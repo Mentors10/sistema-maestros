@@ -1,0 +1,2086 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { Curso } from '@/types';
+import {
+  X, Search, UserPlus, Trash2, Save, Download, Printer,
+  Loader2, ShieldAlert, CheckCircle2, AlertTriangle, Edit,
+  Plus, Phone, ArrowRight, Check, RefreshCw, FileText, Camera, Upload
+} from 'lucide-react';
+import Swal from 'sweetalert2';
+
+interface Participante {
+  ci: string;
+  nombres: string;
+  apellidos: string;
+  rda: string | null;
+  celular: string | null;
+  sie: string | null;
+  unidad_educativa: string | null;
+  validado: boolean;
+  observaciones_sie: string | null;
+}
+
+interface Inscripcion {
+  id: number;
+  nro: number;
+  pagos: string;
+  observaciones: string | null;
+  participantes: Participante | null;
+}
+
+interface PreviewParticipant {
+  ci: string;
+  nombres: string;
+  apellidos: string;
+  rda: string;
+  celular: string;
+  sie: string;
+  unidad_educativa: string;
+}
+
+interface ParticipantesModalProps {
+  curso: Curso;
+  onClose: () => void;
+  onRefresh: () => void;
+}
+
+// --- Levenshtein Distance & Similarity Helpers ---
+function getLevenshteinDistance(a: string, b: string): number {
+  const matrix = Array.from({ length: a.length + 1 }, () =>
+    Array(b.length + 1).fill(0)
+  );
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + 1
+        );
+      }
+    }
+  }
+  return matrix[a.length][b.length];
+}
+
+function cleanNameString(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+    .replace(/[^A-Za-z0-9\s]/g, "") // Remove punctuation/symbols (dots, commas, etc.)
+    .replace(/\s+/g, " ")           // Collapse multiple spaces
+    .trim()
+    .toUpperCase();
+}
+
+function calculateDifferenceRatio(str1: string, str2: string): number {
+  const s1 = cleanNameString(str1);
+  const s2 = cleanNameString(str2);
+  if (s1 === s2) return 0;
+  const maxLen = Math.max(s1.length, s2.length);
+  if (maxLen === 0) return 0;
+  const distance = getLevenshteinDistance(s1, s2);
+  return distance / maxLen;
+}
+
+export default function ParticipantesModal({
+  curso,
+  onClose,
+  onRefresh
+}: ParticipantesModalProps) {
+  const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Importer Panel states
+  const [showImporter, setShowImporter] = useState(false);
+  const [activeImportTab, setActiveImportTab] = useState<'individual' | 'excel' | 'ia'>('individual');
+  const [excelText, setExcelText] = useState('');
+  const [previewList, setPreviewList] = useState<PreviewParticipant[]>([]);
+  const [importingBatch, setImportingBatch] = useState(false);
+
+  // Camera / IA uploader states
+  const [cameraActive, setCameraActive] = useState(false);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const [iaLoading, setIaLoading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Manual Add Form states
+  const [addCi, setAddCi] = useState('');
+  const [addNombres, setAddNombres] = useState('');
+  const [addApellidos, setAddApellidos] = useState('');
+  const [addRda, setAddRda] = useState('');
+  const [addCelular, setAddCelular] = useState('');
+  const [addSie, setAddSie] = useState('');
+  const [addUnidadEducativa, setAddUnidadEducativa] = useState('');
+  const [searchingCi, setSearchingCi] = useState(false);
+  const [ciExists, setCiExists] = useState(false);
+
+  // Edit core participant states
+  const [editingPart, setEditingPart] = useState<Participante | null>(null);
+
+  // SIE connection states
+  const [sieUser, setSieUser] = useState('');
+  const [siePass, setSiePass] = useState('');
+  const [sieSession, setSieSession] = useState<{ sessionid: string; csrftoken: string } | null>(null);
+  const [connectingSie, setConnectingSie] = useState(false);
+
+  // Validation discrepancy details state
+  const [discrepancyData, setDiscrepancyData] = useState<{
+    db: Participante;
+    sie: any;
+    discrepancies: string[];
+    inscripcionId: number;
+  } | null>(null);
+  const [validatingPartId, setValidatingPartId] = useState<number | null>(null);
+  
+  // Batch validating states
+  const [validatingAll, setValidatingAll] = useState(false);
+  const [validatingIndex, setValidatingIndex] = useState(0);
+  const [validatingTotal, setValidatingTotal] = useState(0);
+
+  // Fetch enrolled participants
+  const fetchParticipantes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('inscripcion_ciclo')
+        .select(`
+          id,
+          nro,
+          pagos,
+          observaciones,
+          participantes (
+            ci,
+            nombres,
+            apellidos,
+            rda,
+            celular,
+            sie,
+            unidad_educativa,
+            validado,
+            observaciones_sie
+          )
+        `)
+        .eq('curso_id', curso.id)
+        .order('nro', { ascending: true });
+
+      if (error) throw error;
+      setInscripciones((data || []) as unknown as Inscripcion[]);
+    } catch (err) {
+      console.error('Error fetching enrolled participants:', err);
+      Swal.fire('Error', 'No se pudieron cargar los participantes', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [curso.id]);
+
+  useEffect(() => {
+    fetchParticipantes();
+    
+    // Check if session exists in sessionStorage
+    const savedSession = sessionStorage.getItem('sie_session');
+    if (savedSession) {
+      try {
+        setSieSession(JSON.parse(savedSession));
+      } catch (e) {
+        console.error('Failed to parse saved SIE session', e);
+      }
+    }
+  }, [fetchParticipantes]);
+
+  // Clean camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [videoStream]);
+
+  // Handle updates to enrollment (pagos / observaciones)
+  const handleUpdateEnrollment = async (id: number, pagos: string, observaciones: string) => {
+    try {
+      const { error } = await supabase
+        .from('inscripcion_ciclo')
+        .update({ pagos, observaciones: observaciones.trim() || null })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Actualizado',
+        text: 'Datos de inscripción guardados',
+        timer: 1500,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+      fetchParticipantes();
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'No se pudo actualizar la inscripción', 'error');
+    }
+  };
+
+  // Delete / Unenroll participant
+  const handleDeleteEnrollment = async (id: number) => {
+    const result = await Swal.fire({
+      title: '¿Dar de baja al participante?',
+      text: 'Se eliminará la inscripción del participante a este ciclo. Los datos personales del participante permanecerán en el sistema.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d93025',
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Sí, dar de baja'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const { error } = await supabase
+          .from('inscripcion_ciclo')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        // Update course count to exact value from database
+        const { count } = await supabase
+          .from('inscripcion_ciclo')
+          .select('*', { count: 'exact', head: true })
+          .eq('curso_id', curso.id);
+        await supabase
+          .from('cursos')
+          .update({ inscritos_formulario: count || 0 })
+          .eq('id', curso.id);
+
+        Swal.fire('Eliminado', 'Inscripción eliminada correctamente', 'success');
+        onRefresh();
+        fetchParticipantes();
+      } catch (err: any) {
+        Swal.fire('Error', err.message || 'No se pudo eliminar la inscripción', 'error');
+      }
+    }
+  };
+
+  // Manual Add Form CI search check
+  const checkCiExist = async (ciVal: string) => {
+    if (!ciVal.trim()) return;
+    setSearchingCi(true);
+    try {
+      const { data, error } = await supabase
+        .from('participantes')
+        .select('*')
+        .eq('ci', ciVal.trim())
+        .single();
+
+      if (data) {
+        setAddNombres(data.nombres);
+        setAddApellidos(data.apellidos);
+        setAddRda(data.rda || '');
+        setAddCelular(data.celular || '');
+        setAddSie(data.sie || '');
+        setAddUnidadEducativa(data.unidad_educativa || '');
+        setCiExists(true);
+      } else {
+        setCiExists(false);
+      }
+    } catch (err) {
+      setCiExists(false);
+    } finally {
+      setSearchingCi(false);
+    }
+  };
+
+  // Handle Manual Add Participant Submission
+  const handleAddParticipantSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addCi.trim() || !addNombres.trim() || !addApellidos.trim()) {
+      Swal.fire('Campos requeridos', 'Por favor llena los campos obligatorios (*)', 'warning');
+      return;
+    }
+
+    const isEnrolled = inscripciones.some(
+      (ins) => ins.participantes?.ci.trim() === addCi.trim()
+    );
+    if (isEnrolled) {
+      Swal.fire('Ya registrado', 'Este participante ya está inscrito en este ciclo formativo', 'warning');
+      return;
+    }
+
+    try {
+      // 1. Get next serial number
+      const { data: countData } = await supabase
+        .from('inscripcion_ciclo')
+        .select('nro')
+        .eq('curso_id', curso.id)
+        .order('nro', { ascending: false })
+        .limit(1);
+      const nextNro = countData && countData.length > 0 ? (countData[0].nro + 1) : 1;
+
+      // 2. Upsert participant (Core)
+      const { error: partError } = await supabase
+        .from('participantes')
+        .upsert({
+          ci: addCi.trim(),
+          nombres: addNombres.trim().toUpperCase(),
+          apellidos: addApellidos.trim().toUpperCase(),
+          rda: addRda.trim() || null,
+          celular: addCelular.trim() || null,
+          sie: addSie.trim() || null,
+          unidad_educativa: addUnidadEducativa.trim().toUpperCase() || null
+        }, { onConflict: 'ci' });
+
+      if (partError) throw partError;
+
+      // 3. Insert enrollment
+      const { error: relationError } = await supabase
+        .from('inscripcion_ciclo')
+        .insert({
+          curso_id: curso.id,
+          participante_ci: addCi.trim(),
+          nro: nextNro,
+          pagos: 'Pendiente'
+        });
+
+      if (relationError) throw relationError;
+
+      // 4. Update count to exact value from database
+      const { count } = await supabase
+        .from('inscripcion_ciclo')
+        .select('*', { count: 'exact', head: true })
+        .eq('curso_id', curso.id);
+      await supabase
+        .from('cursos')
+        .update({ inscritos_formulario: count || 0 })
+        .eq('id', curso.id);
+
+      Swal.fire('Inscripción Manual', 'Participante registrado e inscrito correctamente', 'success');
+      
+      // Reset form
+      setAddCi('');
+      setAddNombres('');
+      setAddApellidos('');
+      setAddRda('');
+      setAddCelular('');
+      setAddSie('');
+      setAddUnidadEducativa('');
+      setCiExists(false);
+      
+      onRefresh();
+      fetchParticipantes();
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'No se pudo realizar el registro', 'error');
+    }
+  };
+
+  // Handle Excel Tabulated text parsing
+  const handleParseExcelText = () => {
+    if (!excelText.trim()) {
+      Swal.fire('Campo vacío', 'Pega primero las columnas de tu Excel en el cuadro de texto.', 'warning');
+      return;
+    }
+
+    const lines = excelText.split('\n');
+    const parsed: PreviewParticipant[] = [];
+
+    lines.forEach((line) => {
+      const cells = line.split('\t').map(c => c.trim()).filter(Boolean);
+      if (cells.length < 2) return; // ignore simple index numbers or blank lines
+
+      let ci = '';
+      let names = '';
+      let surnames = '';
+      let rda = '';
+      let celular = '';
+      let sie = '';
+      let ue = '';
+
+      cells.forEach((cell) => {
+        // Skip row indexes like 1, 2, 3
+        if (/^\d{1,2}$/.test(cell)) return;
+
+        if (/^\d{6,8}$/.test(cell)) {
+          if (cell.startsWith('8')) {
+            sie = cell;
+          } else if (!ci) {
+            ci = cell;
+          } else {
+            rda = cell;
+          }
+        } else if (/^[67]\d{7}$/.test(cell)) {
+          celular = cell;
+        } else if (/^\d{5,7}$/.test(cell)) {
+          rda = cell;
+        } else if (cell.includes('U.E.') || cell.includes('COLEGIO') || cell.includes('NUCLEO') || cell.includes('UNIDAD')) {
+          ue = cell.toUpperCase();
+        } else {
+          // Identify text strings
+          if (!surnames) {
+            surnames = cell.toUpperCase();
+          } else if (!names) {
+            names = cell.toUpperCase();
+          } else {
+            names += ' ' + cell.toUpperCase();
+          }
+        }
+      });
+
+      if (ci && (names || surnames)) {
+        parsed.push({
+          ci,
+          nombres: names || 'DOCENTE',
+          apellidos: surnames || 'SIN APELLIDO',
+          rda,
+          celular,
+          sie,
+          unidad_educativa: ue
+        });
+      }
+    });
+
+    if (parsed.length === 0) {
+      Swal.fire('No detectado', 'No se pudieron identificar las columnas. Asegúrate de copiar desde Excel (con tabulaciones).', 'warning');
+    } else {
+      setPreviewList(parsed);
+      setExcelText('');
+      Swal.fire('Texto procesado', `Se detectaron ${parsed.length} participantes en la nómina. Revisa el resultado abajo.`, 'success');
+    }
+  };
+
+  // Webcam Start/Stop
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setVideoStream(stream);
+      setCameraActive(true);
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Cámara', 'No se pudo acceder a la cámara o webcam.', 'error');
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+      setVideoStream(null);
+    }
+    setCameraActive(false);
+  };
+
+  // Capture photo & parse with Gemini API
+  const handleCaptureAndParse = async () => {
+    if (!videoRef.current || !videoStream) return;
+
+    setIaLoading(true);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 1280;
+      canvas.height = videoRef.current.videoHeight || 720;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context error');
+
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      const base64Image = canvas.toDataURL('image/jpeg');
+
+      // Send to parse route
+      const res = await fetch('/api/ai/parse-nomina', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileData: base64Image,
+          mimeType: 'image/jpeg'
+        })
+      });
+
+      const resData = await res.json();
+      if (!res.ok || !resData.success) {
+        throw new Error(resData.message || 'Error analizando imagen');
+      }
+
+      setPreviewList(resData.data);
+      stopCamera();
+      Swal.fire('Escaneo Exitoso', `La IA detectó ${resData.data.length} participantes en la imagen. Revisa la lista abajo.`, 'success');
+    } catch (err: any) {
+      Swal.fire('Error de escaneo IA', err.message || 'No se pudo procesar la nómina con IA.', 'error');
+    } finally {
+      setIaLoading(false);
+    }
+  };
+
+  // Parse Uploaded File (Image or PDF)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIaLoading(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64Data = event.target?.result as string;
+      try {
+        const res = await fetch('/api/ai/parse-nomina', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileData: base64Data,
+            mimeType: file.type
+          })
+        });
+
+        const resData = await res.json();
+        if (!res.ok || !resData.success) {
+          throw new Error(resData.message || 'Error procesando archivo');
+        }
+
+        setPreviewList(resData.data);
+        Swal.fire('Procesado Exitoso', `La IA procesó el archivo y detectó ${resData.data.length} participantes.`, 'success');
+      } catch (err: any) {
+        Swal.fire('Error de IA', err.message || 'Falló el análisis del archivo.', 'error');
+      } finally {
+        setIaLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Batch Save parsed participants from Preview
+  const handleSavePreviewList = async () => {
+    if (previewList.length === 0) return;
+    setImportingBatch(true);
+
+    try {
+      // Filter out participants that don't have CI or Names
+      const validParticipants = previewList.filter(p => p.ci.trim() && (p.nombres.trim() || p.apellidos.trim()));
+      
+      if (validParticipants.length === 0) {
+        Swal.fire('Datos inválidos', 'Ningún participante tiene C.I. y Nombres válidos.', 'warning');
+        setImportingBatch(false);
+        return;
+      }
+
+      // 1. Get current list of CIs to avoid duplication in current course
+      const existingCis = new Set(inscripciones.map(ins => ins.participantes?.ci.trim()));
+      const filteredToEnroll = validParticipants.filter(p => !existingCis.has(p.ci.trim()));
+
+      if (filteredToEnroll.length === 0) {
+        Swal.fire('Ya inscritos', 'Todos los participantes en vista previa ya se encuentran registrados en este ciclo.', 'info');
+        setPreviewList([]);
+        setImportingBatch(false);
+        return;
+      }
+
+      // 2. Batch upsert participant records
+      const upsertData = filteredToEnroll.map(p => ({
+        ci: p.ci.trim(),
+        nombres: p.nombres.trim().toUpperCase(),
+        apellidos: p.apellidos.trim().toUpperCase(),
+        rda: p.rda?.trim() || null,
+        celular: p.celular?.trim() || null,
+        sie: p.sie?.trim() || null,
+        unidad_educativa: p.unidad_educativa?.trim().toUpperCase() || null
+      }));
+
+      const { error: upsertErr } = await supabase
+        .from('participantes')
+        .upsert(upsertData, { onConflict: 'ci' });
+
+      if (upsertErr) throw upsertErr;
+
+      // 3. Batch insert enrollments
+      // Get next Nro starting point
+      const { data: countData } = await supabase
+        .from('inscripcion_ciclo')
+        .select('nro')
+        .eq('curso_id', curso.id)
+        .order('nro', { ascending: false })
+        .limit(1);
+      let nextNro = countData && countData.length > 0 ? (countData[0].nro + 1) : 1;
+
+      const enrollmentsData = filteredToEnroll.map((p, idx) => ({
+        curso_id: curso.id,
+        participante_ci: p.ci.trim(),
+        nro: nextNro + idx,
+        pagos: 'Pendiente'
+      }));
+
+      const { error: enrollErr } = await supabase
+        .from('inscripcion_ciclo')
+        .insert(enrollmentsData);
+
+      if (enrollErr) throw enrollErr;
+
+      // 4. Update count in cursos table to exact value from database
+      const { count } = await supabase
+        .from('inscripcion_ciclo')
+        .select('*', { count: 'exact', head: true })
+        .eq('curso_id', curso.id);
+      await supabase
+        .from('cursos')
+        .update({ inscritos_formulario: count || 0 })
+        .eq('id', curso.id);
+
+      Swal.fire('Lote Guardado', `Se importaron e inscribieron ${filteredToEnroll.length} participantes exitosamente.`, 'success');
+      setPreviewList([]);
+      setShowImporter(false);
+      onRefresh();
+      fetchParticipantes();
+    } catch (err: any) {
+      Swal.fire('Error de importación', err.message || 'No se pudieron guardar los participantes.', 'error');
+    } finally {
+      setImportingBatch(false);
+    }
+  };
+
+  // Edit core participant details (spelling, RDA)
+  const handleSaveCoreParticipant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPart) return;
+
+    try {
+      const { error } = await supabase
+        .from('participantes')
+        .update({
+          nombres: editingPart.nombres.trim().toUpperCase(),
+          apellidos: editingPart.apellidos.trim().toUpperCase(),
+          rda: editingPart.rda?.trim() || null,
+          celular: editingPart.celular?.trim() || null,
+          sie: editingPart.sie?.trim() || null,
+          unidad_educativa: editingPart.unidad_educativa?.trim().toUpperCase() || null
+        })
+        .eq('ci', editingPart.ci);
+
+      if (error) throw error;
+      Swal.fire('Guardado', 'Datos personales del participante actualizados', 'success');
+      setEditingPart(null);
+      fetchParticipantes();
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'No se pudieron actualizar los datos del participante', 'error');
+    }
+  };
+
+  // SIE Portal Login Connection
+  const handleSieConnect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sieUser.trim() || !siePass) {
+      Swal.fire('Campos requeridos', 'Ingresa tu usuario y contraseña de SIE UNEFCO', 'warning');
+      return;
+    }
+
+    setConnectingSie(true);
+    try {
+      const res = await fetch('/api/sie/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: sieUser.trim(), password: siePass })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Falló la conexión');
+      }
+
+      setSieSession(data.cookies);
+      sessionStorage.setItem('sie_session', JSON.stringify(data.cookies));
+      setSiePass(''); // Clear password field
+      Swal.fire({
+        icon: 'success',
+        title: 'Conectado a SIE',
+        text: 'Autenticación con el portal oficial exitosa. Sesión iniciada.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err: any) {
+      Swal.fire('Error de Conexión', err.message || 'No se pudo iniciar sesión en SIE', 'error');
+    } finally {
+      setConnectingSie(false);
+    }
+  };
+
+  // Disconnect SIE Session
+  const handleSieDisconnect = () => {
+    setSieSession(null);
+    sessionStorage.removeItem('sie_session');
+    Swal.fire({
+      icon: 'info',
+      title: 'Sesión Cerrada',
+      text: 'Desconectado del portal oficial SIE',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  };
+
+  // Validate single participant (returns promise)
+  const validateSingle = async (ins: Inscripcion, isBatch = false): Promise<{ success: boolean; status: string; message?: string }> => {
+    const p = ins.participantes;
+    if (!p) return { success: false, status: 'error', message: 'No hay datos' };
+
+    try {
+      const res = await fetch(`/api/sie/search?ci=${p.ci}`, {
+        headers: {
+          'x-sie-sessionid': sieSession!.sessionid,
+          'x-sie-csrftoken': sieSession!.csrftoken
+        }
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        if (resData.status === 'unauthorized') {
+          handleSieDisconnect();
+          return { success: false, status: 'unauthorized', message: 'Sesión expirada' };
+        }
+        return { success: false, status: 'error', message: resData.message || 'Error de red' };
+      }
+
+      if (resData.status === 'not_found') {
+        const obs = `NO ENCONTRADO EN EL PORTAL SIE AL ${new Date().toLocaleDateString()}`;
+        await supabase
+          .from('participantes')
+          .update({
+            validado: false,
+            observaciones_sie: obs
+          })
+          .eq('ci', p.ci);
+        return { success: true, status: 'not_found' };
+      } else if (resData.status === 'found') {
+        const sieData = resData.data[0];
+
+        const dbNombres = p.nombres.trim().toUpperCase();
+        const sieNombres = sieData.nombres.trim().toUpperCase();
+        const dbApellidos = p.apellidos.trim().toUpperCase();
+        const sieApellidos = sieData.apellidos.trim().toUpperCase();
+
+        const localFullName = `${dbNombres} ${dbApellidos}`;
+        const sieFullName = `${sieNombres} ${sieApellidos}`;
+
+        // Calculate edit distance similarity on names only
+        const nameDiff = calculateDifferenceRatio(localFullName, sieFullName);
+
+        const dbRda = (p.rda || '').trim().replace(/\D/g, '');
+        const sieRda = (sieData.rda || '').trim().replace(/\D/g, '');
+        const isRdaMismatch = dbRda && sieRda && dbRda !== sieRda;
+
+        // Check token subset (handles missing second surname or middle name where CI matches)
+        const checkTokenSubset = (nameA: string, nameB: string): boolean => {
+          const tokensA = cleanNameString(nameA).split(" ").filter(t => t.length > 1);
+          const tokensB = cleanNameString(nameB).split(" ").filter(t => t.length > 1);
+          if (tokensA.length === 0 || tokensB.length === 0) return false;
+          const [shorter, longer] = tokensA.length <= tokensB.length ? [tokensA, tokensB] : [tokensB, tokensA];
+          return shorter.every(token => longer.includes(token));
+        };
+
+        // Auto-validate criteria: CI matches, and name/surname difference <= 40% OR one name is a token subset of the other.
+        const isMinimalDifference = nameDiff <= 0.40 || checkTokenSubset(localFullName, sieFullName);
+
+        if (isMinimalDifference) {
+          // Auto-validate: Copy SIE name/rda, keep local cellular number
+          await supabase
+            .from('participantes')
+            .update({
+              nombres: sieData.nombres.trim().toUpperCase(),
+              apellidos: sieData.apellidos.trim().toUpperCase(),
+              rda: sieData.rda || p.rda,
+              validado: true,
+              observaciones_sie: null
+            })
+            .eq('ci', p.ci);
+
+          return { success: true, status: 'validated_auto' };
+        } else {
+          // Discrepancy detected
+          const discrepancies: string[] = [];
+          if (dbNombres !== sieNombres) discrepancies.push('NOMBRES');
+          if (dbApellidos !== sieApellidos) discrepancies.push('APELLIDOS');
+          if (isRdaMismatch) discrepancies.push('RDA');
+
+          const dbCelular = (p.celular || '').trim().replace(/\D/g, '');
+          const sieCelular = (sieData.celular || '').trim().replace(/\D/g, '');
+          if (sieCelular && dbCelular && dbCelular !== sieCelular) {
+            discrepancies.push('CELULAR');
+          }
+
+          const discrepanciesObs = `DISCREPANCIAS DETECTADAS: ` +
+            discrepancies.map(field => {
+              if (field === 'NOMBRES') return `Nombres DB: "${dbNombres}" / SIE: "${sieNombres}"`;
+              if (field === 'APELLIDOS') return `Apellidos DB: "${dbApellidos}" / SIE: "${sieApellidos}"`;
+              if (field === 'RDA') return `RDA DB: "${dbRda || '—'}" / SIE: "${sieRda || '—'}"`;
+              if (field === 'CELULAR') return `Celular DB: "${dbCelular || '—'}" / SIE: "${sieCelular || '—'}"`;
+              return field;
+            }).join(' | ');
+
+          // Save discrepancies to database
+          await supabase
+            .from('participantes')
+            .update({
+              validado: false,
+              observaciones_sie: discrepanciesObs
+            })
+            .eq('ci', p.ci);
+
+          if (!isBatch) {
+            // Open comparison editor only in manual mode
+            setDiscrepancyData({
+              db: p,
+              sie: sieData,
+              discrepancies,
+              inscripcionId: ins.id
+            });
+          }
+
+          return { success: true, status: 'discrepancy' };
+        }
+      }
+      return { success: false, status: 'error', message: 'Respuesta desconocida' };
+    } catch (err: any) {
+      return { success: false, status: 'error', message: err.message || 'Error en petición' };
+    }
+  };
+
+  // Validate single participant manually
+  const handleValidateParticipant = async (ins: Inscripcion) => {
+    if (!sieSession) {
+      Swal.fire('Iniciar sesión', 'Debes iniciar sesión en tu cuenta de SIE UNEFCO arriba para realizar validaciones.', 'info');
+      return;
+    }
+
+    const p = ins.participantes;
+    if (!p) return;
+
+    setValidatingPartId(ins.id);
+    const result = await validateSingle(ins, false);
+    setValidatingPartId(null);
+
+    if (result.success) {
+      if (result.status === 'validated_auto') {
+        Swal.fire({
+          icon: 'success',
+          title: 'Validado Automáticamente',
+          text: `El participante ${p.apellidos} ${p.nombres} coincide perfectamente o tiene diferencias mínimas (≤ 40%). Se actualizaron sus datos con la información oficial de SIE, conservando el celular local.`,
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } else if (result.status === 'not_found') {
+        Swal.fire('No encontrado', 'El participante no está registrado en el portal de SIE UNEFCO. Se guardó la observación.', 'warning');
+      }
+      fetchParticipantes();
+    } else {
+      Swal.fire('Error', result.message || 'Ocurrió un error al validar', 'error');
+    }
+  };
+
+  // Validate All sequentially
+  const handleValidateAll = async () => {
+    if (!sieSession) {
+      Swal.fire('Iniciar sesión', 'Debes iniciar sesión en tu cuenta de SIE UNEFCO para validar.', 'info');
+      return;
+    }
+
+    const unvalidated = inscripciones.filter(ins => ins.participantes && !ins.participantes.validado);
+    if (unvalidated.length === 0) {
+      Swal.fire('Validación Completa', 'Todos los participantes ya están validados.', 'success');
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: '¿Validar Todos?',
+      text: `Se iniciará el proceso secuencial en lote para validar ${unvalidated.length} participantes pendientes contra el portal SIE.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, iniciar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#2f80ed'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    setValidatingAll(true);
+    setValidatingTotal(unvalidated.length);
+    setValidatingIndex(0);
+
+    let validatedCount = 0;
+    let discrepancyCount = 0;
+    let notFoundCount = 0;
+    let errorOccurred = false;
+
+    for (let i = 0; i < unvalidated.length; i++) {
+      setValidatingIndex(i + 1);
+      const ins = unvalidated[i];
+
+      const result = await validateSingle(ins, true);
+
+      if (!result.success) {
+        if (result.status === 'unauthorized') {
+          Swal.fire('Sesión Expirada', 'La sesión de SIE ha expirado. Proceso de validación masiva detenido.', 'error');
+          errorOccurred = true;
+          break;
+        }
+        console.error(`Error validating CI ${ins.participantes?.ci}:`, result.message);
+      } else {
+        if (result.status === 'validated_auto') validatedCount++;
+        else if (result.status === 'discrepancy') discrepancyCount++;
+        else if (result.status === 'not_found') notFoundCount++;
+      }
+
+      // 1.2 second delay between queries
+      await new Promise(resolve => setTimeout(resolve, 1200));
+    }
+
+    setValidatingAll(false);
+    fetchParticipantes();
+
+    if (!errorOccurred) {
+      Swal.fire({
+        title: 'Validación en Lote Completada',
+        html: `
+          <div style="text-align: left; padding: 10px;">
+            <p>Se procesaron todos los participantes pendientes:</p>
+            <ul style="list-style-type: disc; padding-left: 20px; font-size: 0.9rem; line-height: 1.5;">
+              <li style="color: var(--green-600); font-weight: bold;">Validados automáticamente (≤ 40% dif): ${validatedCount}</li>
+              <li style="color: var(--red-600); font-weight: bold;">Con discrepancias detectadas (para revisión): ${discrepancyCount}</li>
+              <li style="color: var(--yellow-600); font-weight: bold;">No encontrados en portal: ${notFoundCount}</li>
+            </ul>
+            <p style="margin-top: 12px; font-size: 0.82rem; color: var(--gray-500);">Revisa las discrepancias marcadas en color rojo en la lista para resolverlas individualmente.</p>
+          </div>
+        `,
+        icon: 'success',
+        confirmButtonColor: '#2e9f5e'
+      });
+    }
+  };
+
+  // Resolve discrepancies
+  const resolveDiscrepancies = async (action: 'correct' | 'validate_anyway') => {
+    if (!discrepancyData) return;
+    const { db, sie } = discrepancyData;
+
+    try {
+      if (action === 'correct') {
+        // Correct local values using SIE official ones, keeping local celular
+        await supabase
+          .from('participantes')
+          .update({
+            nombres: sie.nombres.trim().toUpperCase(),
+            apellidos: sie.apellidos.trim().toUpperCase(),
+            rda: sie.rda || db.rda,
+            // Celular remains db.celular (local is prioritised, as per requirement)
+            validado: true,
+            observaciones_sie: null
+          })
+          .eq('ci', db.ci);
+
+        Swal.fire('Datos Corregidos', 'Los datos locales han sido corregidos con la información oficial de SIE (conservando el celular local) y marcados como validados.', 'success');
+      } else {
+        // Mark as validado but record discrepancies in observations
+        const discrepanciesObs = `DISCREPANCIAS DETECTADAS: ` +
+          discrepancyData.discrepancies.map(field => {
+            if (field === 'NOMBRES') return `Nombres DB: "${db.nombres}" / SIE: "${sie.nombres}"`;
+            if (field === 'APELLIDOS') return `Apellidos DB: "${db.apellidos}" / SIE: "${sie.apellidos}"`;
+            if (field === 'RDA') return `RDA DB: "${db.rda || '—'}" / SIE: "${sie.rda || '—'}"`;
+            if (field === 'CELULAR') return `Celular DB: "${db.celular || '—'}" / SIE: "${sie.celular || '—'}"`;
+            return field;
+          }).join(' | ');
+
+        await supabase
+          .from('participantes')
+          .update({
+            validado: true,
+            observaciones_sie: discrepanciesObs
+          })
+          .eq('ci', db.ci);
+
+        Swal.fire('Validado con observaciones', 'El participante fue validado conservando las discrepancias en observaciones.', 'success');
+      }
+
+      setDiscrepancyData(null);
+      fetchParticipantes();
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'No se pudo resolver la discrepancia', 'error');
+    }
+  };
+
+  // Export to Excel (Lightweight clean HTML blob)
+  const handleExportExcel = () => {
+    if (inscripciones.length === 0) {
+      Swal.fire('Sin datos', 'No hay participantes inscritos para exportar', 'warning');
+      return;
+    }
+
+    const title = `INSCRITOS_CICLO_${curso.id}_${curso.ciclo_nombre || 'CURSO'}`;
+    
+    let html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
+          th { background-color: #0c2340; color: white; font-weight: bold; border: 1px solid #cccccc; padding: 10px; }
+          td { border: 1px solid #cccccc; padding: 8px; font-size: 11px; }
+          .title { font-size: 16px; font-weight: bold; color: #0c2340; margin-bottom: 5px; }
+          .subtitle { font-size: 12px; color: #555555; margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="title">LISTA DE PARTICIPANTES INSCRITOS</div>
+        <div class="subtitle">Curso: ID ${curso.id} - ${curso.ciclo_nombre || ''} | Facilitador: ${curso.facilitador_nombre || ''}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nro</th>
+              <th>C.I.</th>
+              <th>RDA</th>
+              <th>Apellidos</th>
+              <th>Nombres</th>
+              <th>Celular</th>
+              <th>SIE</th>
+              <th>Unidad Educativa</th>
+              <th>Estado Pago</th>
+              <th>Validado SIE</th>
+              <th>Observaciones Validación SIE</th>
+              <th>Observaciones Internas</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    inscripciones.forEach((ins) => {
+      const p = ins.participantes;
+      html += `
+        <tr>
+          <td align="center">${ins.nro}</td>
+          <td>${p?.ci || ''}</td>
+          <td>${p?.rda || ''}</td>
+          <td>${p?.apellidos || ''}</td>
+          <td>${p?.nombres || ''}</td>
+          <td>${p?.celular || ''}</td>
+          <td>${p?.sie || ''}</td>
+          <td>${p?.unidad_educativa || ''}</td>
+          <td>${ins.pagos}</td>
+          <td>${p?.validado ? 'SÍ' : 'NO'}</td>
+          <td>${p?.observaciones_sie || ''}</td>
+          <td>${ins.observaciones || ''}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${title.replace(/\s+/g, '_')}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export to PDF via browser printing styled as Letter page
+  const handlePrintPDF = () => {
+    if (inscripciones.length === 0) {
+      Swal.fire('Sin datos', 'No hay participantes para imprimir', 'warning');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      Swal.fire('Bloqueador de ventanas', 'Por favor habilita las ventanas flotantes para imprimir.', 'warning');
+      return;
+    }
+
+    const rowsHtml = inscripciones.map(ins => {
+      const p = ins.participantes;
+      return `
+        <tr>
+          <td style="text-align: center;">${ins.nro}</td>
+          <td>${p?.ci || ''}</td>
+          <td>${p?.rda || ''}</td>
+          <td style="text-transform: uppercase;">${p?.apellidos || ''}</td>
+          <td style="text-transform: uppercase;">${p?.nombres || ''}</td>
+          <td>${p?.celular || ''}</td>
+          <td>${p?.sie || ''}</td>
+          <td style="text-transform: uppercase;">${p?.unidad_educativa || ''}</td>
+          <td>${ins.pagos}</td>
+          <td style="font-size: 8pt; color: #555;">${p?.observaciones_sie || (p?.validado ? 'VALIDADO' : 'PENDIENTE')}</td>
+        </tr>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>Participantes Inscritos - ID ${curso.id}</title>
+        <style>
+          @page {
+            size: letter landscape;
+            margin: 0.4in 0.4in 0.6in 0.4in;
+          }
+          body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            font-size: 9pt;
+            line-height: 1.3;
+          }
+          .header {
+            border-bottom: 2px solid #0f3060;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+          .header-title h1 {
+            margin: 0;
+            font-size: 16pt;
+            color: #0f3060;
+            font-weight: 800;
+          }
+          .header-title p {
+            margin: 2px 0 0 0;
+            font-size: 9.5pt;
+            color: #555;
+          }
+          .header-meta {
+            text-align: right;
+            font-size: 9pt;
+            color: #444;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          th {
+            background-color: #0f3060;
+            color: white;
+            font-weight: bold;
+            font-size: 8.5pt;
+            border: 1px solid #ddd;
+            padding: 6px 4px;
+            text-transform: uppercase;
+          }
+          td {
+            border: 1px solid #ddd;
+            padding: 5px 4px;
+            font-size: 8.5pt;
+          }
+          tr:nth-child(even) td {
+            background-color: #f9f9f9;
+          }
+          .signatures {
+            margin-top: 50px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 100px;
+            padding: 0 50px;
+          }
+          .signature-box {
+            border-top: 1px solid #444;
+            text-align: center;
+            padding-top: 6px;
+            font-size: 9.5pt;
+            font-weight: 600;
+            color: #444;
+          }
+          @media print {
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="header-title">
+            <h1>UNEFCO - LISTA DE PARTICIPANTES INSCRITOS</h1>
+            <p>Ciclo: <b>${curso.ciclo_nombre || 'Sin nombre'}</b></p>
+          </div>
+          <div class="header-meta">
+            <b>ID Curso:</b> ${curso.id} | <b>Facilitador:</b> ${curso.facilitador_nombre || 'Sin asignar'}<br/>
+            <b>Lugar:</b> ${curso.lugar} (${curso.distrito}) | <b>Técnico:</b> ${curso.tecnico_nombre || ''}
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th width="3%">Nro</th>
+              <th width="10%">C.I.</th>
+              <th width="8%">RDA</th>
+              <th width="20%">Apellidos</th>
+              <th width="18%">Nombres</th>
+              <th width="8%">Celular</th>
+              <th width="8%">SIE</th>
+              <th width="12%">Unidad Educativa</th>
+              <th width="8%">Pago</th>
+              <th width="15%">Detalle / Validación</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="signatures">
+          <div class="signature-box">
+            Firma del Facilitador<br/>
+            <span style="font-size: 8pt; font-weight: normal; color: #777;">C.I. ${curso.facilitador_carnet || ''}</span>
+          </div>
+          <div class="signature-box">
+            Firma del Técnico UNEFCO<br/>
+            <span style="font-size: 8pt; font-weight: normal; color: #777;">C.I. ${curso.tecnico_carnet || ''}</span>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  // Filter list
+  const filteredInscripciones = inscripciones.filter((ins) => {
+    const p = ins.participantes;
+    if (!p) return false;
+    const q = searchQuery.toLowerCase();
+    return (
+      p.ci.includes(q) ||
+      p.nombres.toLowerCase().includes(q) ||
+      p.apellidos.toLowerCase().includes(q) ||
+      (p.rda || '').includes(q) ||
+      (p.celular || '').includes(q) ||
+      (p.unidad_educativa || '').toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(11,21,32,0.6)', backdropFilter: 'blur(8px)', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
+      <div className="modal-container" style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '1280px', maxHeight: '90vh', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease', overflow: 'hidden' }}>
+        
+        {/* Modal Header */}
+        <div className="modal-header" style={{ padding: '20px 24px', background: 'var(--primary-900)', color: 'var(--white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>
+              Administración de Participantes — ID {curso.id}
+            </h3>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', opacity: 0.8 }}>
+              Ciclo: {curso.ciclo_nombre || 'Sin Ciclo'} | Facilitador: {curso.facilitador_nombre || 'Sin Facilitador'} | Lugar: {curso.lugar}
+            </p>
+          </div>
+          <button 
+            type="button" 
+            className="btn btn-icon btn-ghost" 
+            onClick={onClose} 
+            style={{ color: 'var(--white)', padding: '6px', borderRadius: '50%' }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+          
+          {/* Top Panel: SIE Connection & Actions Bar */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', background: 'var(--gray-50)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)' }}>
+            
+            {/* SIE Authentication Panel */}
+            <div style={{ borderRight: '1px solid var(--gray-200)', paddingRight: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <ShieldAlert size={18} style={{ color: sieSession ? 'var(--green-500)' : 'var(--primary-500)' }} />
+                <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--primary-800)' }}>
+                  Conectividad SIE UNEFCO
+                </h4>
+              </div>
+
+              {sieSession ? (
+                /* Connected State */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--green-100)', color: 'var(--green-600)', padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <CheckCircle2 size={16} />
+                    <span>Conexión establecida con éxito con el portal SIE.</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={handleSieDisconnect}>
+                      Desconectar de SIE
+                    </button>
+                    {/* Validate All sequentially */}
+                    <button 
+                      type="button" 
+                      className="btn btn-teal btn-sm" 
+                      onClick={handleValidateAll}
+                      disabled={validatingAll}
+                    >
+                      {validatingAll ? (
+                        <>
+                          <Loader2 size={12} className="spin" />
+                          Validando ({validatingIndex}/{validatingTotal})...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={12} />
+                          Validar Todos
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Disconnected State / Form */
+                <form onSubmit={handleSieConnect} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>USUARIO SIE</label>
+                    <input 
+                      type="text" 
+                      value={sieUser}
+                      onChange={(e) => setSieUser(e.target.value)}
+                      placeholder="usuario@unefco.edu.bo"
+                      style={{ padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>CONTRASEÑA</label>
+                    <input 
+                      type="password" 
+                      value={siePass}
+                      onChange={(e) => setSiePass(e.target.value)}
+                      placeholder="********"
+                      style={{ padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary btn-sm" disabled={connectingSie} style={{ height: '33px' }}>
+                    {connectingSie ? <Loader2 size={14} className="spin" /> : 'Conectar'}
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* General Actions: Search, Exports, Add Manual */}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ position: 'relative', width: '240px' }}>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar inscrito..."
+                    style={{ width: '100%', padding: '6px 10px 6px 30px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
+                  />
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '9px', color: 'var(--gray-400)' }} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleExportExcel} title="Exportar a Excel">
+                    <Download size={14} /> Excel
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPDF} title="Imprimir / Exportar PDF">
+                    <Printer size={14} /> PDF
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--gray-500)', fontWeight: 600 }}>
+                  Total en Lista: <b>{filteredInscripciones.length} de {inscripciones.length}</b>
+                </span>
+                
+                <button 
+                  type="button" 
+                  className={`btn ${showImporter ? 'btn-secondary' : 'btn-success'} btn-sm`}
+                  onClick={() => setShowImporter(!showImporter)}
+                >
+                  <UserPlus size={14} /> {showImporter ? 'Cerrar Importador' : 'Importar Lote (IA / Excel)'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Unified Smart Importer Panel (Collapsible) */}
+          {showImporter && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'var(--primary-50)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--primary-100)', animation: 'slideDown 0.2s ease' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--primary-200)', paddingBottom: '10px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 900, color: 'var(--primary-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <UserPlus size={18} /> Panel de Registro e Importación de Participantes
+                </h4>
+                
+                {/* Tabs Selector */}
+                <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.05)', padding: '3px', borderRadius: 'var(--radius-sm)' }}>
+                  <button
+                    type="button"
+                    className="btn btn-xs"
+                    style={{ background: activeImportTab === 'individual' ? 'var(--primary-500)' : 'transparent', color: activeImportTab === 'individual' ? 'var(--white)' : 'var(--gray-700)' }}
+                    onClick={() => setActiveImportTab('individual')}
+                  >
+                    Registro Individual
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-xs"
+                    style={{ background: activeImportTab === 'excel' ? 'var(--primary-500)' : 'transparent', color: activeImportTab === 'excel' ? 'var(--white)' : 'var(--gray-700)' }}
+                    onClick={() => setActiveImportTab('excel')}
+                  >
+                    Copiar de Excel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-xs"
+                    style={{ background: activeImportTab === 'ia' ? 'var(--primary-500)' : 'transparent', color: activeImportTab === 'ia' ? 'var(--white)' : 'var(--gray-700)' }}
+                    onClick={() => setActiveImportTab('ia')}
+                  >
+                    Escaneo con IA
+                  </button>
+                </div>
+              </div>
+
+              {/* Tab Content: 1. Manual Form */}
+              {activeImportTab === 'individual' && (
+                <form onSubmit={handleAddParticipantSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>C.I. *</label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input 
+                          type="text" 
+                          required
+                          value={addCi}
+                          onChange={(e) => setAddCi(e.target.value)}
+                          onBlur={() => checkCiExist(addCi)}
+                          placeholder="Ej: 1234567"
+                          style={{ flex: 1, padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
+                        />
+                        {searchingCi && <Loader2 size={16} className="spin" style={{ alignSelf: 'center' }} />}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Nombres *</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={addNombres}
+                        onChange={(e) => setAddNombres(e.target.value.toUpperCase())}
+                        placeholder="NOMBRES"
+                        style={{ padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', textTransform: 'uppercase', background: 'var(--white)' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Apellidos *</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={addApellidos}
+                        onChange={(e) => setAddApellidos(e.target.value.toUpperCase())}
+                        placeholder="APELLIDOS"
+                        style={{ padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', textTransform: 'uppercase', background: 'var(--white)' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>RDA (Opcional)</label>
+                      <input 
+                        type="text" 
+                        value={addRda}
+                        onChange={(e) => setAddRda(e.target.value)}
+                        placeholder="RDA"
+                        style={{ padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Celular</label>
+                      <input 
+                        type="text" 
+                        value={addCelular}
+                        onChange={(e) => setAddCelular(e.target.value)}
+                        placeholder="Celular"
+                        style={{ padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Código SIE (Opcional)</label>
+                      <input 
+                        type="text" 
+                        value={addSie}
+                        onChange={(e) => setAddSie(e.target.value)}
+                        placeholder="SIE"
+                        style={{ padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Unidad Educativa</label>
+                      <input 
+                        type="text" 
+                        value={addUnidadEducativa}
+                        onChange={(e) => setAddUnidadEducativa(e.target.value.toUpperCase())}
+                        placeholder="UNIDAD EDUCATIVA"
+                        style={{ padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', textTransform: 'uppercase', background: 'var(--white)' }}
+                      />
+                    </div>
+                  </div>
+
+                  {ciExists && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--green-600)', background: 'var(--green-100)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontWeight: 600 }}>
+                      ✓ El participante ya existe en el sistema. Al confirmar, se le inscribirá a este ciclo automáticamente.
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                    <button type="submit" className="btn btn-success btn-sm">
+                      Inscribir Participante
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Tab Content: 2. Paste Excel columns */}
+              {activeImportTab === 'excel' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--gray-600)' }}>
+                    Copia las columnas directamente de tu archivo Excel (por ejemplo, seleccionando las columnas de C.I., Nombres, RDA, etc.) y pégalas en el cuadro de abajo. El sistema detectará las columnas automáticamente.
+                  </p>
+                  <textarea
+                    rows={6}
+                    value={excelText}
+                    onChange={(e) => setExcelText(e.target.value)}
+                    placeholder="Pega las filas y columnas copiadas de Excel aquí..."
+                    style={{ width: '100%', padding: '10px', fontSize: '0.85rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', fontFamily: 'monospace', background: 'var(--white)', resize: 'vertical' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button type="button" className="btn btn-primary btn-sm" onClick={handleParseExcelText}>
+                      Procesar Columnas
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab Content: 3. AI Scan (Camera / File) */}
+              {activeImportTab === 'ia' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--gray-600)' }}>
+                    Escanea una nómina física utilizando tu cámara web, o sube una fotografía/PDF del documento. La IA transcribirá los datos del lote automáticamente.
+                  </p>
+                  
+                  <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {/* Webcam Area */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '320px' }}>
+                      <div style={{ width: '320px', height: '240px', background: 'var(--gray-900)', borderRadius: 'var(--radius-md)', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)' }}>
+                        {cameraActive ? (
+                          <video 
+                            ref={videoRef}
+                            id="webcam-video" 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            playsInline
+                            muted
+                          />
+                        ) : (
+                          <div style={{ color: 'var(--gray-400)', textAlign: 'center', padding: '20px' }}>
+                            <Camera size={40} style={{ display: 'block', margin: '0 auto 10px', opacity: 0.5 }} />
+                            <span style={{ fontSize: '0.82rem' }}>Cámara apagada</span>
+                          </div>
+                        )}
+                        {iaLoading && (
+                          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(11,21,32,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: 'var(--white)' }}>
+                            <Loader2 size={32} className="spin" />
+                            <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>IA Procesando Nómina...</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {cameraActive ? (
+                          <>
+                            <button type="button" className="btn btn-primary btn-sm" onClick={handleCaptureAndParse} disabled={iaLoading}>
+                              Capturar y Escanear
+                            </button>
+                            <button type="button" className="btn btn-secondary btn-sm" onClick={stopCamera} disabled={iaLoading}>
+                              Apagar
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" className="btn btn-primary btn-sm" onClick={startCamera}>
+                            Activar Cámara
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 800, color: 'var(--gray-400)' }}>
+                      O TAMBIÉN
+                    </div>
+
+                    {/* File Upload Area */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', border: '2px dashed var(--primary-200)', borderRadius: 'var(--radius-md)', padding: '20px', width: '320px', background: 'var(--white)' }}>
+                      <Upload size={36} style={{ color: 'var(--primary-400)' }} />
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--gray-700)', display: 'block' }}>Subir Imagen o PDF</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--gray-400)' }}>Formatos soportados: JPG, PNG, PDF</span>
+                      </div>
+                      
+                      <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', gap: '8px' }}>
+                        <FileText size={14} /> Seleccionar archivo
+                        <input 
+                          type="file" 
+                          accept="image/*,application/pdf" 
+                          onChange={handleFileUpload} 
+                          style={{ display: 'none' }}
+                          disabled={iaLoading}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Import Preview Table */}
+              {previewList.length > 0 && (
+                <div style={{ borderTop: '1px solid var(--primary-200)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h5 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary-900)' }}>
+                      Vista Previa de Importación ({previewList.length} detectados)
+                    </h5>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        type="button" 
+                        className="btn btn-success btn-sm" 
+                        onClick={handleSavePreviewList}
+                        disabled={importingBatch}
+                      >
+                        {importingBatch ? (
+                          <>
+                            <Loader2 size={12} className="spin" /> Guardando...
+                          </>
+                        ) : (
+                          <>
+                            <Check size={14} /> Confirmar e Inscribir Lote
+                          </>
+                        )}
+                      </button>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPreviewList([])} disabled={importingBatch}>
+                        Limpiar Vista Previa
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Preview Table */}
+                  <div style={{ overflowX: 'auto', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--gray-100)', borderBottom: '1px solid var(--gray-200)' }}>
+                          <th style={{ padding: '6px 10px', width: '40px', textAlign: 'center' }}>#</th>
+                          <th style={{ padding: '6px 10px', width: '100px' }}>C.I.</th>
+                          <th style={{ padding: '6px 10px', width: '150px' }}>Nombres</th>
+                          <th style={{ padding: '6px 10px', width: '150px' }}>Apellidos</th>
+                          <th style={{ padding: '6px 10px', width: '80px' }}>RDA</th>
+                          <th style={{ padding: '6px 10px', width: '90px' }}>Celular</th>
+                          <th style={{ padding: '6px 10px', width: '85px' }}>SIE</th>
+                          <th style={{ padding: '6px 10px' }}>Unidad Educativa</th>
+                          <th style={{ padding: '6px 10px', width: '50px', textAlign: 'center' }}>Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewList.map((p, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                            <td style={{ padding: '4px 8px', textAlign: 'center', color: 'var(--gray-400)' }}>{idx + 1}</td>
+                            
+                            {/* C.I. */}
+                            <td style={{ padding: '4px 8px' }}>
+                              <input 
+                                type="text"
+                                value={p.ci}
+                                onChange={(e) => {
+                                  const updated = [...previewList];
+                                  updated[idx].ci = e.target.value;
+                                  setPreviewList(updated);
+                                }}
+                                style={{ width: '100%', padding: '3px 6px', fontSize: '0.78rem', border: '1px solid var(--gray-200)', borderRadius: '3px' }}
+                              />
+                            </td>
+
+                            {/* Nombres */}
+                            <td style={{ padding: '4px 8px' }}>
+                              <input 
+                                type="text"
+                                value={p.nombres}
+                                onChange={(e) => {
+                                  const updated = [...previewList];
+                                  updated[idx].nombres = e.target.value.toUpperCase();
+                                  setPreviewList(updated);
+                                }}
+                                style={{ width: '100%', padding: '3px 6px', fontSize: '0.78rem', border: '1px solid var(--gray-200)', borderRadius: '3px', textTransform: 'uppercase' }}
+                              />
+                            </td>
+
+                            {/* Apellidos */}
+                            <td style={{ padding: '4px 8px' }}>
+                              <input 
+                                type="text"
+                                value={p.apellidos}
+                                onChange={(e) => {
+                                  const updated = [...previewList];
+                                  updated[idx].apellidos = e.target.value.toUpperCase();
+                                  setPreviewList(updated);
+                                }}
+                                style={{ width: '100%', padding: '3px 6px', fontSize: '0.78rem', border: '1px solid var(--gray-200)', borderRadius: '3px', textTransform: 'uppercase' }}
+                              />
+                            </td>
+
+                            {/* RDA */}
+                            <td style={{ padding: '4px 8px' }}>
+                              <input 
+                                type="text"
+                                value={p.rda || ''}
+                                onChange={(e) => {
+                                  const updated = [...previewList];
+                                  updated[idx].rda = e.target.value;
+                                  setPreviewList(updated);
+                                }}
+                                style={{ width: '100%', padding: '3px 6px', fontSize: '0.78rem', border: '1px solid var(--gray-200)', borderRadius: '3px' }}
+                              />
+                            </td>
+
+                            {/* Celular */}
+                            <td style={{ padding: '4px 8px' }}>
+                              <input 
+                                type="text"
+                                value={p.celular || ''}
+                                onChange={(e) => {
+                                  const updated = [...previewList];
+                                  updated[idx].celular = e.target.value;
+                                  setPreviewList(updated);
+                                }}
+                                style={{ width: '100%', padding: '3px 6px', fontSize: '0.78rem', border: '1px solid var(--gray-200)', borderRadius: '3px' }}
+                              />
+                            </td>
+
+                            {/* SIE */}
+                            <td style={{ padding: '4px 8px' }}>
+                              <input 
+                                type="text"
+                                value={p.sie || ''}
+                                onChange={(e) => {
+                                  const updated = [...previewList];
+                                  updated[idx].sie = e.target.value;
+                                  setPreviewList(updated);
+                                }}
+                                style={{ width: '100%', padding: '3px 6px', fontSize: '0.78rem', border: '1px solid var(--gray-200)', borderRadius: '3px' }}
+                              />
+                            </td>
+
+                            {/* Unidad Educativa */}
+                            <td style={{ padding: '4px 8px' }}>
+                              <input 
+                                type="text"
+                                value={p.unidad_educativa || ''}
+                                onChange={(e) => {
+                                  const updated = [...previewList];
+                                  updated[idx].unidad_educativa = e.target.value.toUpperCase();
+                                  setPreviewList(updated);
+                                }}
+                                style={{ width: '100%', padding: '3px 6px', fontSize: '0.78rem', border: '1px solid var(--gray-200)', borderRadius: '3px', textTransform: 'uppercase' }}
+                              />
+                            </td>
+
+                            {/* Actions (delete row from preview) */}
+                            <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                              <button 
+                                type="button" 
+                                className="btn btn-ghost btn-xs"
+                                onClick={() => {
+                                  setPreviewList(previewList.filter((_, i) => i !== idx));
+                                }}
+                                style={{ padding: '3px', color: 'var(--red-500)' }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Enrolled Participants Table */}
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '16px' }}>
+              <Loader2 className="spin" size={36} style={{ color: 'var(--primary-500)' }} />
+              <span style={{ fontSize: '0.88rem', color: 'var(--gray-500)', fontWeight: 600 }}>Cargando lista de participantes inscritos...</span>
+            </div>
+          ) : filteredInscripciones.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--gray-300)' }}>
+              <span style={{ fontSize: '2rem', display: 'block', marginBottom: '10px' }}>📋</span>
+              <p style={{ margin: 0, fontWeight: 700, color: 'var(--gray-600)' }}>No se encontraron participantes en este ciclo.</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: 'var(--gray-400)' }}>Inscribe participantes con el formulario público o con el botón "Importar Lote".</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'var(--primary-900)', color: 'var(--white)' }}>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '50px', textAlign: 'center' }}>Nro</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '110px' }}>C.I.</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '100px' }}>RDA</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase' }}>Apellidos y Nombres</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '90px' }}>Celular</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '180px' }}>SIE / Unidad Educativa</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '140px', textAlign: 'center' }}>Validación SIE</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '130px' }}>Estado Pago</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '160px' }}>Obs. Internas / Validación</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '130px', textAlign: 'center' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInscripciones.map((ins) => {
+                    const p = ins.participantes;
+                    if (!p) return null;
+
+                    return (
+                      <RowComponent
+                        key={ins.id}
+                        ins={ins}
+                        p={p}
+                        onSave={handleUpdateEnrollment}
+                        onDelete={handleDeleteEnrollment}
+                        onEditCore={setEditingPart}
+                        onValidate={handleValidateParticipant}
+                        validating={validatingPartId === ins.id}
+                        sieConnected={!!sieSession}
+                      />
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+        </div>
+
+        {/* Modal Footer */}
+        <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--gray-200)', background: 'var(--gray-50)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
+            Cerrar Ventana
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// Inner helper component to manage individual row state easily without re-rendering the whole table
+interface RowComponentProps {
+  ins: Inscripcion;
+  p: Participante;
+  onSave: (id: number, pagos: string, observaciones: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
+  onEditCore: (p: Participante) => void;
+  onValidate: (ins: Inscripcion) => Promise<void>;
+  validating: boolean;
+  sieConnected: boolean;
+}
+
+function RowComponent({
+  ins,
+  p,
+  onSave,
+  onDelete,
+  onEditCore,
+  onValidate,
+  validating,
+  sieConnected
+}: RowComponentProps) {
+  const [pagos, setPagos] = useState(ins.pagos);
+  const [observaciones, setObservaciones] = useState(ins.observaciones || '');
+  const [saving, setSaving] = useState(false);
+
+  // Detect changes
+  const hasChanges = pagos !== ins.pagos || observaciones !== (ins.observaciones || '');
+
+  const handleSaveClick = async () => {
+    setSaving(true);
+    await onSave(ins.id, pagos, observaciones);
+    setSaving(false);
+  };
+
+  return (
+    <tr style={{ borderBottom: '1px solid var(--gray-100)', transition: 'background var(--transition-fast)' }} className="hover-row">
+      
+      {/* Nro */}
+      <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-600)', fontWeight: 600, textAlign: 'center' }}>
+        {ins.nro}
+      </td>
+      
+      {/* CI */}
+      <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-900)', fontWeight: 600 }}>
+        {p.ci}
+      </td>
+      
+      {/* RDA */}
+      <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-600)' }}>
+        {p.rda || '—'}
+      </td>
+      
+      {/* Apellidos y Nombres */}
+      <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-900)' }}>
+        <div>
+          <b>{p.apellidos}</b><br/>
+          <span>{p.nombres}</span>
+        </div>
+      </td>
+      
+      {/* Celular */}
+      <td style={{ padding: '12px 16px', fontSize: '0.82rem' }}>
+        {p.celular ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>{p.celular}</span>
+            <a 
+              href={`https://wa.me/${p.celular.replace(/\D/g, '')}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#25d366', display: 'inline-flex' }}
+              title="Escribir por WhatsApp"
+            >
+              <Phone size={13} />
+            </a>
+          </div>
+        ) : (
+          <span style={{ color: 'var(--gray-400)' }}>—</span>
+        )}
+      </td>
+      
+      {/* SIE / UE */}
+      <td style={{ padding: '12px 16px', fontSize: '0.78rem', color: 'var(--gray-600)', lineHeight: 1.3 }}>
+        {p.unidad_educativa ? (
+          <div>
+            <b>{p.unidad_educativa}</b><br/>
+            {p.sie && <span style={{ opacity: 0.8 }}>SIE: {p.sie}</span>}
+          </div>
+        ) : (
+          <span style={{ color: 'var(--gray-400)' }}>—</span>
+        )}
+      </td>
+      
+      {/* Validación SIE */}
+      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+        {p.validado ? (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--green-100)', color: 'var(--green-600)', padding: '4px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', fontWeight: 800 }}>
+            <Check size={11} /> VALIDADO
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+            <span style={{ background: p.observaciones_sie ? 'var(--red-100)' : 'var(--gray-100)', color: p.observaciones_sie ? 'var(--red-600)' : 'var(--gray-500)', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontSize: '0.7rem', fontWeight: 800 }}>
+              {p.observaciones_sie ? 'CON DISCREPANCIA' : 'PENDIENTE'}
+            </span>
+            {sieConnected && (
+              <button 
+                type="button" 
+                className="btn btn-ghost btn-xs" 
+                onClick={() => onValidate(ins)}
+                disabled={validating}
+                style={{ padding: '2px 6px', fontSize: '0.7rem', border: '1px solid var(--primary-200)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+              >
+                {validating ? <Loader2 size={10} className="spin" /> : <RefreshCw size={10} />}
+                Validar
+              </button>
+            )}
+          </div>
+        )}
+      </td>
+      
+      {/* Pago */}
+      <td style={{ padding: '12px 16px' }}>
+        <select 
+          value={pagos} 
+          onChange={(e) => setPagos(e.target.value)}
+          style={{ width: '100%', padding: '4px 6px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
+        >
+          <option value="Pendiente">Pendiente</option>
+          <option value="Pagado">Pagado</option>
+          <option value="Media Beca">Media Beca</option>
+          <option value="Beca Completa">Beca Completa</option>
+        </select>
+      </td>
+      
+      {/* Obs. Internas / Validación */}
+      <td style={{ padding: '12px 16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <input 
+            type="text" 
+            value={observaciones} 
+            onChange={(e) => setObservaciones(e.target.value)}
+            placeholder="Obs. internas..."
+            style={{ width: '100%', padding: '4px 8px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
+          />
+          {p.observaciones_sie && (
+            <div style={{ fontSize: '0.7rem', color: 'var(--red-600)', background: 'var(--red-100)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 600, border: '1px dashed var(--red-400)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.2 }}>
+              <b>SIE:</b> {p.observaciones_sie}
+            </div>
+          )}
+        </div>
+      </td>
+      
+      {/* Acciones */}
+      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+          {hasChanges && (
+            <button 
+              type="button" 
+              className="btn btn-success btn-xs" 
+              onClick={handleSaveClick}
+              disabled={saving}
+              title="Guardar observaciones/pago"
+              style={{ padding: '6px' }}
+            >
+              {saving ? <Loader2 size={12} className="spin" /> : <Save size={12} />}
+            </button>
+          )}
+          <button 
+            type="button" 
+            className="btn btn-warning btn-xs" 
+            onClick={() => onEditCore(p)}
+            title="Corregir datos de participante ( spelling / RDA )"
+            style={{ padding: '6px', color: 'var(--gray-900)' }}
+          >
+            <Edit size={12} />
+          </button>
+          <button 
+            type="button" 
+            className="btn btn-danger btn-xs" 
+            onClick={() => onDelete(ins.id)}
+            title="Dar de baja de este ciclo"
+            style={{ padding: '6px' }}
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </td>
+      
+    </tr>
+  );
+}

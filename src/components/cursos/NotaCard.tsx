@@ -1,0 +1,942 @@
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
+import { Curso, HorarioSlot } from '@/types';
+import Swal from 'sweetalert2';
+import { getNoteCompliance } from '@/lib/utils/compliance';
+import { buildMapEmbedSrc, buildMapOpenLink } from '@/lib/utils/maps';
+import { GROUP_COLORS } from '@/lib/utils/colors';
+import { formatFechaDisplay, getTotalHours, getHoursByCourse } from '@/lib/utils/calendar';
+import MiniMonthCalendar from '@/components/calendario/MiniMonthCalendar';
+import {
+  Edit3, Trash2, Users, Wrench, Globe, FileText, BookOpen,
+  ClipboardEdit, ToggleLeft, Link2, MapPin, ExternalLink,
+  Phone, MessageCircle, Share2, Eye, CheckCircle2,
+  Calendar, Clock, Save
+} from 'lucide-react';
+import ParticipantesModal from '@/components/participantes/ParticipantesModal';
+import InscripcionOnlineModal from '@/components/cursos/InscripcionOnlineModal';
+
+interface NotaCardProps {
+  curso: Curso;
+  onEdit: () => void;
+  onDelete: () => void;
+  onUpdate: (data: Partial<Curso>) => void;
+  animationDelay?: number;
+}
+
+export default function NotaCard({
+  curso,
+  onEdit,
+  onDelete,
+  onUpdate,
+  animationDelay = 0,
+}: NotaCardProps) {
+  const [orgNombre, setOrgNombre] = useState(curso.organizador_nombre || '');
+  const [orgTelefono, setOrgTelefono] = useState(curso.organizador_telefono || '');
+  const [orgMaps, setOrgMaps] = useState(curso.organizador_maps || '');
+  const [observaciones, setObservaciones] = useState(curso.observaciones || '');
+  const [linkExterno, setLinkExterno] = useState(curso.link_inscripcion_externo || '');
+  const [noteColor, setNoteColor] = useState(curso.grupo_color || '#2f80ed');
+  const [prev, setPrev] = useState(curso.prev || '');
+  const [showParticipantesModal, setShowParticipantesModal] = useState(false);
+  const [showInscripcionModal, setShowInscripcionModal] = useState(false);
+  const [resolvedMapSrc, setResolvedMapSrc] = useState('');
+
+  useEffect(() => {
+    const rawLocation = orgMaps || curso.lugar || '';
+    if (!rawLocation.trim()) {
+      setResolvedMapSrc('');
+      return;
+    }
+
+    if (rawLocation.includes('maps.app.goo.gl') || rawLocation.includes('goo.gl/maps') || rawLocation.includes('goo.gl')) {
+      fetch(`/api/maps/resolve?url=${encodeURIComponent(rawLocation)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.embedSrc) {
+            setResolvedMapSrc(data.embedSrc);
+          } else {
+            setResolvedMapSrc(buildMapEmbedSrc(rawLocation));
+          }
+        })
+        .catch((err) => {
+          console.error('Error resolving map:', err);
+          setResolvedMapSrc(buildMapEmbedSrc(rawLocation));
+        });
+    } else {
+      setResolvedMapSrc(buildMapEmbedSrc(rawLocation));
+    }
+  }, [orgMaps, curso.lugar]);
+
+  const compliance = getNoteCompliance(curso);
+  const count = curso.inscritos_formulario;
+  const slots = curso.horarios_tentativos || [];
+  const totalHours = getTotalHours(slots);
+  const hoursByCourse = getHoursByCourse(slots);
+
+  const mapLink = buildMapOpenLink(orgMaps || curso.lugar);
+
+  // ─── First course date for calendar display ─────────────────
+  const firstSlot = slots.length > 0
+    ? slots.reduce((a, b) => (a.date < b.date ? a : b))
+    : null;
+
+  // ─── Save organizador ──────────────────────────────────────
+  const handleSaveOrganizador = () => {
+    onUpdate({
+      observaciones,
+      link_inscripcion_externo: linkExterno,
+      grupo_color: noteColor,
+      prev,
+      organizador_nombre: orgNombre,
+      organizador_telefono: orgTelefono,
+      organizador_maps: orgMaps,
+    });
+  };
+
+  // ─── Save calendar slots ───────────────────────────────────
+  const handleSaveSlots = useCallback((newSlots: HorarioSlot[]) => {
+    onUpdate({ horarios_tentativos: newSlots });
+  }, [onUpdate]);
+
+  // ─── Save checks ───────────────────────────────────────────
+  const handleToggleCheck = (field: 'planificacion_recibida' | 'evaluacion_realizada' | 'informe_final_recibido') => {
+    onUpdate({ [field]: !curso[field] });
+  };
+
+  // ─── Print Ficha de Inscripción 2-up Letter (Blank template with official logos) ───
+  const handlePrintFichaInscripcion = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      Swal.fire('Bloqueador', 'Habilita las ventanas flotantes para imprimir la ficha.', 'warning');
+      return;
+    }
+
+    const logoMineduUrl = window.location.origin + '/logo-minedu.jpg';
+    const logoUnefcoUrl = window.location.origin + '/logo-unefco.jpg';
+
+    const buildFichaHtml = () => {
+      return `
+        <div class="ficha">
+          <!-- Header Logos & Title -->
+          <table class="header-table">
+            <tr>
+              <td width="35%" align="left" valign="middle">
+                <img src="${logoMineduUrl}" class="logo-img" alt="Ministerio de Educación" />
+              </td>
+              <td width="30%" align="center" valign="middle">
+                <div class="title-main">FICHA DE INSCRIPCIÓN</div>
+                <div class="title-sub">ITINERARIOS FORMATIVOS - MODALIDAD SEMIPRESENCIAL</div>
+              </td>
+              <td width="35%" align="right" valign="middle">
+                <img src="${logoUnefcoUrl}" class="logo-img" alt="UNEFCO" />
+              </td>
+            </tr>
+          </table>
+
+          <!-- 1. Table for Course Details -->
+          <table class="data-table">
+            <tr>
+              <td class="lbl" width="18%">Area</td>
+              <td class="val">${curso.area_formativa || curso.ciclo_grupo || ''}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Ciclo Formativo</td>
+              <td class="val"><b>${curso.ciclo_nombre || ''}</b></td>
+            </tr>
+            <tr>
+              <td class="lbl">Curso Nº 1</td>
+              <td class="val">${curso.tema1 || ''}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Curso Nº 2</td>
+              <td class="val">${curso.tema2 || ''}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Curso Nº 3</td>
+              <td class="val">${curso.tema3 || ''}</td>
+            </tr>
+            <tr>
+              <td class="lbl">Curso Nº 4</td>
+              <td class="val">${curso.tema4 || ''}</td>
+            </tr>
+          </table>
+
+          <!-- 2. Personal Info Section -->
+          <table class="personal-table">
+            <tr>
+              <td class="lbl" width="20%">Apellido(s) y Nombre(s):</td>
+              <td class="val" colspan="3"></td>
+              <td class="lbl" width="12%">Telf/Cel:</td>
+              <td class="val" width="15%"></td>
+            </tr>
+            <tr>
+              <td class="lbl">Carnet de Identidad:</td>
+              <td class="val" width="25%"></td>
+              <td class="lbl" width="10%">E-mail:</td>
+              <td class="val"></td>
+              <td class="lbl">RDA/RP:</td>
+              <td class="val"></td>
+            </tr>
+            <tr>
+              <td class="lbl">Fecha de Nacimiento:</td>
+              <td class="val" colspan="5"></td>
+            </tr>
+          </table>
+
+          <!-- 3. Form Selection Options (Checkboxes) -->
+          <div class="checks-section">
+            <div class="check-row">
+              <span class="lbl-check">Función que cumple:</span>
+              <span class="chk-box-label">Docente <span class="chk"></span></span>
+              <span class="chk-box-label">Director <span class="chk"></span></span>
+              <span class="chk-box-label">Administrativo <span class="chk"></span></span>
+              <span class="chk-box-label">Estudiante ESFM <span class="chk"></span></span>
+              <span class="chk-box-label">Estudiante Sec. <span class="chk"></span></span>
+              <span class="chk-box-label">Padre de Familia <span class="chk"></span></span>
+              <span class="chk-box-label">No aplica <span class="chk"></span></span>
+            </div>
+
+            <div class="check-row">
+              <span class="lbl-check">Área:</span>
+              <span class="chk-box-label">Urbano <span class="chk"></span></span>
+              <span class="chk-box-label">Rural <span class="chk"></span></span>
+            </div>
+
+            <table class="check-table">
+              <tr>
+                <td width="75%">
+                  <div class="field-line">
+                    <span class="lbl-line">Distrito Educativo:</span>
+                    <span class="val-line"></span>
+                  </div>
+                  <div class="field-line">
+                    <span class="lbl-line">Unidad Educativa:</span>
+                    <span class="val-line"></span>
+                  </div>
+                </td>
+                <td width="25%" align="right">
+                  <div class="check-vertical">
+                    <span class="chk-box-label">No aplica <span class="chk"></span></span>
+                    <span class="chk-box-label">No aplica <span class="chk"></span></span>
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <div class="check-row" style="margin-top: 4px;">
+              <span class="lbl-check">Subsistema:</span>
+              <span class="chk-box-label">Educación Regular <span class="chk"></span></span>
+              <span class="chk-box-label">Educación Alternativa y Especial <span class="chk"></span></span>
+              <span class="chk-box-label">Ed. Superior <span class="chk"></span></span>
+              <span class="chk-box-label">No aplica <span class="chk"></span></span>
+            </div>
+
+            <div class="check-row">
+              <span class="lbl-check">Nivel de Ed. Regular:</span>
+              <span class="chk-box-label">Inicial <span class="chk"></span></span>
+              <span class="chk-box-label">Primaria <span class="chk"></span></span>
+              <span class="chk-box-label">Secundaria <span class="chk"></span></span>
+              <span class="chk-box-label">Ed. Superior <span class="chk"></span></span>
+              <span class="chk-box-label">No aplica <span class="chk"></span></span>
+            </div>
+
+            <table class="check-table" style="margin-top: 4px;">
+              <tr>
+                <td width="55%">
+                  <div class="field-line">
+                    <span class="lbl-line">Especialidad:</span>
+                    <span class="val-line"></span>
+                  </div>
+                </td>
+                <td width="45%">
+                  <div class="field-line">
+                    <span class="lbl-line">Año de Formación:</span>
+                    <span class="val-line"></span>
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <div class="check-row" style="margin-top: 4px;">
+              <span class="lbl-check">Discapacidad:</span>
+              <span class="chk-box-label">Auditiva <span class="chk"></span></span>
+              <span class="chk-box-label">Visual <span class="chk"></span></span>
+              <span class="chk-box-label">Otros <span class="chk"></span></span>
+              <span style="border-bottom: 1px solid #444; width: 140px; display: inline-block; height: 12px; margin-left: 5px;"></span>
+            </div>
+          </div>
+
+          <!-- 4. Footer & Signature -->
+          <table class="footer-table">
+            <tr>
+              <td width="50%" align="left" valign="bottom">
+                <span class="lbl">Fecha de inscripción:</span>
+                <span style="border-bottom: 1px solid #000; padding: 0 20px; font-weight: bold;">
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                </span> / 
+                <span style="border-bottom: 1px solid #000; padding: 0 20px; font-weight: bold;">
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                </span> / 
+                <span style="border-bottom: 1px solid #000; padding: 0 30px; font-weight: bold;">
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                </span>
+              </td>
+              <td width="50%" align="center" valign="bottom">
+                <div class="signature-line"></div>
+                <div class="signature-lbl">Firma Participante</div>
+              </td>
+            </tr>
+          </table>
+        </div>
+      `;
+    };
+
+    const fichaHtml = buildFichaHtml();
+
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>Ficha de Inscripción - ID ${curso.id}</title>
+        <style>
+          @page {
+            size: letter portrait;
+            margin: 0.25in 0.25in;
+          }
+          html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background: #fff;
+          }
+          .sheet-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            justify-content: space-between;
+            box-sizing: border-box;
+            padding: 0.1in 0;
+            position: relative;
+          }
+          .ficha {
+            height: 48%;
+            box-sizing: border-box;
+            border: 2px solid #000;
+            border-radius: 4px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            background: #fff;
+          }
+          
+          /* Custom divider to guide cutting the sheet */
+          .divider-line {
+            border-top: 1.5px dashed #777;
+            width: 100%;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 8pt;
+            color: #555;
+            box-sizing: border-box;
+          }
+          
+          /* Table structures */
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          
+          /* Header Logos styling */
+          .header-table {
+            margin-bottom: 6px;
+            border-bottom: 1.5px solid #000;
+            padding-bottom: 4px;
+          }
+          .logo-img {
+            height: 44px;
+            max-width: 100%;
+            object-fit: contain;
+            display: block;
+          }
+          .title-main {
+            font-size: 13pt;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            color: #000;
+            line-height: 1.1;
+          }
+          .title-sub {
+            font-size: 7.2pt;
+            font-weight: bold;
+            color: #333;
+          }
+
+          /* General Label / Values */
+          .lbl {
+            font-size: 7.8pt;
+            font-weight: bold;
+            color: #000;
+          }
+          .val {
+            font-size: 8.2pt;
+            color: #111;
+          }
+
+          /* Courses data table */
+          .data-table {
+            margin-bottom: 6px;
+          }
+          .data-table td {
+            border: 1px solid #000;
+            padding: 3px 5px;
+            vertical-align: middle;
+          }
+          .data-table .lbl {
+            background-color: #f2f2f2;
+            text-align: right;
+            padding-right: 8px;
+          }
+          
+          /* Personal table */
+          .personal-table {
+            margin-bottom: 6px;
+          }
+          .personal-table td {
+            border: 1px solid #000;
+            padding: 3px 5px;
+            vertical-align: middle;
+          }
+          .personal-table .lbl {
+            background-color: #f2f2f2;
+            text-align: right;
+            padding-right: 6px;
+          }
+
+          /* Checkboxes */
+          .checks-section {
+            font-size: 7pt;
+            line-height: 1.15;
+            margin-bottom: 6px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+          }
+          .check-row {
+            margin-bottom: 4px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+          }
+          .lbl-check {
+            font-weight: bold;
+            margin-right: 8px;
+            width: 100px;
+            display: inline-block;
+          }
+          .chk-box-label {
+            margin-right: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+          }
+          .chk {
+            display: inline-block;
+            width: 11px;
+            height: 11px;
+            border: 1.5px solid #000;
+            text-align: center;
+            font-size: 7pt;
+            line-height: 11px;
+            font-weight: bold;
+            background: #fff;
+          }
+
+          .check-table {
+            width: 100%;
+          }
+          .check-table td {
+            padding: 0;
+            vertical-align: middle;
+          }
+          .field-line {
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: 3px;
+            width: 98%;
+          }
+          .lbl-line {
+            font-weight: bold;
+            margin-right: 6px;
+            white-space: nowrap;
+          }
+          .val-line {
+            border-bottom: 1px solid #444;
+            flex: 1;
+            padding-left: 5px;
+            font-size: 8pt;
+            font-weight: bold;
+            height: 13px;
+            line-height: 13px;
+          }
+          .check-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            align-items: flex-end;
+          }
+
+          /* Footer / Signatures */
+          .footer-table {
+            margin-top: auto;
+            padding-top: 6px;
+          }
+          .signature-line {
+            border-top: 1px solid #000;
+            width: 80%;
+            margin: 0 auto;
+          }
+          .signature-lbl {
+            font-size: 8pt;
+            font-weight: bold;
+            margin-top: 2px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="sheet-container">
+          <!-- Duplicate Copy 1 (UNEFCO COPY) -->
+          ${fichaHtml}
+          
+          <!-- Visual line dividing the page when cutting -->
+          <div class="divider-line">✂------------------- CORTE POR AQUÍ PARA ENTREGAR AL MAESTRO / UNEFCO -------------------✂</div>
+          
+          <!-- Duplicate Copy 2 (PARTICIPANT COPY) -->
+          ${fichaHtml}
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  // ─── Dates summary ─────────────────────────────────────────
+  const courseDatesStr = slots
+    .filter((s) => typeof s.course === 'number' || ['1','2','3','4'].includes(String(s.course)))
+    .map((s) => s.date)
+    .sort();
+  const dateRangeLabel = courseDatesStr.length > 0
+    ? `${formatFechaDisplay(courseDatesStr[0])} - ${formatFechaDisplay(courseDatesStr[courseDatesStr.length - 1])}`
+    : 'Sin fechas';
+
+  return (
+    <div
+      className="nota-card"
+      style={{
+        '--nota-color': noteColor,
+        animationDelay: `${animationDelay}s`,
+      } as React.CSSProperties}
+    >
+      {/* ─── Head ────────────────────────────────────────── */}
+      <div className="nota-head" style={{ background: noteColor }}>
+        <div className="nota-head-left">
+          <h3>{curso.grupo_nombre || 'Sin grupo'}</h3>
+          <span className="nota-head-pill">
+            <Calendar size={11} /> {curso.ciclo_nombre ? curso.ciclo_nombre.substring(0, 30) : curso.segmento || ''}
+          </span>
+        </div>
+        <div className="nota-head-right">
+          <div className="nota-count-wrapper" onClick={(e) => e.stopPropagation()}>
+            <div className="nota-count-value">{count}</div>
+            <div className="nota-count-label">INSCRITOS</div>
+          </div>
+          <button className="btn btn-sm" onClick={onEdit} title="Editar">
+            <Edit3 size={13} /> Editar
+          </button>
+          <button className="btn btn-sm" onClick={onDelete} title="Eliminar">
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Subbar ──────────────────────────────────────── */}
+      <div className="nota-subbar">
+        <span><Calendar size={13} /> Calendario y control de la nota</span>
+        <span>{dateRangeLabel}</span>
+      </div>
+
+      {/* ─── Layout ──────────────────────────────────────── */}
+      <div className="nota-layout">
+        {/* ─── Left Panel ──────────────────────────────── */}
+        <div className="nota-left">
+          {/* ID + State */}
+          <div className="nota-id-row">
+            <span className="nota-id">ID: {curso.id}</span>
+            <span className={`nota-state-chip ${curso.estado === 'EJECUTADO' ? 'ejecutado' : 'por-ejecutar'}`}>
+              {curso.estado === 'EJECUTADO' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+              {curso.estado}
+            </span>
+          </div>
+
+          {/* Preventivo */}
+          <div className="nota-preventivo">
+            <span className="prev-label">PREV:</span>
+            <input
+              type="text"
+              value={prev}
+              onChange={(e) => setPrev(e.target.value)}
+              placeholder="N° preventivo"
+            />
+            <button className="btn btn-success btn-xs" onClick={() => onUpdate({ prev })}>
+              <Save size={11} />
+            </button>
+          </div>
+
+          {/* Info Grid */}
+          <div className="nota-info-grid">
+            <div className="nota-info-row">
+              <b>Grupo:</b>
+              <span>{curso.grupo_nombre || '—'}</span>
+            </div>
+            <div className="nota-info-row">
+              <b>Área:</b>
+              <span>{curso.area_formativa || curso.ciclo_grupo || '—'}</span>
+            </div>
+            <div className="nota-info-row">
+              <b>Ciclo:</b>
+              <span>{curso.ciclo_nombre || '—'}</span>
+            </div>
+            <div className="nota-info-row">
+              <b>Facilitador:</b>
+              <span>{curso.facilitador_nombre || '—'}</span>
+            </div>
+            <div className="nota-info-row">
+              <b>Distrito:</b>
+              <span>{curso.distrito || '—'}</span>
+            </div>
+            <div className="nota-info-row">
+              <b>Inicio:</b>
+              <span>
+                {courseDatesStr.length > 0
+                  ? courseDatesStr.map((d, i) => {
+                      const slot = slots.find((s) => s.date === d);
+                      const key = String(slot?.course || '');
+                      return `C${key}: ${formatFechaDisplay(d)}`;
+                    }).filter((v, i, a) => a.indexOf(v) === i).join(' | ')
+                  : formatFechaDisplay(curso.fecha_inicio) || '—'
+                }
+              </span>
+            </div>
+            <div className="nota-info-row">
+              <b>Lugar:</b>
+              <span>{curso.lugar || '—'}</span>
+            </div>
+            <div className="nota-info-row">
+              <b>Técnico:</b>
+              <span>{curso.tecnico_nombre || '—'}</span>
+            </div>
+          </div>
+
+          {/* Total */}
+          <div className="nota-total-bar">
+            <small>TOTAL ESTIMADO</small>
+            <span>{curso.total_bs ? `${curso.total_bs} Bs` : '0 Bs'}</span>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="nota-actions-grid">
+            <button className="btn btn-warning btn-sm" onClick={onEdit}>
+              <Edit3 size={12} /> Editar
+            </button>
+            <button className="btn btn-danger btn-sm" onClick={onDelete}>
+              <Trash2 size={12} /> Eliminar
+            </button>
+            <button className="btn btn-teal btn-sm" onClick={() => setShowParticipantesModal(true)}>
+              <Users size={12} /> Participantes
+            </button>
+            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
+              <Globe size={12} /> Insc. online
+            </button>
+            <button className="btn btn-purple btn-sm" onClick={handlePrintFichaInscripcion}>
+              <FileText size={12} /> Ficha inscripción
+            </button>
+            <button className="btn btn-orange btn-sm">
+              <BookOpen size={12} /> Registro Pedg
+            </button>
+            <button 
+              className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
+              onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
+            >
+              <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
+            </button>
+            <button 
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                const link = `${window.location.origin}/participantes/${curso.id}`;
+                navigator.clipboard.writeText(link);
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Enlace copiado',
+                  text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
+                  timer: 2500,
+                  showConfirmButton: false,
+                  toast: true,
+                  position: 'top-end'
+                });
+              }}
+            >
+              <Link2 size={12} /> Link público
+            </button>
+          </div>
+        </div>
+
+        {/* ─── Center Panel ────────────────────────────── */}
+        <div className="nota-center">
+          {/* Organizador */}
+          <div className="organizador-section">
+            <div className="organizador-title">
+              <Users size={14} /> Datos del Organizador
+            </div>
+            <div className="organizador-grid">
+              <div className="organizador-field">
+                <label>Organizador</label>
+                <input
+                  type="text"
+                  value={orgNombre}
+                  onChange={(e) => setOrgNombre(e.target.value)}
+                  placeholder="Nombre del organizador"
+                />
+              </div>
+              <div className="organizador-field">
+                <label>Celular</label>
+                <input
+                  type="text"
+                  value={orgTelefono}
+                  onChange={(e) => setOrgTelefono(e.target.value)}
+                  placeholder="Teléfono"
+                />
+              </div>
+              <div className="organizador-field full">
+                <label>Link Maps</label>
+                <input
+                  type="text"
+                  value={orgMaps}
+                  onChange={(e) => setOrgMaps(e.target.value)}
+                  placeholder="https://maps.app.goo.gl/..."
+                />
+              </div>
+              <div className="organizador-field full">
+                <label>Observaciones</label>
+                <textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  placeholder="Pendientes, detalles del organizador..."
+                />
+              </div>
+              <div className="organizador-field full">
+                <label>Link de inscripción</label>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={linkExterno}
+                    onChange={(e) => setLinkExterno(e.target.value)}
+                    placeholder="Google Sheet, formulario externo o lista compartida..."
+                    style={{ flex: 1 }}
+                  />
+                  {linkExterno && (
+                    <a
+                      href={linkExterno}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary btn-xs"
+                    >
+                      <ExternalLink size={11} /> Abrir
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div className="organizador-field full">
+                <label>Color</label>
+                <div className="color-swatches">
+                  {GROUP_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      className={`color-swatch ${noteColor === c ? 'active' : ''}`}
+                      style={{ background: c }}
+                      onClick={() => setNoteColor(c)}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="organizador-field full" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="btn btn-success btn-sm" onClick={handleSaveOrganizador}>
+                  <Save size={12} /> Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Section */}
+          <div className="calendar-section">
+            <MiniMonthCalendar
+              slots={slots}
+              onSaveSlots={handleSaveSlots}
+              noteColor={noteColor}
+              initialDate={firstSlot ? new Date(firstSlot.date) : undefined}
+            />
+          </div>
+
+          {/* Compliance */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="compliance-strip">
+              {compliance.map((alert, i) => (
+                <div key={i} className={`compliance-chip ${alert.severity}`}>
+                  {alert.label}
+                </div>
+              ))}
+            </div>
+
+            {/* Hours summary */}
+            {totalHours > 0 && (
+              <div className="soc-days-badge">
+                <Clock size={11} /> {totalHours} hrs total
+                {Object.entries(hoursByCourse).map(([k, v]) => (
+                  <span key={k} style={{ opacity: 0.8 }}> • {k.toUpperCase()}: {v}h</span>
+                ))}
+              </div>
+            )}
+
+            {/* Checks */}
+            <div className="compliance-checks">
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.planificacion_recibida}
+                  onChange={() => handleToggleCheck('planificacion_recibida')}
+                />
+                Planificación recibida
+              </label>
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.evaluacion_realizada}
+                  onChange={() => handleToggleCheck('evaluacion_realizada')}
+                />
+                Evaluación realizada
+              </label>
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.informe_final_recibido}
+                  onChange={() => handleToggleCheck('informe_final_recibido')}
+                />
+                Informe final recibido
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Bottom Panel ────────────────────────────────── */}
+      <div className="nota-bottom">
+        {/* Map */}
+        <div className="map-panel">
+          <div className="map-title">
+            <h4><MapPin size={14} /> Ubicación exacta</h4>
+            {mapLink && (
+              <a href={mapLink} target="_blank" rel="noopener noreferrer">
+                Ver en Google <ExternalLink size={11} />
+              </a>
+            )}
+          </div>
+          <div className="map-preview">
+            {resolvedMapSrc ? (
+              <iframe
+                src={resolvedMapSrc}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            ) : (
+              <div className="map-empty">
+                <div>
+                  <MapPin size={28} style={{ opacity: 0.4 }} />
+                  <p>Sin ubicación registrada</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Share actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {orgTelefono && (
+            <>
+              <a
+                href={`https://wa.me/${orgTelefono.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-whatsapp btn-sm"
+                style={{ width: '100%', textDecoration: 'none' }}
+              >
+                <MessageCircle size={12} /> WhatsApp
+              </a>
+              <a
+                href={`tel:${orgTelefono}`}
+                className="btn btn-primary btn-sm"
+                style={{ width: '100%', textDecoration: 'none' }}
+              >
+                <Phone size={12} /> Llamar
+              </a>
+            </>
+          )}
+          {mapLink && (
+            <button
+              className="btn btn-map btn-sm"
+              style={{ width: '100%' }}
+              onClick={() => {
+                navigator.clipboard?.writeText(mapLink);
+              }}
+            >
+              <Share2 size={12} /> Compartir ubicación
+            </button>
+          )}
+          {curso.form_url && (
+            <a
+              href={curso.form_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-purple btn-sm"
+              style={{ width: '100%', textDecoration: 'none' }}
+            >
+              <Eye size={12} /> Ver formulario
+            </a>
+          )}
+        </div>
+      </div>
+      {showParticipantesModal && (
+        <ParticipantesModal
+          curso={curso}
+          onClose={() => setShowParticipantesModal(false)}
+          onRefresh={() => onUpdate({ id: curso.id })}
+        />
+      )}
+      {showInscripcionModal && (
+        <InscripcionOnlineModal
+          curso={curso}
+          onClose={() => setShowInscripcionModal(false)}
+        />
+      )}
+    </div>
+  );
+}

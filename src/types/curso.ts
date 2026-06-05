@@ -50,6 +50,7 @@ export interface Curso {
   informe_final_recibido: boolean;
   created_at: string;
   updated_at: string;
+  form_habilitado?: boolean;
 
   // Campos enriquecidos (del JOIN / vista)
   tecnico_nombre?: string;
