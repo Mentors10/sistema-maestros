@@ -117,17 +117,17 @@ export function getCourseRanges(slots: HorarioSlot[]): Map<string, number> {
 
     if (courseSlots.length === 0 || socSlots.length === 0) continue;
 
-    // Encontrar la última fecha del curso y la primera fecha de socialización
-    const courseDates = courseSlots.map((s) => new Date(s.date)).sort((a, b) => a.getTime() - b.getTime());
-    const socDates = socSlots.map((s) => new Date(s.date)).sort((a, b) => a.getTime() - b.getTime());
+    // Encontrar la primera fecha del curso y la primera fecha de socialización
+    const courseDates = courseSlots.map((s) => parseLocalDate(s.date)).sort((a, b) => a.getTime() - b.getTime());
+    const socDates = socSlots.map((s) => parseLocalDate(s.date)).sort((a, b) => a.getTime() - b.getTime());
 
-    const lastCourseDate = courseDates[courseDates.length - 1];
+    const firstCourseDate = courseDates[0];
     const firstSocDate = socDates[0];
 
-    if (lastCourseDate >= firstSocDate) continue;
+    if (firstCourseDate >= firstSocDate) continue;
 
-    // Llenar los días intermedios
-    const current = new Date(lastCourseDate);
+    // Llenar los días intermedios (desde el primer día de clase hasta la socialización)
+    const current = new Date(firstCourseDate);
     current.setDate(current.getDate() + 1);
     while (current < firstSocDate) {
       ranges.set(formatDateStr(current), courseNum);
@@ -136,6 +136,41 @@ export function getCourseRanges(slots: HorarioSlot[]): Map<string, number> {
   }
 
   return ranges;
+}
+
+export interface ReportRangeInfo {
+  courseNum: number;
+  isDeadline: boolean;
+}
+
+export function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+export function getReportRanges(slots: HorarioSlot[]): Map<string, ReportRangeInfo> {
+  const reportRanges = new Map<string, ReportRangeInfo>();
+
+  for (const courseNum of [1, 2, 3, 4]) {
+    const socSlots = slots.filter((s) => String(s.course) === `soc${courseNum}`);
+    if (socSlots.length === 0) continue;
+
+    const socDates = socSlots.map((s) => parseLocalDate(s.date)).sort((a, b) => a.getTime() - b.getTime());
+    const socDate = socDates[0];
+
+    for (let dayOffset = 1; dayOffset <= 5; dayOffset++) {
+      const current = new Date(socDate);
+      current.setDate(current.getDate() + dayOffset);
+      const dateStr = formatDateStr(current);
+      
+      reportRanges.set(dateStr, {
+        courseNum,
+        isDeadline: dayOffset === 5
+      });
+    }
+  }
+
+  return reportRanges;
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Grupo, Curso } from '@/types';
-import { LayoutGrid, ChevronRight, Edit3, Hash } from 'lucide-react';
+import { LayoutGrid, ChevronRight, Edit3, Hash, ArrowUp, ArrowDown } from 'lucide-react';
 import NotaCard from './NotaCard';
 import Swal from 'sweetalert2';
 
@@ -13,6 +13,10 @@ interface GrupoCardProps {
   onDeleteCurso: (id: string) => void;
   onUpdateCurso: (id: string, data: Partial<Curso>) => void;
   onRenameGrupo: (oldName: string, newName: string) => void;
+  onMoveGrupo?: (nombre: string, direction: 'up' | 'down') => void;
+  isFirst?: boolean;
+  isLast?: boolean;
+  onManageParticipantes: (curso: Curso) => void;
 }
 
 export default function GrupoCard({
@@ -22,6 +26,10 @@ export default function GrupoCard({
   onDeleteCurso,
   onUpdateCurso,
   onRenameGrupo,
+  onMoveGrupo,
+  isFirst = false,
+  isLast = false,
+  onManageParticipantes,
 }: GrupoCardProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -68,6 +76,32 @@ export default function GrupoCard({
         <div className="grupo-header-right">
 
 
+          {/* Move Up/Down arrows */}
+          {onMoveGrupo && (
+            <div style={{ display: 'flex', gap: '4px', marginRight: '4px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={isFirst}
+                onClick={(e) => { e.stopPropagation(); onMoveGrupo(grupo.nombre, 'up'); }}
+                title="Subir grupo"
+                style={{ padding: '6px', minWidth: '28px', opacity: isFirst ? 0.4 : 1, cursor: isFirst ? 'not-allowed' : 'pointer' }}
+              >
+                <ArrowUp size={12} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={isLast}
+                onClick={(e) => { e.stopPropagation(); onMoveGrupo(grupo.nombre, 'down'); }}
+                title="Bajar grupo"
+                style={{ padding: '6px', minWidth: '28px', opacity: isLast ? 0.4 : 1, cursor: isLast ? 'not-allowed' : 'pointer' }}
+              >
+                <ArrowDown size={12} />
+              </button>
+            </div>
+          )}
+
           {/* Rename */}
           <button
             className="btn btn-secondary btn-sm"
@@ -90,6 +124,7 @@ export default function GrupoCard({
             onEdit={() => onEditCurso(curso)}
             onDelete={() => onDeleteCurso(curso.id)}
             onUpdate={(data) => onUpdateCurso(curso.id, data)}
+            onManageParticipantes={onManageParticipantes}
             animationDelay={idx * 0.06}
           />
         ))}

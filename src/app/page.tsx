@@ -9,6 +9,7 @@ import GrupoCard from '@/components/cursos/GrupoCard';
 import CursoForm from '@/components/cursos/CursoForm';
 import AgendaCard from '@/components/agenda/AgendaCard';
 import AgendaForm from '@/components/agenda/AgendaForm';
+import ParticipantesModal from '@/components/participantes/ParticipantesModal';
 import Swal from 'sweetalert2';
 
 export default function HomePage() {
@@ -26,6 +27,27 @@ export default function HomePage() {
 
   const [showAgendaForm, setShowAgendaForm] = useState(false);
   const [editingContacto, setEditingContacto] = useState<AgendaContacto | null>(null);
+
+  const [activeCursoParticipantes, setActiveCursoParticipantes] = useState<Curso | null>(null);
+  const [customGrupoOrder, setCustomGrupoOrder] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('grupo_orden');
+      if (stored) {
+        try {
+          setCustomGrupoOrder(JSON.parse(stored));
+        } catch (e) {
+          console.error('Failed to parse group_orden from localStorage', e);
+        }
+      }
+    }
+  }, []);
+
+  const currentModalCurso = useMemo(() => {
+    if (!activeCursoParticipantes) return null;
+    return cursos.find((c) => c.id === activeCursoParticipantes.id) || activeCursoParticipantes;
+  }, [cursos, activeCursoParticipantes]);
 
   // ─── Load data ──────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -182,8 +204,35 @@ export default function HomePage() {
       map.get(key)!.cursos.push(c);
     });
 
-    return Array.from(map.values());
-  }, [filteredCursos, filters.agruparPor]);
+    const list = Array.from(map.values());
+
+    if (filters.agruparPor === 'grupo') {
+      const getGroupMinCreatedAt = (g: Grupo) => {
+        const times = g.cursos.map((c) => c.created_at).filter(Boolean);
+        if (times.length === 0) return '';
+        times.sort();
+        return times[0];
+      };
+
+      list.sort((a, b) => {
+        const indexA = customGrupoOrder.indexOf(a.nombre);
+        const indexB = customGrupoOrder.indexOf(b.nombre);
+
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+        if (indexA !== -1) return 1;
+        if (indexB !== -1) return -1;
+
+        // Default: newest groups at the top (highest minimum created_at first)
+        const timeA = getGroupMinCreatedAt(a);
+        const timeB = getGroupMinCreatedAt(b);
+        return timeB.localeCompare(timeA);
+      });
+    }
+
+    return list;
+  }, [filteredCursos, filters.agruparPor, customGrupoOrder]);
 
   // ─── Available group names for filter ───────────────────────
   const grupoNames = useMemo(() => {
@@ -317,6 +366,22 @@ export default function HomePage() {
       Swal.fire('Error', errorMsg, 'error');
     }
   };
+
+  const handleMoveGrupo = useCallback((nombre: string, direction: 'up' | 'down') => {
+    const currentGroupNames = grupos.map((g) => g.nombre);
+    const index = currentGroupNames.indexOf(nombre);
+    if (index === -1) return;
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= currentGroupNames.length) return;
+
+    const newOrder = [...currentGroupNames];
+    newOrder[index] = currentGroupNames[newIndex];
+    newOrder[newIndex] = currentGroupNames[index];
+
+    setCustomGrupoOrder(newOrder);
+    localStorage.setItem('grupo_orden', JSON.stringify(newOrder));
+  }, [grupos]);
 
   // ─── Agenda CRUD callbacks ──────────────────────────────────
   const handleSaveContacto = async (data: Partial<AgendaContacto>) => {
@@ -591,7 +656,7 @@ export default function HomePage() {
       )}
 
       {/* Content */}
-      {loading ? (
+      {loading && (viewMode === 'cursos' ? cursos.length === 0 : agenda.length === 0) ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', padding: '20px 0' }}>
           {[1, 2, 3].map((i) => (
             <div key={i} className="skeleton skeleton-card" />
@@ -609,7 +674,7 @@ export default function HomePage() {
             </p>
           </div>
         ) : (
-          grupos.map((grupo) => (
+          grupos.map((grupo, idx) => (
             <GrupoCard
               key={grupo.nombre}
               grupo={grupo}
@@ -618,6 +683,10 @@ export default function HomePage() {
               onDeleteCurso={handleDeleteCurso}
               onUpdateCurso={handleUpdateCurso}
               onRenameGrupo={handleRenameGrupo}
+              onMoveGrupo={filters.agruparPor === 'grupo' ? handleMoveGrupo : undefined}
+              isFirst={idx === 0}
+              isLast={idx === grupos.length - 1}
+              onManageParticipantes={setActiveCursoParticipantes}
             />
           ))
         )
@@ -646,6 +715,14 @@ export default function HomePage() {
             ))}
           </div>
         )
+      )}
+
+      {currentModalCurso && (
+        <ParticipantesModal
+          curso={currentModalCurso}
+          onClose={() => setActiveCursoParticipantes(null)}
+          onRefresh={loadData}
+        />
       )}
     </div>
   );

@@ -14,7 +14,6 @@ import {
   Phone, MessageCircle, Share2, Eye, CheckCircle2,
   Calendar, Clock, Save
 } from 'lucide-react';
-import ParticipantesModal from '@/components/participantes/ParticipantesModal';
 import InscripcionOnlineModal from '@/components/cursos/InscripcionOnlineModal';
 
 interface NotaCardProps {
@@ -22,6 +21,7 @@ interface NotaCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onUpdate: (data: Partial<Curso>) => void;
+  onManageParticipantes: (curso: Curso) => void;
   animationDelay?: number;
 }
 
@@ -30,6 +30,7 @@ export default function NotaCard({
   onEdit,
   onDelete,
   onUpdate,
+  onManageParticipantes,
   animationDelay = 0,
 }: NotaCardProps) {
   const [orgNombre, setOrgNombre] = useState(curso.organizador_nombre || '');
@@ -39,7 +40,6 @@ export default function NotaCard({
   const [linkExterno, setLinkExterno] = useState(curso.link_inscripcion_externo || '');
   const [noteColor, setNoteColor] = useState(curso.grupo_color || '#2f80ed');
   const [prev, setPrev] = useState(curso.prev || '');
-  const [showParticipantesModal, setShowParticipantesModal] = useState(false);
   const [showInscripcionModal, setShowInscripcionModal] = useState(false);
   const [resolvedMapSrc, setResolvedMapSrc] = useState('');
 
@@ -661,7 +661,7 @@ export default function NotaCard({
             <button className="btn btn-danger btn-sm" onClick={onDelete}>
               <Trash2 size={12} /> Eliminar
             </button>
-            <button className="btn btn-teal btn-sm" onClick={() => setShowParticipantesModal(true)}>
+            <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
               <Users size={12} /> Participantes
             </button>
             <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
@@ -793,18 +793,12 @@ export default function NotaCard({
               onSaveSlots={handleSaveSlots}
               noteColor={noteColor}
               initialDate={firstSlot ? new Date(firstSlot.date) : undefined}
+              compliance={compliance}
             />
           </div>
 
           {/* Compliance */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div className="compliance-strip">
-              {compliance.map((alert, i) => (
-                <div key={i} className={`compliance-chip ${alert.severity}`}>
-                  {alert.label}
-                </div>
-              ))}
-            </div>
 
             {/* Hours summary */}
             {totalHours > 0 && (
@@ -924,13 +918,6 @@ export default function NotaCard({
           )}
         </div>
       </div>
-      {showParticipantesModal && (
-        <ParticipantesModal
-          curso={curso}
-          onClose={() => setShowParticipantesModal(false)}
-          onRefresh={() => onUpdate({ id: curso.id })}
-        />
-      )}
       {showInscripcionModal && (
         <InscripcionOnlineModal
           curso={curso}

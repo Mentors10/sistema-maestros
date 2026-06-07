@@ -1,19 +1,21 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { HorarioSlot } from '@/types';
 import {
   getMonthDays, DAY_NAMES_SHORT, MONTH_NAMES, formatDateStr,
-  getSlotsForDate, autoAssignSocNumber, getCourseRanges,
+  getSlotsForDate, autoAssignSocNumber, getCourseRanges, getReportRanges, ReportRangeInfo
 } from '@/lib/utils/calendar';
 import { CALENDAR_DAY_COLORS, RANGE_COLORS, getCourseLabel, getCourseColor, COURSE_COLORS } from '@/lib/utils/colors';
 import { ChevronLeft, ChevronRight, Plus, Trash2, X, Calendar } from 'lucide-react';
+import { ComplianceAlert } from '@/lib/utils/compliance';
 
 interface MiniMonthCalendarProps {
   slots: HorarioSlot[];
   onSaveSlots: (slots: HorarioSlot[]) => void;
   noteColor?: string;
   initialDate?: Date;
+  compliance?: ComplianceAlert[];
 }
 
 export default function MiniMonthCalendar({
@@ -21,6 +23,7 @@ export default function MiniMonthCalendar({
   onSaveSlots,
   noteColor = '#2f80ed',
   initialDate,
+  compliance = [],
 }: MiniMonthCalendarProps) {
   const now = new Date();
   const [year, setYear] = useState(initialDate?.getFullYear() || now.getFullYear());
@@ -32,7 +35,8 @@ export default function MiniMonthCalendar({
   const calRef = useRef<HTMLDivElement>(null);
 
   const days = getMonthDays(year, month);
-  const ranges = getCourseRanges(slots);
+  const ranges = useMemo(() => getCourseRanges(slots), [slots]);
+  const reportRanges = useMemo(() => getReportRanges(slots), [slots]);
 
   // ─── Navigate ───────────────────────────────────────────────
   const prevMonth = () => {
@@ -106,11 +110,43 @@ export default function MiniMonthCalendar({
   // ─── Get cell styles ──────────────────────────────────────
   const getDayCellStyle = (dateStr: string) => {
     const daySlots = getSlotsForDate(slots, dateStr);
+
+    const hasPlanningDelay = compliance.some((a) => a.type === 'planificacion-atrasada');
+    const hasPlanningRequired = compliance.some((a) => a.type === 'planificacion-requerida');
+    const hasEvalDelay = compliance.some((a) => a.type === 'eval-pendiente');
+
     if (daySlots.length > 0) {
       const mainSlot = daySlots[0];
       const key = String(mainSlot.course);
       const colors = CALENDAR_DAY_COLORS[key];
       if (colors) {
+        // Class slots
+        if (['1', '2', '3', '4'].includes(key)) {
+          if (hasPlanningDelay) {
+            return {
+              background: colors.bg,
+              borderColor: '#dc2626', // Red border
+              borderWidth: '2.5px',
+              boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.15)'
+            };
+          } else if (hasPlanningRequired) {
+            return {
+              background: colors.bg,
+              borderColor: '#d97706', // Yellow/Amber border
+              borderWidth: '2.5px',
+              boxShadow: '0 0 0 2px rgba(217, 119, 6, 0.15)'
+            };
+          }
+        }
+        // Evaluation slots
+        if (key.startsWith('eval') && hasEvalDelay) {
+          return {
+            background: '#fee2e2',
+            borderColor: '#dc2626',
+            borderWidth: '2.5px',
+            boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.15)'
+          };
+        }
         return { background: colors.bg, borderColor: colors.border };
       }
     }
@@ -119,6 +155,35 @@ export default function MiniMonthCalendar({
     if (rangeNum) {
       const rc = RANGE_COLORS[String(rangeNum)];
       if (rc) return { background: rc.bg, borderColor: rc.border };
+    }
+    // Check report ranges
+    const reportInfo = reportRanges.get(dateStr);
+    if (reportInfo) {
+      const hasReportDelay = compliance.some((a) => a.type === 'informe-atrasado');
+      const hasReportWarning = compliance.some((a) => a.type === 'informe-por-vencer');
+
+      if (hasReportDelay) {
+        return {
+          background: '#fef2f2',
+          borderColor: '#fca5a5',
+          borderStyle: 'dashed',
+          borderWidth: '1.5px',
+        };
+      } else if (hasReportWarning) {
+        return {
+          background: '#fffbeb',
+          borderColor: '#fde047',
+          borderStyle: 'dashed',
+          borderWidth: '1.5px',
+        };
+      } else {
+        return {
+          background: '#eef2ff',
+          borderColor: '#c7d2fe',
+          borderStyle: 'dashed',
+          borderWidth: '1.5px',
+        };
+      }
     }
     return {};
   };
@@ -150,6 +215,10 @@ export default function MiniMonthCalendar({
         {days.map((day, i) => {
           const daySlots = getSlotsForDate(slots, day.dateStr);
           const cellStyle = getDayCellStyle(day.dateStr);
+          
+          const reportInfo = reportRanges.get(day.dateStr);
+          const isReportDeadline = reportInfo?.isDeadline;
+          const reportCourseNum = reportInfo?.courseNum;
 
           return (
             <div
@@ -168,10 +237,60 @@ export default function MiniMonthCalendar({
                   ))}
                 </div>
               )}
+              {isReportDeadline && (() => {
+                const hasReportDelay = compliance.some((a) => a.type === 'informe-atrasado');
+                const hasReportWarning = compliance.some((a) => a.type === 'informe-por-vencer');
+
+                let textColor = '#4f46e5';
+                let bgColor = '#e0e7ff';
+                let borderColor = '#c7d2fe';
+                if (hasReportDelay) {
+                  textColor = '#b91c1c';
+                  bgColor = '#fee2e2';
+                  borderColor = '#fca5a5';
+                } else if (hasReportWarning) {
+                  textColor = '#b45309';
+                  bgColor = '#fef3c7';
+                  borderColor = '#fde047';
+                }
+
+                return (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
+                    <span 
+                      style={{ 
+                        fontSize: '0.62rem', 
+                        fontWeight: 800, 
+                        color: textColor, 
+                        backgroundColor: bgColor,
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                        border: `1px solid ${borderColor}`
+                      }}
+                      title="Fecha límite de entrega de informe"
+                    >
+                      INF{reportCourseNum}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
       </div>
+
+      {compliance.length > 0 && (
+        <div className="calendar-compliance-strip" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '10px 14px', background: 'var(--gray-50)', borderTop: '1px solid var(--gray-200)', alignItems: 'center' }}>
+          {compliance.map((alert, idx) => (
+            <div key={idx} className={`compliance-chip ${alert.severity}`} style={{ fontSize: '0.7rem', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+              {alert.label}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Day Popover */}
       {popoverDate && (
