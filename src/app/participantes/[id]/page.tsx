@@ -75,17 +75,28 @@ export default function ParticipanteRegistroPage() {
       if (countError) throw countError;
       const nextNro = countData && countData.length > 0 ? (countData[0].nro + 1) : 1;
 
+      // Fetch existing participant record to merge and prevent nulling out existing fields
+      const { data: dbPart, error: fetchPartErr } = await supabase
+        .from('participantes')
+        .select('*')
+        .eq('ci', ci.trim())
+        .maybeSingle();
+
+      if (fetchPartErr) throw fetchPartErr;
+
       // 2. Upsert participant core info
       const { error: partError } = await supabase
         .from('participantes')
         .upsert({
           ci: ci.trim(),
-          apellidos: apellidos.trim(),
-          nombres: nombres.trim(),
-          rda: rda.trim() || null,
-          celular: celular.trim() || null,
-          sie: sie.trim() || null,
-          unidad_educativa: unidadEducativa.trim() || null,
+          apellidos: apellidos.trim().toUpperCase() || dbPart?.apellidos,
+          nombres: nombres.trim().toUpperCase() || dbPart?.nombres,
+          rda: rda.trim() || dbPart?.rda || null,
+          celular: celular.trim() || dbPart?.celular || null,
+          sie: sie.trim() || dbPart?.sie || null,
+          unidad_educativa: unidadEducativa.trim().toUpperCase() || dbPart?.unidad_educativa || null,
+          validado: dbPart?.validado ?? false,
+          observaciones_sie: dbPart?.observaciones_sie || null
         }, { onConflict: 'ci' });
 
       if (partError) throw partError;

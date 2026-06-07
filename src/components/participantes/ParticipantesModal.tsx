@@ -140,7 +140,7 @@ export default function ParticipantesModal({
     inscripcionId: number;
   } | null>(null);
   const [validatingPartId, setValidatingPartId] = useState<number | null>(null);
-  
+
   // Batch validating states
   const [validatingAll, setValidatingAll] = useState(false);
   const [validatingIndex, setValidatingIndex] = useState(0);
@@ -150,6 +150,7 @@ export default function ParticipantesModal({
   const fetchParticipantes = useCallback(async () => {
     setLoading(true);
     try {
+      console.log('fetchParticipantes: Querying for curso.id =', curso.id, 'type =', typeof curso.id);
       const { data, error } = await supabase
         .from('inscripcion_ciclo')
         .select(`
@@ -172,6 +173,9 @@ export default function ParticipantesModal({
         .eq('curso_id', curso.id)
         .order('nro', { ascending: true });
 
+      console.log('fetchParticipantes: Response data =', data);
+      console.log('fetchParticipantes: Response error =', error);
+
       if (error) throw error;
       setInscripciones((data || []) as unknown as Inscripcion[]);
     } catch (err) {
@@ -184,7 +188,7 @@ export default function ParticipantesModal({
 
   useEffect(() => {
     fetchParticipantes();
-    
+
     // Check if session exists in sessionStorage
     const savedSession = sessionStorage.getItem('sie_session');
     if (savedSession) {
@@ -214,7 +218,7 @@ export default function ParticipantesModal({
         .eq('id', id);
 
       if (error) throw error;
-      
+
       Swal.fire({
         icon: 'success',
         title: 'Actualizado',
@@ -325,17 +329,28 @@ export default function ParticipantesModal({
         .limit(1);
       const nextNro = countData && countData.length > 0 ? (countData[0].nro + 1) : 1;
 
+      // Fetch existing participant record to merge and prevent nulling out existing fields
+      const { data: dbPart, error: fetchPartErr } = await supabase
+        .from('participantes')
+        .select('*')
+        .eq('ci', addCi.trim())
+        .maybeSingle();
+
+      if (fetchPartErr) throw fetchPartErr;
+
       // 2. Upsert participant (Core)
       const { error: partError } = await supabase
         .from('participantes')
         .upsert({
           ci: addCi.trim(),
-          nombres: addNombres.trim().toUpperCase(),
-          apellidos: addApellidos.trim().toUpperCase(),
-          rda: addRda.trim() || null,
-          celular: addCelular.trim() || null,
-          sie: addSie.trim() || null,
-          unidad_educativa: addUnidadEducativa.trim().toUpperCase() || null
+          nombres: addNombres.trim().toUpperCase() || dbPart?.nombres,
+          apellidos: addApellidos.trim().toUpperCase() || dbPart?.apellidos,
+          rda: addRda.trim() || dbPart?.rda || null,
+          celular: addCelular.trim() || dbPart?.celular || null,
+          sie: addSie.trim() || dbPart?.sie || null,
+          unidad_educativa: addUnidadEducativa.trim().toUpperCase() || dbPart?.unidad_educativa || null,
+          validado: dbPart?.validado ?? false,
+          observaciones_sie: dbPart?.observaciones_sie || null
         }, { onConflict: 'ci' });
 
       if (partError) throw partError;
@@ -363,7 +378,7 @@ export default function ParticipantesModal({
         .eq('id', curso.id);
 
       Swal.fire('Inscripción Manual', 'Participante registrado e inscrito correctamente', 'success');
-      
+
       // Reset form
       setAddCi('');
       setAddNombres('');
@@ -373,7 +388,7 @@ export default function ParticipantesModal({
       setAddSie('');
       setAddUnidadEducativa('');
       setCiExists(false);
-      
+
       onRefresh();
       fetchParticipantes();
     } catch (err: any) {
@@ -398,7 +413,7 @@ export default function ParticipantesModal({
     if (rawLines.length > 0) {
       // Split the first line using tabs (Excel copy-paste behavior)
       const firstLineCells = rawLines[0].split('\t').map(c => c.trim().toLowerCase());
-      
+
       // Check if the first line is indeed a header row
       const hasCiHeader = firstLineCells.some(c => c === 'ci' || c === 'c.i.' || c.includes('carnet') || c.includes('identidad') || c.includes('documento'));
       const hasNombreHeader = firstLineCells.some(c => c.includes('nombre'));
@@ -433,7 +448,7 @@ export default function ParticipantesModal({
       const line = rawLines[i];
       // Keep all columns even if empty to preserve alignment with header mapping
       const cells = line.split('\t').map(c => c.trim());
-      
+
       // If the line is empty or has no content, skip it
       if (cells.filter(Boolean).length === 0) continue;
 
@@ -638,7 +653,7 @@ export default function ParticipantesModal({
     try {
       // Filter out participants that don't have CI or Names
       const validParticipants = previewList.filter(p => p.ci.trim() && (p.nombres.trim() || p.apellidos.trim()));
-      
+
       if (validParticipants.length === 0) {
         Swal.fire('Datos inválidos', 'Ningún participante tiene C.I. y Nombres válidos.', 'warning');
         setImportingBatch(false);
@@ -667,16 +682,32 @@ export default function ParticipantesModal({
         return;
       }
 
+      // Fetch existing participants from database to merge and prevent nulling out existing fields
+      const cisToQuery = filteredToEnroll.map(p => p.ci.trim());
+      const { data: existingPartsDb, error: fetchPartsErr } = await supabase
+        .from('participantes')
+        .select('ci, nombres, apellidos, rda, celular, sie, unidad_educativa, validado, observaciones_sie')
+        .in('ci', cisToQuery);
+
+      if (fetchPartsErr) throw fetchPartsErr;
+
+      const dbPartsMap = new Map(existingPartsDb?.map(dbP => [dbP.ci, dbP]) || []);
+
       // 2. Batch upsert participant records
-      const upsertData = filteredToEnroll.map(p => ({
-        ci: p.ci.trim(),
-        nombres: p.nombres.trim().toUpperCase(),
-        apellidos: p.apellidos.trim().toUpperCase(),
-        rda: p.rda?.trim() || null,
-        celular: p.celular?.trim() || null,
-        sie: p.sie?.trim() || null,
-        unidad_educativa: p.unidad_educativa?.trim().toUpperCase() || null
-      }));
+      const upsertData = filteredToEnroll.map(p => {
+        const dbPart = dbPartsMap.get(p.ci.trim());
+        return {
+          ci: p.ci.trim(),
+          nombres: p.nombres.trim().toUpperCase() || dbPart?.nombres,
+          apellidos: p.apellidos.trim().toUpperCase() || dbPart?.apellidos,
+          rda: p.rda?.trim() || dbPart?.rda || null,
+          celular: p.celular?.trim() || dbPart?.celular || null,
+          sie: p.sie?.trim() || dbPart?.sie || null,
+          unidad_educativa: p.unidad_educativa?.trim().toUpperCase() || dbPart?.unidad_educativa || null,
+          validado: dbPart?.validado ?? false,
+          observaciones_sie: dbPart?.observaciones_sie || null
+        };
+      });
 
       const { error: upsertErr } = await supabase
         .from('participantes')
@@ -1103,7 +1134,7 @@ export default function ParticipantesModal({
     }
 
     const title = `INSCRITOS_CICLO_${curso.id}_${curso.ciclo_nombre || 'CURSO'}`;
-    
+
     let html = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
       <head>
@@ -1361,9 +1392,10 @@ export default function ParticipantesModal({
   });
 
   return (
-    <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(11,21,32,0.6)', backdropFilter: 'blur(8px)', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
+    <>
+      <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(11,21,32,0.6)', backdropFilter: 'blur(8px)', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
       <div className="modal-container" style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '1280px', maxHeight: '90vh', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease', overflow: 'hidden' }}>
-        
+
         {/* Modal Header */}
         <div className="modal-header" style={{ padding: '20px 24px', background: 'var(--primary-900)', color: 'var(--white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -1374,10 +1406,10 @@ export default function ParticipantesModal({
               Ciclo: {curso.ciclo_nombre || 'Sin Ciclo'} | Facilitador: {curso.facilitador_nombre || 'Sin Facilitador'} | Lugar: {curso.lugar}
             </p>
           </div>
-          <button 
-            type="button" 
-            className="btn btn-icon btn-ghost" 
-            onClick={onClose} 
+          <button
+            type="button"
+            className="btn btn-icon btn-ghost"
+            onClick={onClose}
             style={{ color: 'var(--white)', padding: '6px', borderRadius: '50%' }}
           >
             <X size={20} />
@@ -1386,10 +1418,10 @@ export default function ParticipantesModal({
 
         {/* Modal Body */}
         <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
-          
+
           {/* Top Panel: SIE Connection & Actions Bar */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', background: 'var(--gray-50)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)' }}>
-            
+
             {/* SIE Authentication Panel */}
             <div style={{ borderRight: '1px solid var(--gray-200)', paddingRight: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -1411,9 +1443,9 @@ export default function ParticipantesModal({
                       Desconectar de SIE
                     </button>
                     {/* Validate All sequentially */}
-                    <button 
-                      type="button" 
-                      className="btn btn-teal btn-sm" 
+                    <button
+                      type="button"
+                      className="btn btn-teal btn-sm"
                       onClick={handleValidateAll}
                       disabled={validatingAll}
                     >
@@ -1436,8 +1468,8 @@ export default function ParticipantesModal({
                 <form onSubmit={handleSieConnect} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>USUARIO SIE</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={sieUser}
                       onChange={(e) => setSieUser(e.target.value)}
                       placeholder="usuario@unefco.edu.bo"
@@ -1446,8 +1478,8 @@ export default function ParticipantesModal({
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>CONTRASEÑA</label>
-                    <input 
-                      type="password" 
+                    <input
+                      type="password"
                       value={siePass}
                       onChange={(e) => setSiePass(e.target.value)}
                       placeholder="********"
@@ -1489,9 +1521,9 @@ export default function ParticipantesModal({
                 <span style={{ fontSize: '0.82rem', color: 'var(--gray-500)', fontWeight: 600 }}>
                   Total en Lista: <b>{filteredInscripciones.length} de {inscripciones.length}</b>
                 </span>
-                
-                <button 
-                  type="button" 
+
+                <button
+                  type="button"
                   className={`btn ${showImporter ? 'btn-secondary' : 'btn-success'} btn-sm`}
                   onClick={() => setShowImporter(!showImporter)}
                 >
@@ -1508,7 +1540,7 @@ export default function ParticipantesModal({
                 <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 900, color: 'var(--primary-900)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <UserPlus size={18} /> Panel de Registro e Importación de Participantes
                 </h4>
-                
+
                 {/* Tabs Selector */}
                 <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.05)', padding: '3px', borderRadius: 'var(--radius-sm)' }}>
                   <button
@@ -1545,8 +1577,8 @@ export default function ParticipantesModal({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>C.I. *</label>
                       <div style={{ display: 'flex', gap: '6px' }}>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           required
                           value={addCi}
                           onChange={(e) => setAddCi(e.target.value)}
@@ -1560,8 +1592,8 @@ export default function ParticipantesModal({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Nombres *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         required
                         value={addNombres}
                         onChange={(e) => setAddNombres(e.target.value.toUpperCase())}
@@ -1572,8 +1604,8 @@ export default function ParticipantesModal({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Apellidos *</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         required
                         value={addApellidos}
                         onChange={(e) => setAddApellidos(e.target.value.toUpperCase())}
@@ -1584,8 +1616,8 @@ export default function ParticipantesModal({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>RDA (Opcional)</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={addRda}
                         onChange={(e) => setAddRda(e.target.value)}
                         placeholder="RDA"
@@ -1595,8 +1627,8 @@ export default function ParticipantesModal({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Celular</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={addCelular}
                         onChange={(e) => setAddCelular(e.target.value)}
                         placeholder="Celular"
@@ -1606,8 +1638,8 @@ export default function ParticipantesModal({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Código SIE (Opcional)</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={addSie}
                         onChange={(e) => setAddSie(e.target.value)}
                         placeholder="SIE"
@@ -1617,8 +1649,8 @@ export default function ParticipantesModal({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
                       <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>Unidad Educativa</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={addUnidadEducativa}
                         onChange={(e) => setAddUnidadEducativa(e.target.value.toUpperCase())}
                         placeholder="UNIDAD EDUCATIVA"
@@ -1668,16 +1700,16 @@ export default function ParticipantesModal({
                   <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--gray-600)' }}>
                     Escanea una nómina física utilizando tu cámara web, o sube una fotografía/PDF del documento. La IA transcribirá los datos del lote automáticamente.
                   </p>
-                  
+
                   <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
                     {/* Webcam Area */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '320px' }}>
                       <div style={{ width: '320px', height: '240px', background: 'var(--gray-900)', borderRadius: 'var(--radius-md)', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)' }}>
                         {cameraActive ? (
-                          <video 
+                          <video
                             ref={videoRef}
-                            id="webcam-video" 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            id="webcam-video"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             playsInline
                             muted
                           />
@@ -1725,13 +1757,13 @@ export default function ParticipantesModal({
                         <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--gray-700)', display: 'block' }}>Subir Imagen o PDF</span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--gray-400)' }}>Formatos soportados: JPG, PNG, PDF</span>
                       </div>
-                      
+
                       <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', gap: '8px' }}>
                         <FileText size={14} /> Seleccionar archivo
-                        <input 
-                          type="file" 
-                          accept="image/*,application/pdf" 
-                          onChange={handleFileUpload} 
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={handleFileUpload}
                           style={{ display: 'none' }}
                           disabled={iaLoading}
                         />
@@ -1749,9 +1781,9 @@ export default function ParticipantesModal({
                       Vista Previa de Importación ({previewList.length} detectados)
                     </h5>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        type="button" 
-                        className="btn btn-success btn-sm" 
+                      <button
+                        type="button"
+                        className="btn btn-success btn-sm"
                         onClick={handleSavePreviewList}
                         disabled={importingBatch}
                       >
@@ -1791,10 +1823,10 @@ export default function ParticipantesModal({
                         {previewList.map((p, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid var(--gray-100)' }}>
                             <td style={{ padding: '4px 8px', textAlign: 'center', color: 'var(--gray-400)' }}>{idx + 1}</td>
-                            
+
                             {/* C.I. */}
                             <td style={{ padding: '4px 8px' }}>
-                              <input 
+                              <input
                                 type="text"
                                 value={p.ci}
                                 onChange={(e) => {
@@ -1808,7 +1840,7 @@ export default function ParticipantesModal({
 
                             {/* Nombres */}
                             <td style={{ padding: '4px 8px' }}>
-                              <input 
+                              <input
                                 type="text"
                                 value={p.nombres}
                                 onChange={(e) => {
@@ -1822,7 +1854,7 @@ export default function ParticipantesModal({
 
                             {/* Apellidos */}
                             <td style={{ padding: '4px 8px' }}>
-                              <input 
+                              <input
                                 type="text"
                                 value={p.apellidos}
                                 onChange={(e) => {
@@ -1836,7 +1868,7 @@ export default function ParticipantesModal({
 
                             {/* RDA */}
                             <td style={{ padding: '4px 8px' }}>
-                              <input 
+                              <input
                                 type="text"
                                 value={p.rda || ''}
                                 onChange={(e) => {
@@ -1850,7 +1882,7 @@ export default function ParticipantesModal({
 
                             {/* Celular */}
                             <td style={{ padding: '4px 8px' }}>
-                              <input 
+                              <input
                                 type="text"
                                 value={p.celular || ''}
                                 onChange={(e) => {
@@ -1864,7 +1896,7 @@ export default function ParticipantesModal({
 
                             {/* SIE */}
                             <td style={{ padding: '4px 8px' }}>
-                              <input 
+                              <input
                                 type="text"
                                 value={p.sie || ''}
                                 onChange={(e) => {
@@ -1878,7 +1910,7 @@ export default function ParticipantesModal({
 
                             {/* Unidad Educativa */}
                             <td style={{ padding: '4px 8px' }}>
-                              <input 
+                              <input
                                 type="text"
                                 value={p.unidad_educativa || ''}
                                 onChange={(e) => {
@@ -1892,8 +1924,8 @@ export default function ParticipantesModal({
 
                             {/* Actions (delete row from preview) */}
                             <td style={{ padding: '4px 8px', textAlign: 'center' }}>
-                              <button 
-                                type="button" 
+                              <button
+                                type="button"
                                 className="btn btn-ghost btn-xs"
                                 onClick={() => {
                                   setPreviewList(previewList.filter((_, i) => i !== idx));
@@ -1977,7 +2009,103 @@ export default function ParticipantesModal({
 
       </div>
     </div>
-  );
+
+    {editingPart && (
+      <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(11,21,32,0.6)', backdropFilter: 'blur(4px)', zIndex: 1100, padding: '20px' }}>
+        <div className="modal-container" style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '500px', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease', overflow: 'hidden' }}>
+          
+          {/* Header */}
+          <div className="modal-header" style={{ padding: '16px 20px', background: 'var(--primary-900)', color: 'var(--white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Corregir Datos del Participante</h4>
+            <button type="button" className="btn btn-icon btn-ghost" onClick={() => setEditingPart(null)} style={{ color: 'var(--white)', padding: '4px', borderRadius: '50%' }}>
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSaveCoreParticipant} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>C.I. (No editable)</label>
+              <input type="text" disabled value={editingPart.ci} style={{ background: 'var(--gray-100)', color: 'var(--gray-505)', cursor: 'not-allowed' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>NOMBRES *</label>
+              <input 
+                type="text" 
+                required 
+                value={editingPart.nombres} 
+                onChange={(e) => setEditingPart({ ...editingPart, nombres: e.target.value.toUpperCase() })} 
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>APELLIDOS *</label>
+              <input 
+                type="text" 
+                required 
+                value={editingPart.apellidos} 
+                onChange={(e) => setEditingPart({ ...editingPart, apellidos: e.target.value.toUpperCase() })} 
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>RDA (Opcional)</label>
+                <input 
+                  type="text" 
+                  value={editingPart.rda || ''} 
+                  onChange={(e) => setEditingPart({ ...editingPart, rda: e.target.value })} 
+                  placeholder="RDA"
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>CELULAR (Opcional)</label>
+                <input 
+                  type="text" 
+                  value={editingPart.celular || ''} 
+                  onChange={(e) => setEditingPart({ ...editingPart, celular: e.target.value })} 
+                  placeholder="Celular"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>CÓDIGO SIE</label>
+                <input 
+                  type="text" 
+                  value={editingPart.sie || ''} 
+                  onChange={(e) => setEditingPart({ ...editingPart, sie: e.target.value })} 
+                  placeholder="SIE"
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>UNIDAD EDUCATIVA</label>
+                <input 
+                  type="text" 
+                  value={editingPart.unidad_educativa || ''} 
+                  onChange={(e) => setEditingPart({ ...editingPart, unidad_educativa: e.target.value.toUpperCase() })} 
+                  placeholder="Unidad Educativa"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingPart(null)}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn btn-success btn-sm">
+                Guardar Cambios
+              </button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    )}
+  </>
+);
 }
 
 // Inner helper component to manage individual row state easily without re-rendering the whole table
@@ -2002,7 +2130,7 @@ function RowComponent({
   validating,
   sieConnected
 }: RowComponentProps) {
-  const [pagos, setPagos] = useState(ins.pagos);
+  const [pagos, setPagos] = useState(ins.pagos || 'Pendiente');
   const [observaciones, setObservaciones] = useState(ins.observaciones || '');
   const [saving, setSaving] = useState(false);
 
@@ -2017,38 +2145,38 @@ function RowComponent({
 
   return (
     <tr style={{ borderBottom: '1px solid var(--gray-100)', transition: 'background var(--transition-fast)' }} className="hover-row">
-      
+
       {/* Nro */}
       <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-600)', fontWeight: 600, textAlign: 'center' }}>
         {ins.nro}
       </td>
-      
+
       {/* CI */}
       <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-900)', fontWeight: 600 }}>
         {p.ci}
       </td>
-      
+
       {/* RDA */}
       <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-600)' }}>
         {p.rda || '—'}
       </td>
-      
+
       {/* Apellidos y Nombres */}
       <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-900)' }}>
         <div>
-          <b>{p.apellidos}</b><br/>
+          <b>{p.apellidos}</b><br />
           <span>{p.nombres}</span>
         </div>
       </td>
-      
+
       {/* Celular */}
       <td style={{ padding: '12px 16px', fontSize: '0.82rem' }}>
         {p.celular ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>{p.celular}</span>
-            <a 
-              href={`https://wa.me/${p.celular.replace(/\D/g, '')}`} 
-              target="_blank" 
+            <a
+              href={`https://wa.me/${p.celular.replace(/\D/g, '')}`}
+              target="_blank"
               rel="noopener noreferrer"
               style={{ color: '#25d366', display: 'inline-flex' }}
               title="Escribir por WhatsApp"
@@ -2060,19 +2188,19 @@ function RowComponent({
           <span style={{ color: 'var(--gray-400)' }}>—</span>
         )}
       </td>
-      
+
       {/* SIE / UE */}
       <td style={{ padding: '12px 16px', fontSize: '0.78rem', color: 'var(--gray-600)', lineHeight: 1.3 }}>
         {p.unidad_educativa ? (
           <div>
-            <b>{p.unidad_educativa}</b><br/>
+            <b>{p.unidad_educativa}</b><br />
             {p.sie && <span style={{ opacity: 0.8 }}>SIE: {p.sie}</span>}
           </div>
         ) : (
           <span style={{ color: 'var(--gray-400)' }}>—</span>
         )}
       </td>
-      
+
       {/* Validación SIE */}
       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
         {p.validado ? (
@@ -2085,9 +2213,9 @@ function RowComponent({
               {p.observaciones_sie ? 'CON DISCREPANCIA' : 'PENDIENTE'}
             </span>
             {sieConnected && (
-              <button 
-                type="button" 
-                className="btn btn-ghost btn-xs" 
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs"
                 onClick={() => onValidate(ins)}
                 disabled={validating}
                 style={{ padding: '2px 6px', fontSize: '0.7rem', border: '1px solid var(--primary-200)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
@@ -2099,11 +2227,11 @@ function RowComponent({
           </div>
         )}
       </td>
-      
+
       {/* Pago */}
       <td style={{ padding: '12px 16px' }}>
-        <select 
-          value={pagos} 
+        <select
+          value={pagos}
           onChange={(e) => setPagos(e.target.value)}
           style={{ width: '100%', padding: '4px 6px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
         >
@@ -2113,13 +2241,13 @@ function RowComponent({
           <option value="Beca Completa">Beca Completa</option>
         </select>
       </td>
-      
+
       {/* Obs. Internas / Validación */}
       <td style={{ padding: '12px 16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <input 
-            type="text" 
-            value={observaciones} 
+          <input
+            type="text"
+            value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
             placeholder="Obs. internas..."
             style={{ width: '100%', padding: '4px 8px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
@@ -2131,14 +2259,14 @@ function RowComponent({
           )}
         </div>
       </td>
-      
+
       {/* Acciones */}
       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
         <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
           {hasChanges && (
-            <button 
-              type="button" 
-              className="btn btn-success btn-xs" 
+            <button
+              type="button"
+              className="btn btn-success btn-xs"
               onClick={handleSaveClick}
               disabled={saving}
               title="Guardar observaciones/pago"
@@ -2147,18 +2275,18 @@ function RowComponent({
               {saving ? <Loader2 size={12} className="spin" /> : <Save size={12} />}
             </button>
           )}
-          <button 
-            type="button" 
-            className="btn btn-warning btn-xs" 
+          <button
+            type="button"
+            className="btn btn-warning btn-xs"
             onClick={() => onEditCore(p)}
             title="Corregir datos de participante ( spelling / RDA )"
             style={{ padding: '6px', color: 'var(--gray-900)' }}
           >
             <Edit size={12} />
           </button>
-          <button 
-            type="button" 
-            className="btn btn-danger btn-xs" 
+          <button
+            type="button"
+            className="btn btn-danger btn-xs"
             onClick={() => onDelete(ins.id)}
             title="Dar de baja de este ciclo"
             style={{ padding: '6px' }}
@@ -2167,7 +2295,7 @@ function RowComponent({
           </button>
         </div>
       </td>
-      
+
     </tr>
   );
 }
