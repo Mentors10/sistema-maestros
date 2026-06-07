@@ -659,7 +659,15 @@ export default function NotaCard({
           ${fichaHtml}
           
           <!-- Visual line dividing the page when cutting -->
-          <div class="divider-line">✂------------------- CORTE POR AQUÍ PARA ENTREGAR AL MAESTRO / UNEFCO -------------------✂</div>
+          .divider-line {
+            border-top: 1.5px dashed #777;
+            width: 100%;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 8pt;
+            color: #555;
+            box-sizing: border-box;
+          }
           
           <!-- Duplicate Copy 2 (PARTICIPANT COPY) -->
           ${fichaHtml}
@@ -981,78 +989,12 @@ export default function NotaCard({
                 <small>TOTAL ESTIMADO</small>
                 <span>{curso.total_bs ? `${curso.total_bs} Bs` : '0 Bs'}</span>
               </div>
-
-              {/* Action Buttons Columna Izquierda (2x2) */}
-              <div className="nota-actions-grid-2x2">
-                <button className="btn btn-warning btn-sm" onClick={() => setIsEditingCurso(true)}>
-                  <Edit3 size={12} /> Editar
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={onDelete}>
-                  <Trash2 size={12} /> Eliminar
-                </button>
-                <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
-                  <Users size={12} /> Participantes
-                </button>
-                <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
-                  <Globe size={12} /> Insc. online
-                </button>
-              </div>
             </>
           )}
-
-          {/* Calendario de Actividades */}
-          <div className="calendar-section" style={{ marginTop: '12px' }}>
-            <MiniMonthCalendar
-              slots={slots}
-              onSaveSlots={handleSaveSlots}
-              noteColor={noteColor}
-              initialDate={firstSlot ? new Date(firstSlot.date) : undefined}
-              compliance={compliance}
-            />
-          </div>
-
-          {/* Compliance */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {totalHours > 0 && (
-              <div className="soc-days-badge">
-                <Clock size={11} /> {totalHours} hrs total
-                {Object.entries(hoursByCourse).map(([k, v]) => (
-                  <span key={k} style={{ opacity: 0.8 }}> • {k.toUpperCase()}: {v}h</span>
-                ))}
-              </div>
-            )}
-
-            <div className="compliance-checks">
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.planificacion_recibida}
-                  onChange={() => handleToggleCheck('planificacion_recibida')}
-                />
-                Planificación recibida
-              </label>
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.evaluacion_realizada}
-                  onChange={() => handleToggleCheck('evaluacion_realizada')}
-                />
-                Evaluación realizada
-              </label>
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.informe_final_recibido}
-                  onChange={() => handleToggleCheck('informe_final_recibido')}
-                />
-                Informe final recibido
-              </label>
-            </div>
-          </div>
         </div>
 
         {/* ─── Columna Derecha ─────────────────────────── */}
-        <div className="nota-col-right">
+        <div className="nota-col-right" style={{ borderRight: 'none' }}>
           {/* Organizador */}
           <div className="organizador-section">
             <div className="organizador-title">
@@ -1129,67 +1071,143 @@ export default function NotaCard({
                   ))}
                 </div>
               </div>
-              <div className="organizador-field full" style={{ display: 'flex', width: '100%', marginTop: '8px' }}>
-                <button
-                  className={`btn ${hasOrganizerChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
-                  style={{
-                    width: '100%',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: hasOrganizerChanges ? '10px 16px' : '8px 12px',
-                    fontSize: hasOrganizerChanges ? '0.88rem' : '0.82rem',
-                    transition: 'all 0.3s ease',
-                    boxShadow: hasOrganizerChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
-                    borderRadius: 'var(--radius-sm, 6px)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}
-                  onClick={handleSaveOrganizador}
-                >
-                  <Save size={hasOrganizerChanges ? 15 : 13} />
-                  {hasOrganizerChanges ? '⚠️ Guardar Cambios del Organizador' : 'Guardar Datos del Organizador'}
-                </button>
-              </div>
+            </div>
+            <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
+              <button
+                className={`btn ${hasOrganizerChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+                style={{
+                  width: '100%',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: hasOrganizerChanges ? '10px 16px' : '8px 12px',
+                  fontSize: hasOrganizerChanges ? '0.88rem' : '0.82rem',
+                  transition: 'all 0.3s ease',
+                  boxShadow: hasOrganizerChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                  borderRadius: 'var(--radius-sm, 6px)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+                onClick={handleSaveOrganizador}
+              >
+                <Save size={hasOrganizerChanges ? 15 : 13} />
+                {hasOrganizerChanges ? '⚠️ Guardar Cambios del Organizador' : 'Guardar Datos del Organizador'}
+              </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Action Buttons Columna Derecha (2x2) */}
-          <div className="nota-actions-grid-2x2">
-            <button className="btn btn-purple btn-sm" onClick={handlePrintFichaInscripcion}>
-              <FileText size={12} /> Ficha inscripción
-            </button>
-            <button className="btn btn-orange btn-sm">
-              <BookOpen size={12} /> Registro Pedg
-            </button>
-            <button 
-              className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
-              onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
-            >
-              <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
-            </button>
-            <button 
-              className="btn btn-primary btn-sm"
-              onClick={() => {
-                const link = `${window.location.origin}/participantes/${curso.id}`;
-                navigator.clipboard.writeText(link);
-                Swal.fire({
-                  icon: 'success',
-                  title: 'Enlace copiado',
-                  text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
-                  timer: 2500,
-                  showConfirmButton: false,
-                  toast: true,
-                  position: 'top-end'
-                });
-              }}
-            >
-              <Link2 size={12} /> Link público
-            </button>
+      {/* ─── Middle Section (Unified Actions) ──────────────── */}
+      <div className="nota-actions-section">
+        <div className="nota-actions-grid-4x2">
+          {/* Row 1: Left column buttons */}
+          <button className="btn btn-warning btn-sm" onClick={() => setIsEditingCurso(true)}>
+            <Edit3 size={12} /> Editar
+          </button>
+          <button className="btn btn-danger btn-sm" onClick={onDelete}>
+            <Trash2 size={12} /> Eliminar
+          </button>
+          <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
+            <Users size={12} /> Participantes
+          </button>
+          <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
+            <Globe size={12} /> Insc. online
+          </button>
+
+          {/* Row 2: Right column buttons */}
+          <button className="btn btn-purple btn-sm" onClick={handlePrintFichaInscripcion}>
+            <FileText size={12} /> Ficha inscripción
+          </button>
+          <button className="btn btn-orange btn-sm">
+            <BookOpen size={12} /> Registro Pedg
+          </button>
+          <button 
+            className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
+            onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
+          >
+            <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
+          </button>
+          <button 
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              const link = `${window.location.origin}/participantes/${curso.id}`;
+              navigator.clipboard.writeText(link);
+              Swal.fire({
+                icon: 'success',
+                title: 'Enlace copiado',
+                text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
+                timer: 2500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+              });
+            }}
+          >
+            <Link2 size={12} /> Link público
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Bottom Section (Widgets) ────────────────────── */}
+      <div className="nota-widgets-layout">
+        {/* ─── Columna Izquierda (Calendario) ───────────── */}
+        <div className="nota-widget-left">
+          {/* Calendario de Actividades */}
+          <div className="calendar-section">
+            <MiniMonthCalendar
+              slots={slots}
+              onSaveSlots={handleSaveSlots}
+              noteColor={noteColor}
+              initialDate={firstSlot ? new Date(firstSlot.date) : undefined}
+              compliance={compliance}
+            />
           </div>
 
+          {/* Compliance */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {totalHours > 0 && (
+              <div className="soc-days-badge">
+                <Clock size={11} /> {totalHours} hrs total
+                {Object.entries(hoursByCourse).map(([k, v]) => (
+                  <span key={k} style={{ opacity: 0.8 }}> • {k.toUpperCase()}: {v}h</span>
+                ))}
+              </div>
+            )}
+
+            <div className="compliance-checks">
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.planificacion_recibida}
+                  onChange={() => handleToggleCheck('planificacion_recibida')}
+                />
+                Planificación recibida
+              </label>
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.evaluacion_realizada}
+                  onChange={() => handleToggleCheck('evaluacion_realizada')}
+                />
+                Evaluación realizada
+              </label>
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.informe_final_recibido}
+                  onChange={() => handleToggleCheck('informe_final_recibido')}
+                />
+                Informe final recibido
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Columna Derecha (Mapa) ───────────────────── */}
+        <div className="nota-widget-right">
           {/* Ubicación exacta (Simétrica) */}
           <div className="map-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div className="map-title">
@@ -1274,7 +1292,8 @@ export default function NotaCard({
             </div>
           </div>
         </div>
-      </div> {/* Closes nota-layout opened at line 724 */}
+      </div>
+
       {showInscripcionModal && (
         <InscripcionOnlineModal
           curso={curso}
