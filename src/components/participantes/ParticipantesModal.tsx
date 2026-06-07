@@ -388,12 +388,54 @@ export default function ParticipantesModal({
       return;
     }
 
-    const lines = excelText.split('\n');
+    // Split lines, normalize carriage returns, filter out empty lines
+    const rawLines = excelText.split('\n').map(l => l.replace('\r', '').trim()).filter(Boolean);
     const parsed: PreviewParticipant[] = [];
 
-    lines.forEach((line) => {
-      const cells = line.split('\t').map(c => c.trim()).filter(Boolean);
-      if (cells.length < 2) return; // ignore simple index numbers or blank lines
+    let headerIndices: { [key: string]: number } = {};
+    let hasHeader = false;
+
+    if (rawLines.length > 0) {
+      // Split the first line using tabs (Excel copy-paste behavior)
+      const firstLineCells = rawLines[0].split('\t').map(c => c.trim().toLowerCase());
+      
+      // Check if the first line is indeed a header row
+      const hasCiHeader = firstLineCells.some(c => c.includes('ci') || c.includes('carnet') || c.includes('identidad') || c.includes('documento'));
+      const hasNombreHeader = firstLineCells.some(c => c.includes('nombre'));
+      const hasApellidoHeader = firstLineCells.some(c => c.includes('apellido'));
+      const hasCelularHeader = firstLineCells.some(c => c.includes('celular') || c.includes('telefono') || c.includes('cel') || c.includes('telf'));
+
+      if (hasCiHeader || hasNombreHeader || hasApellidoHeader || hasCelularHeader) {
+        hasHeader = true;
+        firstLineCells.forEach((cell, idx) => {
+          if (cell.includes('ci') || cell.includes('carnet') || cell.includes('identidad') || cell.includes('documento')) {
+            headerIndices['ci'] = idx;
+          } else if (cell.includes('apellido')) {
+            headerIndices['apellidos'] = idx;
+          } else if (cell.includes('nombre')) {
+            headerIndices['nombres'] = idx;
+          } else if (cell.includes('rda')) {
+            headerIndices['rda'] = idx;
+          } else if (cell.includes('celular') || cell.includes('telefono') || cell.includes('cel') || cell.includes('telf')) {
+            headerIndices['celular'] = idx;
+          } else if (cell.includes('sie')) {
+            headerIndices['sie'] = idx;
+          } else if (cell.includes('unidad') || cell.includes('colegio') || cell.includes('escuela') || cell.includes('institucion') || cell.includes('ue') || cell.includes('u.e.')) {
+            headerIndices['unidad_educativa'] = idx;
+          }
+        });
+      }
+    }
+
+    const startIndex = hasHeader ? 1 : 0;
+
+    for (let i = startIndex; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      // Keep all columns even if empty to preserve alignment with header mapping
+      const cells = line.split('\t').map(c => c.trim());
+      
+      // If the line is empty or has no content, skip it
+      if (cells.filter(Boolean).length === 0) continue;
 
       let ci = '';
       let names = '';
@@ -403,35 +445,69 @@ export default function ParticipantesModal({
       let sie = '';
       let ue = '';
 
-      cells.forEach((cell) => {
-        // Skip row indexes like 1, 2, 3
-        if (/^\d{1,2}$/.test(cell)) return;
+      if (hasHeader) {
+        if (headerIndices['ci'] !== undefined && cells[headerIndices['ci']]) {
+          ci = cells[headerIndices['ci']];
+        }
+        if (headerIndices['nombres'] !== undefined && cells[headerIndices['nombres']]) {
+          names = cells[headerIndices['nombres']].toUpperCase();
+        }
+        if (headerIndices['apellidos'] !== undefined && cells[headerIndices['apellidos']]) {
+          surnames = cells[headerIndices['apellidos']].toUpperCase();
+        }
+        if (headerIndices['rda'] !== undefined && cells[headerIndices['rda']]) {
+          rda = cells[headerIndices['rda']];
+        }
+        if (headerIndices['celular'] !== undefined && cells[headerIndices['celular']]) {
+          celular = cells[headerIndices['celular']];
+        }
+        if (headerIndices['sie'] !== undefined && cells[headerIndices['sie']]) {
+          sie = cells[headerIndices['sie']];
+        }
+        if (headerIndices['unidad_educativa'] !== undefined && cells[headerIndices['unidad_educativa']]) {
+          ue = cells[headerIndices['unidad_educativa']].toUpperCase();
+        }
+      } else {
+        // Fallback: heuristic parsing without headers (filtering out empty cells first)
+        const activeCells = cells.filter(Boolean);
+        if (activeCells.length < 2) continue;
 
-        if (/^\d{6,8}$/.test(cell)) {
-          if (cell.startsWith('8')) {
+        activeCells.forEach((cell) => {
+          // Skip row indexes like 1, 2, 3
+          if (/^\d{1,2}$/.test(cell)) return;
+
+          // Check if it's a mobile phone (7 or 8 digits starting with 6 or 7)
+          if (/^[67]\d{6,7}$/.test(cell)) {
+            celular = cell;
+          }
+          // Check if it's a SIE code (starts with 8, 8 digits)
+          else if (/^8\d{7}$/.test(cell)) {
             sie = cell;
-          } else if (!ci) {
+          }
+          // Check if it's a CI (6 to 8 digits, not starting with 8)
+          else if (/^\d{6,8}$/.test(cell) && !ci) {
             ci = cell;
-          } else {
+          }
+          // Check if it's a RDA (5 to 7 digits)
+          else if (/^\d{5,7}$/.test(cell) && !rda) {
             rda = cell;
           }
-        } else if (/^[67]\d{7}$/.test(cell)) {
-          celular = cell;
-        } else if (/^\d{5,7}$/.test(cell)) {
-          rda = cell;
-        } else if (cell.includes('U.E.') || cell.includes('COLEGIO') || cell.includes('NUCLEO') || cell.includes('UNIDAD')) {
-          ue = cell.toUpperCase();
-        } else {
-          // Identify text strings
-          if (!surnames) {
-            surnames = cell.toUpperCase();
-          } else if (!names) {
-            names = cell.toUpperCase();
-          } else {
-            names += ' ' + cell.toUpperCase();
+          // Check if it's a school name
+          else if (cell.includes('U.E.') || cell.includes('COLEGIO') || cell.includes('NUCLEO') || cell.includes('UNIDAD')) {
+            ue = cell.toUpperCase();
           }
-        }
-      });
+          // Identify text strings
+          else {
+            if (!surnames) {
+              surnames = cell.toUpperCase();
+            } else if (!names) {
+              names = cell.toUpperCase();
+            } else {
+              names += ' ' + cell.toUpperCase();
+            }
+          }
+        });
+      }
 
       if (ci && (names || surnames)) {
         parsed.push({
@@ -444,7 +520,7 @@ export default function ParticipantesModal({
           unidad_educativa: ue
         });
       }
-    });
+    }
 
     if (parsed.length === 0) {
       Swal.fire('No detectado', 'No se pudieron identificar las columnas. Asegúrate de copiar desde Excel (con tabulaciones).', 'warning');
