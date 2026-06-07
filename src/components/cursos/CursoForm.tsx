@@ -15,6 +15,26 @@ interface CursoFormProps {
   onCancel: () => void;
 }
 
+const getInitialFechaInicio = (c: Curso | null): string => {
+  if (!c) return '';
+  if (c.fecha_inicio) {
+    let cleanStr = c.fecha_inicio.trim().replace(/\s+/g, 'T');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      cleanStr += 'T08:00';
+    }
+    const match = cleanStr.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+    if (match) {
+      return match[1];
+    }
+    return cleanStr;
+  }
+  if (c.horarios_tentativos && c.horarios_tentativos.length > 0) {
+    const first = c.horarios_tentativos.reduce((a, b) => (a.date < b.date ? a : b));
+    return `${first.date}T${first.startTime || '08:00'}`;
+  }
+  return '';
+};
+
 export default function CursoForm({
   curso,
   tecnicos,
@@ -35,10 +55,10 @@ export default function CursoForm({
     lugar: curso?.lugar || '',
     area_urbano_rural: curso?.area_urbano_rural || 'Urbano',
     segmento: curso?.segmento || '',
-    fecha_inicio: curso?.fecha_inicio || '',
+    fecha_inicio: getInitialFechaInicio(curso),
     estado: curso?.estado || 'POR EJECUTAR',
     mostrar: curso?.mostrar || 'M',
-    inscritos: curso?.inscritos || 0,
+    inscritos: curso?.inscritos_formulario || 0,
     costo: curso?.costo || 50,
     mes: curso?.mes || '',
     prev: curso?.prev || '',
@@ -46,6 +66,29 @@ export default function CursoForm({
     grupo_color: curso?.grupo_color || '#2f80ed',
     observaciones: curso?.observaciones || '',
   });
+
+  useEffect(() => {
+    setForm({
+      id: curso?.id || '',
+      tecnico_carnet: curso?.tecnico_carnet || '',
+      ciclo_id: curso?.ciclo_id || '',
+      facilitador_carnet: curso?.facilitador_carnet || '',
+      distrito: curso?.distrito || '',
+      lugar: curso?.lugar || '',
+      area_urbano_rural: curso?.area_urbano_rural || 'Urbano',
+      segmento: curso?.segmento || '',
+      fecha_inicio: getInitialFechaInicio(curso),
+      estado: curso?.estado || 'POR EJECUTAR',
+      mostrar: curso?.mostrar || 'M',
+      inscritos: curso?.inscritos_formulario || 0,
+      costo: curso?.costo || 50,
+      mes: curso?.mes || '',
+      prev: curso?.prev || '',
+      grupo_nombre: curso?.grupo_nombre || '',
+      grupo_color: curso?.grupo_color || '#2f80ed',
+      observaciones: curso?.observaciones || '',
+    });
+  }, [curso]);
 
   const [newGrupoName, setNewGrupoName] = useState('');
   const useNewGrupo = newGrupoName.trim().length > 0;
@@ -56,10 +99,12 @@ export default function CursoForm({
     if (!form.id.trim()) return;
     onSave({
       ...form,
+      fecha_inicio: form.fecha_inicio ? form.fecha_inicio.replace('T', ' ') : '',
       grupo_nombre: useNewGrupo ? newGrupoName.trim() : form.grupo_nombre,
       total_bs: totalBs,
     });
   };
+
 
   return (
     <div className="curso-form" style={{ marginBottom: '20px', animation: 'slideUp 0.3s ease' }}>
@@ -185,11 +230,11 @@ export default function CursoForm({
         />
       </div>
       <div className="form-field">
-        <label>Inscritos estimados</label>
+        <label>Participantes inscritos</label>
         <input
           type="number"
           value={form.inscritos}
-          onChange={(e) => setForm({ ...form, inscritos: parseInt(e.target.value) || 0 })}
+          disabled={true}
         />
       </div>
       <div className="form-field">

@@ -43,6 +43,26 @@ export default function NotaCard({
   const [showInscripcionModal, setShowInscripcionModal] = useState(false);
   const [resolvedMapSrc, setResolvedMapSrc] = useState('');
 
+  // Sincronizar estados locales con las props del curso
+  useEffect(() => {
+    setOrgNombre(curso.organizador_nombre || '');
+    setOrgTelefono(curso.organizador_telefono || '');
+    setOrgMaps(curso.organizador_maps || '');
+    setObservaciones(curso.observaciones || '');
+    setLinkExterno(curso.link_inscripcion_externo || '');
+    setNoteColor(curso.grupo_color || '#2f80ed');
+    setPrev(curso.prev || '');
+  }, [
+    curso.id,
+    curso.organizador_nombre,
+    curso.organizador_telefono,
+    curso.organizador_maps,
+    curso.observaciones,
+    curso.link_inscripcion_externo,
+    curso.grupo_color,
+    curso.prev
+  ]);
+
   useEffect(() => {
     const rawLocation = orgMaps || curso.lugar || '';
     if (!rawLocation.trim()) {
@@ -69,6 +89,14 @@ export default function NotaCard({
     }
   }, [orgMaps, curso.lugar]);
 
+  const hasOrganizerChanges =
+    orgNombre !== (curso.organizador_nombre || '') ||
+    orgTelefono !== (curso.organizador_telefono || '') ||
+    orgMaps !== (curso.organizador_maps || '') ||
+    observaciones !== (curso.observaciones || '') ||
+    linkExterno !== (curso.link_inscripcion_externo || '') ||
+    noteColor !== (curso.grupo_color || '#2f80ed');
+
   const compliance = getNoteCompliance(curso);
   const count = curso.inscritos_formulario;
   const slots = curso.horarios_tentativos || [];
@@ -93,7 +121,18 @@ export default function NotaCard({
       organizador_telefono: orgTelefono,
       organizador_maps: orgMaps,
     });
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Guardado correctamente',
+      text: 'Los datos del organizador se han actualizado.',
+      timer: 2000,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end'
+    });
   };
+
 
   // ─── Save calendar slots ───────────────────────────────────
   const handleSaveSlots = useCallback((newSlots: HorarioSlot[]) => {
@@ -627,13 +666,15 @@ export default function NotaCard({
             <div className="nota-info-row">
               <b>Inicio:</b>
               <span>
-                {courseDatesStr.length > 0
-                  ? courseDatesStr.map((d, i) => {
-                      const slot = slots.find((s) => s.date === d);
-                      const key = String(slot?.course || '');
-                      return `C${key}: ${formatFechaDisplay(d)}`;
-                    }).filter((v, i, a) => a.indexOf(v) === i).join(' | ')
-                  : formatFechaDisplay(curso.fecha_inicio) || '—'
+                {curso.fecha_inicio
+                  ? formatFechaDisplay(curso.fecha_inicio)
+                  : (courseDatesStr.length > 0
+                      ? courseDatesStr.map((d, i) => {
+                          const slot = slots.find((s) => s.date === d);
+                          const key = String(slot?.course || '');
+                          return `C${key}: ${formatFechaDisplay(d)}`;
+                        }).filter((v, i, a) => a.indexOf(v) === i).join(' | ')
+                      : '—')
                 }
               </span>
             </div>
@@ -778,11 +819,31 @@ export default function NotaCard({
                   ))}
                 </div>
               </div>
-              <div className="organizador-field full" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button className="btn btn-success btn-sm" onClick={handleSaveOrganizador}>
-                  <Save size={12} /> Guardar
+              <div className="organizador-field full" style={{ display: 'flex', width: '100%', marginTop: '8px' }}>
+                <button
+                  className={`btn ${hasOrganizerChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+                  style={{
+                    width: '100%',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: hasOrganizerChanges ? '10px 16px' : '8px 12px',
+                    fontSize: hasOrganizerChanges ? '0.88rem' : '0.82rem',
+                    transition: 'all 0.3s ease',
+                    boxShadow: hasOrganizerChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                  onClick={handleSaveOrganizador}
+                >
+                  <Save size={hasOrganizerChanges ? 15 : 13} />
+                  {hasOrganizerChanges ? '⚠️ Guardar Cambios del Organizador' : 'Guardar Datos del Organizador'}
                 </button>
               </div>
+
             </div>
           </div>
 
