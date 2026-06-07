@@ -400,7 +400,7 @@ export default function ParticipantesModal({
       const firstLineCells = rawLines[0].split('\t').map(c => c.trim().toLowerCase());
       
       // Check if the first line is indeed a header row
-      const hasCiHeader = firstLineCells.some(c => c.includes('ci') || c.includes('carnet') || c.includes('identidad') || c.includes('documento'));
+      const hasCiHeader = firstLineCells.some(c => c === 'ci' || c === 'c.i.' || c.includes('carnet') || c.includes('identidad') || c.includes('documento'));
       const hasNombreHeader = firstLineCells.some(c => c.includes('nombre'));
       const hasApellidoHeader = firstLineCells.some(c => c.includes('apellido'));
       const hasCelularHeader = firstLineCells.some(c => c.includes('celular') || c.includes('telefono') || c.includes('cel') || c.includes('telf'));
@@ -408,7 +408,7 @@ export default function ParticipantesModal({
       if (hasCiHeader || hasNombreHeader || hasApellidoHeader || hasCelularHeader) {
         hasHeader = true;
         firstLineCells.forEach((cell, idx) => {
-          if (cell.includes('ci') || cell.includes('carnet') || cell.includes('identidad') || cell.includes('documento')) {
+          if (cell === 'ci' || cell === 'c.i.' || cell.includes('carnet') || cell.includes('identidad') || cell.includes('documento')) {
             headerIndices['ci'] = idx;
           } else if (cell.includes('apellido')) {
             headerIndices['apellidos'] = idx;
@@ -647,7 +647,18 @@ export default function ParticipantesModal({
 
       // 1. Get current list of CIs to avoid duplication in current course
       const existingCis = new Set(inscripciones.map(ins => ins.participantes?.ci.trim()));
-      const filteredToEnroll = validParticipants.filter(p => !existingCis.has(p.ci.trim()));
+      const rawFiltered = validParticipants.filter(p => !existingCis.has(p.ci.trim()));
+
+      // Dedup by CI in the pasted batch to avoid "ON CONFLICT DO UPDATE cannot affect row a second time"
+      const filteredToEnroll: PreviewParticipant[] = [];
+      const seenCis = new Set<string>();
+      rawFiltered.forEach(p => {
+        const cleanedCi = p.ci.trim();
+        if (!seenCis.has(cleanedCi)) {
+          seenCis.add(cleanedCi);
+          filteredToEnroll.push(p);
+        }
+      });
 
       if (filteredToEnroll.length === 0) {
         Swal.fire('Ya inscritos', 'Todos los participantes en vista previa ya se encuentran registrados en este ciclo.', 'info');
