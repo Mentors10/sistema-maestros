@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Curso, HorarioSlot } from '@/types';
+import { Curso, HorarioSlot, Tecnico, Facilitador, CicloFormativo } from '@/types';
 import Swal from 'sweetalert2';
 import { getNoteCompliance } from '@/lib/utils/compliance';
 import { buildMapEmbedSrc, buildMapOpenLink } from '@/lib/utils/maps';
@@ -16,8 +16,32 @@ import {
 } from 'lucide-react';
 import InscripcionOnlineModal from '@/components/cursos/InscripcionOnlineModal';
 
+const getInitialFechaInicio = (c: Curso | null): string => {
+  if (!c) return '';
+  if (c.fecha_inicio) {
+    let cleanStr = c.fecha_inicio.trim().replace(/\s+/g, 'T');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      cleanStr += 'T08:00';
+    }
+    const match = cleanStr.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+    if (match) {
+      return match[1];
+    }
+    return cleanStr;
+  }
+  if (c.horarios_tentativos && c.horarios_tentativos.length > 0) {
+    const first = c.horarios_tentativos.reduce((a, b) => (a.date < b.date ? a : b));
+    return `${first.date}T${first.startTime || '08:00'}`;
+  }
+  return '';
+};
+
 interface NotaCardProps {
   curso: Curso;
+  tecnicos: Tecnico[];
+  facilitadores: Facilitador[];
+  ciclos: CicloFormativo[];
+  grupoNames: string[];
   onEdit: () => void;
   onDelete: () => void;
   onUpdate: (data: Partial<Curso>) => void;
@@ -27,6 +51,10 @@ interface NotaCardProps {
 
 export default function NotaCard({
   curso,
+  tecnicos,
+  facilitadores,
+  ciclos,
+  grupoNames,
   onEdit,
   onDelete,
   onUpdate,
@@ -43,6 +71,22 @@ export default function NotaCard({
   const [showInscripcionModal, setShowInscripcionModal] = useState(false);
   const [resolvedMapSrc, setResolvedMapSrc] = useState('');
 
+  // Estados locales para la edición directa del curso
+  const [isEditingCurso, setIsEditingCurso] = useState(false);
+  const [editTecnico, setEditTecnico] = useState(curso.tecnico_carnet || '');
+  const [editCiclo, setEditCiclo] = useState(curso.ciclo_id || '');
+  const [editFacilitador, setEditFacilitador] = useState(curso.facilitador_carnet || '');
+  const [editDistrito, setEditDistrito] = useState(curso.distrito || '');
+  const [editLugar, setEditLugar] = useState(curso.lugar || '');
+  const [editArea, setEditArea] = useState(curso.area_urbano_rural || 'Urbano');
+  const [editSegmento, setEditSegmento] = useState(curso.segmento || '');
+  const [editFechaInicio, setEditFechaInicio] = useState(getInitialFechaInicio(curso));
+  const [editEstado, setEditEstado] = useState(curso.estado || 'POR EJECUTAR');
+  const [editMes, setEditMes] = useState(curso.mes || '');
+  const [editCosto, setEditCosto] = useState(curso.costo || 50);
+  const [editGrupoNombre, setEditGrupoNombre] = useState(curso.grupo_nombre || '');
+  const [editNewGrupoNombre, setEditNewGrupoNombre] = useState('');
+
   // Sincronizar estados locales con las props del curso
   useEffect(() => {
     setOrgNombre(curso.organizador_nombre || '');
@@ -52,6 +96,22 @@ export default function NotaCard({
     setLinkExterno(curso.link_inscripcion_externo || '');
     setNoteColor(curso.grupo_color || '#2f80ed');
     setPrev(curso.prev || '');
+
+    if (!isEditingCurso) {
+      setEditTecnico(curso.tecnico_carnet || '');
+      setEditCiclo(curso.ciclo_id || '');
+      setEditFacilitador(curso.facilitador_carnet || '');
+      setEditDistrito(curso.distrito || '');
+      setEditLugar(curso.lugar || '');
+      setEditArea(curso.area_urbano_rural || 'Urbano');
+      setEditSegmento(curso.segmento || '');
+      setEditFechaInicio(getInitialFechaInicio(curso));
+      setEditEstado(curso.estado || 'POR EJECUTAR');
+      setEditMes(curso.mes || '');
+      setEditCosto(curso.costo || 50);
+      setEditGrupoNombre(curso.grupo_nombre || '');
+      setEditNewGrupoNombre('');
+    }
   }, [
     curso.id,
     curso.organizador_nombre,
@@ -60,7 +120,20 @@ export default function NotaCard({
     curso.observaciones,
     curso.link_inscripcion_externo,
     curso.grupo_color,
-    curso.prev
+    curso.prev,
+    curso.tecnico_carnet,
+    curso.ciclo_id,
+    curso.facilitador_carnet,
+    curso.distrito,
+    curso.lugar,
+    curso.area_urbano_rural,
+    curso.segmento,
+    curso.fecha_inicio,
+    curso.estado,
+    curso.mes,
+    curso.costo,
+    curso.grupo_nombre,
+    isEditingCurso
   ]);
 
   useEffect(() => {
@@ -126,6 +199,40 @@ export default function NotaCard({
       icon: 'success',
       title: 'Guardado correctamente',
       text: 'Los datos del organizador se han actualizado.',
+      timer: 2000,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end'
+    });
+  };
+
+  // ─── Save curso info ───────────────────────────────────────
+  const handleSaveCursoInfo = () => {
+    const finalGrupoNombre = editNewGrupoNombre.trim() ? editNewGrupoNombre.trim() : editGrupoNombre;
+    const finalTotalBs = curso.inscritos_formulario * editCosto;
+
+    onUpdate({
+      tecnico_carnet: editTecnico,
+      ciclo_id: editCiclo,
+      facilitador_carnet: editFacilitador,
+      distrito: editDistrito,
+      lugar: editLugar,
+      area_urbano_rural: editArea,
+      segmento: editSegmento,
+      fecha_inicio: editFechaInicio ? editFechaInicio.replace('T', ' ') : '',
+      estado: editEstado,
+      mes: editMes,
+      costo: editCosto,
+      grupo_nombre: finalGrupoNombre,
+      total_bs: finalTotalBs,
+    });
+
+    setIsEditingCurso(false);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Guardado correctamente',
+      text: 'Los datos del curso se han actualizado.',
       timer: 2000,
       showConfirmButton: false,
       toast: true,
@@ -571,7 +678,7 @@ export default function NotaCard({
 
   // ─── Dates summary ─────────────────────────────────────────
   const courseDatesStr = slots
-    .filter((s) => typeof s.course === 'number' || ['1','2','3','4'].includes(String(s.course)))
+    .filter((s) => typeof s.course === 'number' || ['1', '2', '3', '4'].includes(String(s.course)))
     .map((s) => s.date)
     .sort();
   const dateRangeLabel = courseDatesStr.length > 0
@@ -599,8 +706,8 @@ export default function NotaCard({
             <div className="nota-count-value">{count}</div>
             <div className="nota-count-label">INSCRITOS</div>
           </div>
-          <button className="btn btn-sm" onClick={onEdit} title="Editar">
-            <Edit3 size={13} /> Editar
+          <button className="btn btn-sm" onClick={() => setIsEditingCurso(!isEditingCurso)} title="Editar">
+            <Edit3 size={13} /> {isEditingCurso ? 'Cancelar' : 'Editar'}
           </button>
           <button className="btn btn-sm" onClick={onDelete} title="Eliminar">
             <Trash2 size={13} />
@@ -614,10 +721,9 @@ export default function NotaCard({
         <span>{dateRangeLabel}</span>
       </div>
 
-      {/* ─── Layout ──────────────────────────────────────── */}
       <div className="nota-layout">
-        {/* ─── Left Panel ──────────────────────────────── */}
-        <div className="nota-left">
+        {/* ─── Columna Izquierda ─────────────────────────── */}
+        <div className="nota-col-left">
           {/* ID + State */}
           <div className="nota-id-row">
             <span className="nota-id">ID: {curso.id}</span>
@@ -641,108 +747,312 @@ export default function NotaCard({
             </button>
           </div>
 
-          {/* Info Grid */}
-          <div className="nota-info-grid">
-            <div className="nota-info-row">
-              <b>Grupo:</b>
-              <span>{curso.grupo_nombre || '—'}</span>
+          {isEditingCurso ? (
+            /* Formulario de Edición Directa */
+            <div className="nota-edit-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="organizador-field">
+                <label>Grupo</label>
+                <select
+                  value={editGrupoNombre}
+                  onChange={(e) => setEditGrupoNombre(e.target.value)}
+                >
+                  <option value="">Sin grupo</option>
+                  {grupoNames.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={editNewGrupoNombre}
+                  onChange={(e) => setEditNewGrupoNombre(e.target.value)}
+                  placeholder="O crear grupo nuevo..."
+                  style={{ marginTop: '4px' }}
+                />
+              </div>
+
+              <div className="organizador-field">
+                <label>Técnico</label>
+                <select
+                  value={editTecnico}
+                  onChange={(e) => setEditTecnico(e.target.value)}
+                >
+                  <option value="">Seleccionar técnico</option>
+                  {tecnicos.map((t) => (
+                    <option key={t.carnet} value={t.carnet}>{t.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="organizador-field">
+                <label>Ciclo Formativo</label>
+                <select
+                  value={editCiclo}
+                  onChange={(e) => setEditCiclo(e.target.value)}
+                >
+                  <option value="">Seleccionar ciclo</option>
+                  {ciclos.map((c) => (
+                    <option key={c.id} value={c.id}>{c.grupo} — {c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="organizador-field">
+                <label>Facilitador</label>
+                <select
+                  value={editFacilitador}
+                  onChange={(e) => setEditFacilitador(e.target.value)}
+                >
+                  <option value="">Seleccionar facilitador</option>
+                  {facilitadores.map((f) => (
+                    <option key={f.carnet} value={f.carnet}>{f.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="organizador-field">
+                <label>Distrito</label>
+                <input
+                  type="text"
+                  value={editDistrito}
+                  onChange={(e) => setEditDistrito(e.target.value)}
+                  placeholder="Distrito educativo"
+                />
+              </div>
+
+              <div className="organizador-field">
+                <label>Lugar</label>
+                <input
+                  type="text"
+                  value={editLugar}
+                  onChange={(e) => setEditLugar(e.target.value)}
+                  placeholder="Lugar de ejecución"
+                />
+              </div>
+
+              <div className="organizador-field">
+                <label>Área</label>
+                <select
+                  value={editArea}
+                  onChange={(e) => setEditArea(e.target.value)}
+                >
+                  <option value="Urbano">Urbano</option>
+                  <option value="Rural">Rural</option>
+                </select>
+              </div>
+
+              <div className="organizador-field">
+                <label>Segmento</label>
+                <input
+                  type="text"
+                  value={editSegmento}
+                  onChange={(e) => setEditSegmento(e.target.value)}
+                  placeholder="Segmento"
+                />
+              </div>
+
+              <div className="organizador-field">
+                <label>Fecha Inicio</label>
+                <input
+                  type="datetime-local"
+                  value={editFechaInicio}
+                  onChange={(e) => setEditFechaInicio(e.target.value)}
+                />
+              </div>
+
+              <div className="organizador-field">
+                <label>Estado</label>
+                <select
+                  value={editEstado}
+                  onChange={(e) => setEditEstado(e.target.value)}
+                >
+                  <option value="POR EJECUTAR">POR EJECUTAR</option>
+                  <option value="EJECUTADO">EJECUTADO</option>
+                </select>
+              </div>
+
+              <div className="organizador-field">
+                <label>Mes</label>
+                <select
+                  value={editMes}
+                  onChange={(e) => setEditMes(e.target.value)}
+                >
+                  <option value="">Seleccionar mes</option>
+                  {['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'].map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="organizador-field">
+                <label>Costo por participante (Bs)</label>
+                <input
+                  type="number"
+                  value={editCosto}
+                  onChange={(e) => setEditCosto(parseFloat(e.target.value) || 0)}
+                />
+              </div>
+
+              <div className="nota-total-bar" style={{ marginTop: '8px' }}>
+                <small>TOTAL ESTIMADO</small>
+                <span>{curso.inscritos_formulario * editCosto} Bs</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' }}>
+                <button
+                  className="btn btn-success"
+                  style={{
+                    width: '100%',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                  onClick={handleSaveCursoInfo}
+                >
+                  <Save size={14} /> Guardar Datos del Curso
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{
+                    width: '100%',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                  onClick={() => setIsEditingCurso(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
-            <div className="nota-info-row">
-              <b>Área:</b>
-              <span>{curso.area_formativa || curso.ciclo_grupo || '—'}</span>
-            </div>
-            <div className="nota-info-row">
-              <b>Ciclo:</b>
-              <span>{curso.ciclo_nombre || '—'}</span>
-            </div>
-            <div className="nota-info-row">
-              <b>Facilitador:</b>
-              <span>{curso.facilitador_nombre || '—'}</span>
-            </div>
-            <div className="nota-info-row">
-              <b>Distrito:</b>
-              <span>{curso.distrito || '—'}</span>
-            </div>
-            <div className="nota-info-row">
-              <b>Inicio:</b>
-              <span>
-                {curso.fecha_inicio
-                  ? formatFechaDisplay(curso.fecha_inicio)
-                  : (courseDatesStr.length > 0
-                      ? courseDatesStr.map((d, i) => {
-                          const slot = slots.find((s) => s.date === d);
-                          const key = String(slot?.course || '');
-                          return `C${key}: ${formatFechaDisplay(d)}`;
-                        }).filter((v, i, a) => a.indexOf(v) === i).join(' | ')
-                      : '—')
-                }
-              </span>
-            </div>
-            <div className="nota-info-row">
-              <b>Lugar:</b>
-              <span>{curso.lugar || '—'}</span>
-            </div>
-            <div className="nota-info-row">
-              <b>Técnico:</b>
-              <span>{curso.tecnico_nombre || '—'}</span>
-            </div>
+          ) : (
+            /* Vista de Lectura Normal */
+            <>
+              {/* Info Grid */}
+              <div className="nota-info-grid">
+                <div className="nota-info-row">
+                  <b>Grupo:</b>
+                  <span>{curso.grupo_nombre || '—'}</span>
+                </div>
+                <div className="nota-info-row">
+                  <b>Área:</b>
+                  <span>{curso.area_formativa || curso.ciclo_grupo || '—'}</span>
+                </div>
+                <div className="nota-info-row">
+                  <b>Ciclo:</b>
+                  <span>{curso.ciclo_nombre || '—'}</span>
+                </div>
+                <div className="nota-info-row">
+                  <b>Facilitador:</b>
+                  <span style={{ color: curso.facilitador_nombre === 'POR CONFIRMAR' ? 'var(--red-500)' : 'inherit', fontWeight: curso.facilitador_nombre === 'POR CONFIRMAR' ? 'bold' : 'normal' }}>
+                    {curso.facilitador_nombre || '—'}
+                  </span>
+                </div>
+                <div className="nota-info-row">
+                  <b>Distrito:</b>
+                  <span>{curso.distrito || '—'}</span>
+                </div>
+                <div className="nota-info-row">
+                  <b>Inicio:</b>
+                  <span>
+                    {curso.fecha_inicio
+                      ? formatFechaDisplay(curso.fecha_inicio)
+                      : (courseDatesStr.length > 0
+                          ? courseDatesStr.map((d, i) => {
+                              const slot = slots.find((s) => s.date === d);
+                              const key = String(slot?.course || '');
+                              return `C${key}: ${formatFechaDisplay(d)}`;
+                            }).filter((v, i, a) => a.indexOf(v) === i).join(' | ')
+                          : '—')
+                    }
+                  </span>
+                </div>
+                <div className="nota-info-row">
+                  <b>Lugar:</b>
+                  <span>{curso.lugar || '—'}</span>
+                </div>
+                <div className="nota-info-row">
+                  <b>Técnico:</b>
+                  <span>{curso.tecnico_nombre || '—'}</span>
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="nota-total-bar">
+                <small>TOTAL ESTIMADO</small>
+                <span>{curso.total_bs ? `${curso.total_bs} Bs` : '0 Bs'}</span>
+              </div>
+
+              {/* Action Buttons Columna Izquierda (2x2) */}
+              <div className="nota-actions-grid-2x2">
+                <button className="btn btn-warning btn-sm" onClick={() => setIsEditingCurso(true)}>
+                  <Edit3 size={12} /> Editar
+                </button>
+                <button className="btn btn-danger btn-sm" onClick={onDelete}>
+                  <Trash2 size={12} /> Eliminar
+                </button>
+                <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
+                  <Users size={12} /> Participantes
+                </button>
+                <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
+                  <Globe size={12} /> Insc. online
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Calendario de Actividades */}
+          <div className="calendar-section" style={{ marginTop: '12px' }}>
+            <MiniMonthCalendar
+              slots={slots}
+              onSaveSlots={handleSaveSlots}
+              noteColor={noteColor}
+              initialDate={firstSlot ? new Date(firstSlot.date) : undefined}
+              compliance={compliance}
+            />
           </div>
 
-          {/* Total */}
-          <div className="nota-total-bar">
-            <small>TOTAL ESTIMADO</small>
-            <span>{curso.total_bs ? `${curso.total_bs} Bs` : '0 Bs'}</span>
-          </div>
+          {/* Compliance */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {totalHours > 0 && (
+              <div className="soc-days-badge">
+                <Clock size={11} /> {totalHours} hrs total
+                {Object.entries(hoursByCourse).map(([k, v]) => (
+                  <span key={k} style={{ opacity: 0.8 }}> • {k.toUpperCase()}: {v}h</span>
+                ))}
+              </div>
+            )}
 
-          {/* Action Buttons */}
-          <div className="nota-actions-grid">
-            <button className="btn btn-warning btn-sm" onClick={onEdit}>
-              <Edit3 size={12} /> Editar
-            </button>
-            <button className="btn btn-danger btn-sm" onClick={onDelete}>
-              <Trash2 size={12} /> Eliminar
-            </button>
-            <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
-              <Users size={12} /> Participantes
-            </button>
-            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
-              <Globe size={12} /> Insc. online
-            </button>
-            <button className="btn btn-purple btn-sm" onClick={handlePrintFichaInscripcion}>
-              <FileText size={12} /> Ficha inscripción
-            </button>
-            <button className="btn btn-orange btn-sm">
-              <BookOpen size={12} /> Registro Pedg
-            </button>
-            <button 
-              className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
-              onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
-            >
-              <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
-            </button>
-            <button 
-              className="btn btn-primary btn-sm"
-              onClick={() => {
-                const link = `${window.location.origin}/participantes/${curso.id}`;
-                navigator.clipboard.writeText(link);
-                Swal.fire({
-                  icon: 'success',
-                  title: 'Enlace copiado',
-                  text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
-                  timer: 2500,
-                  showConfirmButton: false,
-                  toast: true,
-                  position: 'top-end'
-                });
-              }}
-            >
-              <Link2 size={12} /> Link público
-            </button>
+            <div className="compliance-checks">
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.planificacion_recibida}
+                  onChange={() => handleToggleCheck('planificacion_recibida')}
+                />
+                Planificación recibida
+              </label>
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.evaluacion_realizada}
+                  onChange={() => handleToggleCheck('evaluacion_realizada')}
+                />
+                Evaluación realizada
+              </label>
+              <label className="compliance-check">
+                <input
+                  type="checkbox"
+                  checked={curso.informe_final_recibido}
+                  onChange={() => handleToggleCheck('informe_final_recibido')}
+                />
+                Informe final recibido
+              </label>
+            </div>
           </div>
         </div>
 
-        {/* ─── Center Panel ────────────────────────────── */}
-        <div className="nota-center">
+        {/* ─── Columna Derecha ─────────────────────────── */}
+        <div className="nota-col-right">
           {/* Organizador */}
           <div className="organizador-section">
             <div className="organizador-title">
@@ -843,142 +1153,128 @@ export default function NotaCard({
                   {hasOrganizerChanges ? '⚠️ Guardar Cambios del Organizador' : 'Guardar Datos del Organizador'}
                 </button>
               </div>
-
             </div>
           </div>
 
-          {/* Calendar Section */}
-          <div className="calendar-section">
-            <MiniMonthCalendar
-              slots={slots}
-              onSaveSlots={handleSaveSlots}
-              noteColor={noteColor}
-              initialDate={firstSlot ? new Date(firstSlot.date) : undefined}
-              compliance={compliance}
-            />
-          </div>
-
-          {/* Compliance */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-
-            {/* Hours summary */}
-            {totalHours > 0 && (
-              <div className="soc-days-badge">
-                <Clock size={11} /> {totalHours} hrs total
-                {Object.entries(hoursByCourse).map(([k, v]) => (
-                  <span key={k} style={{ opacity: 0.8 }}> • {k.toUpperCase()}: {v}h</span>
-                ))}
-              </div>
-            )}
-
-            {/* Checks */}
-            <div className="compliance-checks">
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.planificacion_recibida}
-                  onChange={() => handleToggleCheck('planificacion_recibida')}
-                />
-                Planificación recibida
-              </label>
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.evaluacion_realizada}
-                  onChange={() => handleToggleCheck('evaluacion_realizada')}
-                />
-                Evaluación realizada
-              </label>
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.informe_final_recibido}
-                  onChange={() => handleToggleCheck('informe_final_recibido')}
-                />
-                Informe final recibido
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Bottom Panel ────────────────────────────────── */}
-      <div className="nota-bottom">
-        {/* Map */}
-        <div className="map-panel">
-          <div className="map-title">
-            <h4><MapPin size={14} /> Ubicación exacta</h4>
-            {mapLink && (
-              <a href={mapLink} target="_blank" rel="noopener noreferrer">
-                Ver en Google <ExternalLink size={11} />
-              </a>
-            )}
-          </div>
-          <div className="map-preview">
-            {resolvedMapSrc ? (
-              <iframe
-                src={resolvedMapSrc}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-              />
-            ) : (
-              <div className="map-empty">
-                <div>
-                  <MapPin size={28} style={{ opacity: 0.4 }} />
-                  <p>Sin ubicación registrada</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Share actions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {orgTelefono && (
-            <>
-              <a
-                href={`https://wa.me/${orgTelefono.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-whatsapp btn-sm"
-                style={{ width: '100%', textDecoration: 'none' }}
-              >
-                <MessageCircle size={12} /> WhatsApp
-              </a>
-              <a
-                href={`tel:${orgTelefono}`}
-                className="btn btn-primary btn-sm"
-                style={{ width: '100%', textDecoration: 'none' }}
-              >
-                <Phone size={12} /> Llamar
-              </a>
-            </>
-          )}
-          {mapLink && (
-            <button
-              className="btn btn-map btn-sm"
-              style={{ width: '100%' }}
+          {/* Action Buttons Columna Derecha (2x2) */}
+          <div className="nota-actions-grid-2x2">
+            <button className="btn btn-purple btn-sm" onClick={handlePrintFichaInscripcion}>
+              <FileText size={12} /> Ficha inscripción
+            </button>
+            <button className="btn btn-orange btn-sm">
+              <BookOpen size={12} /> Registro Pedg
+            </button>
+            <button 
+              className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
+              onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
+            >
+              <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
+            </button>
+            <button 
+              className="btn btn-primary btn-sm"
               onClick={() => {
-                navigator.clipboard?.writeText(mapLink);
+                const link = `${window.location.origin}/participantes/${curso.id}`;
+                navigator.clipboard.writeText(link);
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Enlace copiado',
+                  text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
+                  timer: 2500,
+                  showConfirmButton: false,
+                  toast: true,
+                  position: 'top-end'
+                });
               }}
             >
-              <Share2 size={12} /> Compartir ubicación
+              <Link2 size={12} /> Link público
             </button>
-          )}
-          {curso.form_url && (
-            <a
-              href={curso.form_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-purple btn-sm"
-              style={{ width: '100%', textDecoration: 'none' }}
-            >
-              <Eye size={12} /> Ver formulario
-            </a>
-          )}
+          </div>
+
+          {/* Ubicación exacta (Simétrica) */}
+          <div className="map-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="map-title">
+              <h4><MapPin size={14} /> Ubicación exacta</h4>
+              {mapLink && (
+                <a href={mapLink} target="_blank" rel="noopener noreferrer">
+                  Ver en Google <ExternalLink size={11} />
+                </a>
+              )}
+            </div>
+            <div className="map-preview">
+              {resolvedMapSrc ? (
+                <iframe
+                  src={resolvedMapSrc}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="map-empty">
+                  <div>
+                    <MapPin size={28} style={{ opacity: 0.4 }} />
+                    <p>Sin ubicación registrada</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Share / Comm Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+              {orgTelefono && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <a
+                    href={`https://wa.me/${orgTelefono.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-whatsapp btn-sm"
+                    style={{ width: '100%', textDecoration: 'none' }}
+                  >
+                    <MessageCircle size={12} /> WhatsApp
+                  </a>
+                  <a
+                    href={`tel:${orgTelefono}`}
+                    className="btn btn-primary btn-sm"
+                    style={{ width: '100%', textDecoration: 'none' }}
+                  >
+                    <Phone size={12} /> Llamar
+                  </a>
+                </div>
+              )}
+              {mapLink && (
+                <button
+                  className="btn btn-map btn-sm"
+                  style={{ width: '100%', backgroundColor: '#ea4335', color: '#fff' }}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(mapLink);
+                    Swal.fire({
+                      icon: 'success',
+                      title: 'Copiado',
+                      text: 'Enlace de ubicación copiado al portapapeles.',
+                      timer: 2000,
+                      showConfirmButton: false,
+                      toast: true,
+                      position: 'top-end'
+                    });
+                  }}
+                >
+                  <Share2 size={12} /> Compartir ubicación
+                </button>
+              )}
+              {curso.form_url && (
+                <a
+                  href={curso.form_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-purple btn-sm"
+                  style={{ width: '100%', textDecoration: 'none' }}
+                >
+                  <Eye size={12} /> Ver formulario
+                </a>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      </div> {/* Closes nota-layout opened at line 724 */}
       {showInscripcionModal && (
         <InscripcionOnlineModal
           curso={curso}

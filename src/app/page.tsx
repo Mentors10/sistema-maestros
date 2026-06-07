@@ -679,6 +679,10 @@ export default function HomePage() {
               key={grupo.nombre}
               grupo={grupo}
               activeGroup={filters.grupo}
+              tecnicos={tecnicos}
+              facilitadores={facilitadores}
+              ciclos={ciclos}
+              grupoNames={grupoNames}
               onEditCurso={handleEditCurso}
               onDeleteCurso={handleDeleteCurso}
               onUpdateCurso={handleUpdateCurso}

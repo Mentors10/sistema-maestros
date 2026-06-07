@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Grupo, Curso } from '@/types';
+import { Grupo, Curso, Tecnico, Facilitador, CicloFormativo } from '@/types';
 import { LayoutGrid, ChevronRight, Edit3, Hash, ArrowUp, ArrowDown } from 'lucide-react';
 import NotaCard from './NotaCard';
 import Swal from 'sweetalert2';
@@ -9,6 +9,10 @@ import Swal from 'sweetalert2';
 interface GrupoCardProps {
   grupo: Grupo;
   activeGroup: string;
+  tecnicos: Tecnico[];
+  facilitadores: Facilitador[];
+  ciclos: CicloFormativo[];
+  grupoNames: string[];
   onEditCurso: (curso: Curso) => void;
   onDeleteCurso: (id: string) => void;
   onUpdateCurso: (id: string, data: Partial<Curso>) => void;
@@ -22,6 +26,10 @@ interface GrupoCardProps {
 export default function GrupoCard({
   grupo,
   activeGroup,
+  tecnicos,
+  facilitadores,
+  ciclos,
+  grupoNames,
   onEditCurso,
   onDeleteCurso,
   onUpdateCurso,
@@ -121,6 +129,10 @@ export default function GrupoCard({
           <NotaCard
             key={curso.id}
             curso={curso}
+            tecnicos={tecnicos}
+            facilitadores={facilitadores}
+            ciclos={ciclos}
+            grupoNames={grupoNames}
             onEdit={() => onEditCurso(curso)}
             onDelete={() => onDeleteCurso(curso.id)}
             onUpdate={(data) => onUpdateCurso(curso.id, data)}
