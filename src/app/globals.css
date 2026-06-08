@@ -104,7 +104,7 @@
 }
 
 html {
-  font-size: 15px;
+  font-size: 13px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
@@ -901,6 +901,10 @@ h1, h2, h3, h4, h5, h6 {
   gap: 8px;
 }
 
+.col-span-2 {
+  grid-column: span 2;
+}
+
 .nota-actions-grid-4x2 .btn {
   width: 100%;
   font-size: 0.78rem;
@@ -914,7 +918,7 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   background: #ffffff;
-  height: 520px;
+  height: 460px;
 }
 
 .nota-widget-left {
@@ -937,7 +941,7 @@ h1, h2, h3, h4, h5, h6 {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  position: relative;
   box-shadow: var(--shadow-sm);
 }
 
@@ -1107,6 +1111,53 @@ h1, h2, h3, h4, h5, h6 {
   background: #fee2e2;
   color: #991b1b;
   border-color: #fca5a5;
+}
+
+/* Compliance Status Bars */
+.compliance-status-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compliance-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+  border: 1px solid transparent;
+}
+
+.compliance-status-bar.realizado {
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.compliance-status-bar.realizado:hover {
+  background: #d1fae5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
+}
+
+.compliance-status-bar.pendiente {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.compliance-status-bar.pendiente:hover {
+  background: #fee2e2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.12);
 }
 
 /* Compliance Checklist */
@@ -1366,6 +1417,169 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 20px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
+}
+
+/* Calendar Day Popover Bubble Dialog */
+.day-popover {
+  position: absolute;
+  bottom: 115%; /* Bubble on top of clicked date cell */
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 8px;
+  width: 200px; /* Reduced width */
+  box-shadow: var(--shadow-xl), 0 4px 15px rgba(0, 0, 0, 0.12);
+  z-index: 105;
+  border: 1px solid #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: default;
+}
+
+/* Alignment variants and pointer arrow positioning */
+.day-popover.align-left {
+  left: -10px;
+  transform: none;
+}
+.day-popover.align-left::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 20px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #ffffff transparent transparent transparent;
+}
+.day-popover.align-left::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 20px;
+  border-width: 7px;
+  border-style: solid;
+  border-color: #cbd5e1 transparent transparent transparent;
+  z-index: -1;
+}
+
+.day-popover.align-right {
+  left: auto;
+  right: -10px;
+  transform: none;
+}
+.day-popover.align-right::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 20px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #ffffff transparent transparent transparent;
+}
+.day-popover.align-right::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 20px;
+  border-width: 7px;
+  border-style: solid;
+  border-color: #cbd5e1 transparent transparent transparent;
+  z-index: -1;
+}
+
+.day-popover.align-center {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.day-popover.align-center::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #ffffff transparent transparent transparent;
+}
+.day-popover.align-center::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 7px;
+  border-style: solid;
+  border-color: #cbd5e1 transparent transparent transparent;
+  z-index: -1;
+}
+
+.day-popover h4 {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--primary-900);
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+  margin: 0;
+}
+
+.day-popover-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.day-slot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: #f8fafc;
+  border-left: 3px solid var(--primary-500);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.day-popover-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8fafc;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px dashed #e2e8f0;
+}
+
+.day-popover-form label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 1px;
+  display: block;
+}
+
+.day-popover-form select,
+.day-popover-form input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  background: #ffffff;
+}
+
+.day-popover-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.day-popover-actions .btn {
+  flex: 1;
+  font-size: 0.75rem;
+  padding: 5px 8px;
 }
 
 /* ─── Agenda Contact view ─────────────────────────────────── */

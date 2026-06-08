@@ -170,6 +170,23 @@ export default function NotaCard({
     linkExterno !== (curso.link_inscripcion_externo || '') ||
     noteColor !== (curso.grupo_color || '#2f80ed');
 
+  const cleanEditFecha = editFechaInicio.replace('T', ' ').substring(0, 16);
+  const cleanCursoFecha = (curso.fecha_inicio || '').trim().replace(/\s+/g, ' ').substring(0, 16);
+  const hasCursoChanges =
+    editTecnico !== (curso.tecnico_carnet || '') ||
+    editCiclo !== (curso.ciclo_id || '') ||
+    editFacilitador !== (curso.facilitador_carnet || '') ||
+    editDistrito !== (curso.distrito || '') ||
+    editLugar !== (curso.lugar || '') ||
+    editArea !== (curso.area_urbano_rural || 'Urbano') ||
+    editSegmento !== (curso.segmento || '') ||
+    cleanEditFecha !== cleanCursoFecha ||
+    editEstado !== (curso.estado || 'POR EJECUTAR') ||
+    editMes !== (curso.mes || '') ||
+    editCosto !== (curso.costo || 50) ||
+    editGrupoNombre !== (curso.grupo_nombre || '') ||
+    editNewGrupoNombre.trim() !== '';
+
   const compliance = getNoteCompliance(curso);
   const count = curso.inscritos_formulario;
   const slots = curso.horarios_tentativos || [];
@@ -714,9 +731,6 @@ export default function NotaCard({
             <div className="nota-count-value">{count}</div>
             <div className="nota-count-label">INSCRITOS</div>
           </div>
-          <button className="btn btn-sm" onClick={() => setIsEditingCurso(!isEditingCurso)} title="Editar">
-            <Edit3 size={13} /> {isEditingCurso ? 'Cancelar' : 'Editar'}
-          </button>
           <button className="btn btn-sm" onClick={onDelete} title="Eliminar">
             <Trash2 size={13} />
           </button>
@@ -755,242 +769,181 @@ export default function NotaCard({
             </button>
           </div>
 
-          {isEditingCurso ? (
-            /* Formulario de Edición Directa */
-            <div className="nota-edit-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div className="organizador-field">
-                <label>Grupo</label>
-                <select
-                  value={editGrupoNombre}
-                  onChange={(e) => setEditGrupoNombre(e.target.value)}
-                >
-                  <option value="">Sin grupo</option>
-                  {grupoNames.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  value={editNewGrupoNombre}
-                  onChange={(e) => setEditNewGrupoNombre(e.target.value)}
-                  placeholder="O crear grupo nuevo..."
-                  style={{ marginTop: '4px' }}
-                />
-              </div>
-
-              <div className="organizador-field">
-                <label>Técnico</label>
-                <select
-                  value={editTecnico}
-                  onChange={(e) => setEditTecnico(e.target.value)}
-                >
-                  <option value="">Seleccionar técnico</option>
-                  {tecnicos.map((t) => (
-                    <option key={t.carnet} value={t.carnet}>{t.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="organizador-field">
-                <label>Ciclo Formativo</label>
-                <select
-                  value={editCiclo}
-                  onChange={(e) => setEditCiclo(e.target.value)}
-                >
-                  <option value="">Seleccionar ciclo</option>
-                  {ciclos.map((c) => (
-                    <option key={c.id} value={c.id}>{c.grupo} — {c.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="organizador-field">
-                <label>Facilitador</label>
-                <select
-                  value={editFacilitador}
-                  onChange={(e) => setEditFacilitador(e.target.value)}
-                >
-                  <option value="">Seleccionar facilitador</option>
-                  {facilitadores.map((f) => (
-                    <option key={f.carnet} value={f.carnet}>{f.nombre}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="organizador-field">
-                <label>Distrito</label>
-                <input
-                  type="text"
-                  value={editDistrito}
-                  onChange={(e) => setEditDistrito(e.target.value)}
-                  placeholder="Distrito educativo"
-                />
-              </div>
-
-              <div className="organizador-field">
-                <label>Lugar</label>
-                <input
-                  type="text"
-                  value={editLugar}
-                  onChange={(e) => setEditLugar(e.target.value)}
-                  placeholder="Lugar de ejecución"
-                />
-              </div>
-
-              <div className="organizador-field">
-                <label>Área</label>
-                <select
-                  value={editArea}
-                  onChange={(e) => setEditArea(e.target.value)}
-                >
-                  <option value="Urbano">Urbano</option>
-                  <option value="Rural">Rural</option>
-                </select>
-              </div>
-
-              <div className="organizador-field">
-                <label>Segmento</label>
-                <input
-                  type="text"
-                  value={editSegmento}
-                  onChange={(e) => setEditSegmento(e.target.value)}
-                  placeholder="Segmento"
-                />
-              </div>
-
-              <div className="organizador-field">
-                <label>Fecha Inicio</label>
-                <input
-                  type="datetime-local"
-                  value={editFechaInicio}
-                  onChange={(e) => setEditFechaInicio(e.target.value)}
-                />
-              </div>
-
-              <div className="organizador-field">
-                <label>Estado</label>
-                <select
-                  value={editEstado}
-                  onChange={(e) => setEditEstado(e.target.value)}
-                >
-                  <option value="POR EJECUTAR">POR EJECUTAR</option>
-                  <option value="EJECUTADO">EJECUTADO</option>
-                </select>
-              </div>
-
-              <div className="organizador-field">
-                <label>Mes</label>
-                <select
-                  value={editMes}
-                  onChange={(e) => setEditMes(e.target.value)}
-                >
-                  <option value="">Seleccionar mes</option>
-                  {['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'].map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="organizador-field">
-                <label>Costo por participante (Bs)</label>
-                <input
-                  type="number"
-                  value={editCosto}
-                  onChange={(e) => setEditCosto(parseFloat(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="nota-total-bar" style={{ marginTop: '8px' }}>
-                <small>TOTAL ESTIMADO</small>
-                <span>{curso.inscritos_formulario * editCosto} Bs</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' }}>
-                <button
-                  className="btn btn-success"
-                  style={{
-                    width: '100%',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}
-                  onClick={handleSaveCursoInfo}
-                >
-                  <Save size={14} /> Guardar Datos del Curso
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  style={{
-                    width: '100%',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}
-                  onClick={() => setIsEditingCurso(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
+          {/* Formulario de Edición Directa */}
+          <div className="nota-edit-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="organizador-field">
+              <label>Grupo</label>
+              <select
+                value={editGrupoNombre}
+                onChange={(e) => setEditGrupoNombre(e.target.value)}
+              >
+                <option value="">Sin grupo</option>
+                {grupoNames.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={editNewGrupoNombre}
+                onChange={(e) => setEditNewGrupoNombre(e.target.value)}
+                placeholder="O crear grupo nuevo..."
+                style={{ marginTop: '4px' }}
+              />
             </div>
-          ) : (
-            /* Vista de Lectura Normal */
-            <>
-              {/* Info Grid */}
-              <div className="nota-info-grid">
-                <div className="nota-info-row">
-                  <b>Grupo:</b>
-                  <span>{curso.grupo_nombre || '—'}</span>
-                </div>
-                <div className="nota-info-row">
-                  <b>Área:</b>
-                  <span>{curso.area_formativa || curso.ciclo_grupo || '—'}</span>
-                </div>
-                <div className="nota-info-row">
-                  <b>Ciclo:</b>
-                  <span>{curso.ciclo_nombre || '—'}</span>
-                </div>
-                <div className="nota-info-row">
-                  <b>Facilitador:</b>
-                  <span style={{ color: curso.facilitador_nombre === 'POR CONFIRMAR' ? 'var(--red-500)' : 'inherit', fontWeight: curso.facilitador_nombre === 'POR CONFIRMAR' ? 'bold' : 'normal' }}>
-                    {curso.facilitador_nombre || '—'}
-                  </span>
-                </div>
-                <div className="nota-info-row">
-                  <b>Distrito:</b>
-                  <span>{curso.distrito || '—'}</span>
-                </div>
-                <div className="nota-info-row">
-                  <b>Inicio:</b>
-                  <span>
-                    {curso.fecha_inicio
-                      ? formatFechaDisplay(curso.fecha_inicio)
-                      : (courseDatesStr.length > 0
-                          ? courseDatesStr.map((d, i) => {
-                              const slot = slots.find((s) => s.date === d);
-                              const key = String(slot?.course || '');
-                              return `C${key}: ${formatFechaDisplay(d)}`;
-                            }).filter((v, i, a) => a.indexOf(v) === i).join(' | ')
-                          : '—')
-                    }
-                  </span>
-                </div>
-                <div className="nota-info-row">
-                  <b>Lugar:</b>
-                  <span>{curso.lugar || '—'}</span>
-                </div>
-                <div className="nota-info-row">
-                  <b>Técnico:</b>
-                  <span>{curso.tecnico_nombre || '—'}</span>
-                </div>
-              </div>
 
-              {/* Total */}
-              <div className="nota-total-bar">
-                <small>TOTAL ESTIMADO</small>
-                <span>{curso.total_bs ? `${curso.total_bs} Bs` : '0 Bs'}</span>
-              </div>
-            </>
-          )}
+            <div className="organizador-field">
+              <label>Técnico</label>
+              <select
+                value={editTecnico}
+                onChange={(e) => setEditTecnico(e.target.value)}
+              >
+                <option value="">Seleccionar técnico</option>
+                {tecnicos.map((t) => (
+                  <option key={t.carnet} value={t.carnet}>{t.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="organizador-field">
+              <label>Ciclo Formativo</label>
+              <select
+                value={editCiclo}
+                onChange={(e) => setEditCiclo(e.target.value)}
+              >
+                <option value="">Seleccionar ciclo</option>
+                {ciclos.map((c) => (
+                  <option key={c.id} value={c.id}>{c.grupo} — {c.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="organizador-field">
+              <label>Facilitador</label>
+              <select
+                value={editFacilitador}
+                onChange={(e) => setEditFacilitador(e.target.value)}
+              >
+                <option value="">Seleccionar facilitador</option>
+                {facilitadores.map((f) => (
+                  <option key={f.carnet} value={f.carnet}>{f.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="organizador-field">
+              <label>Distrito</label>
+              <input
+                type="text"
+                value={editDistrito}
+                onChange={(e) => setEditDistrito(e.target.value)}
+                placeholder="Distrito educativo"
+              />
+            </div>
+
+            <div className="organizador-field">
+              <label>Lugar</label>
+              <input
+                type="text"
+                value={editLugar}
+                onChange={(e) => setEditLugar(e.target.value)}
+                placeholder="Lugar de ejecución"
+              />
+            </div>
+
+            <div className="organizador-field">
+              <label>Área</label>
+              <select
+                value={editArea}
+                onChange={(e) => setEditArea(e.target.value)}
+              >
+                <option value="Urbano">Urbano</option>
+                <option value="Rural">Rural</option>
+              </select>
+            </div>
+
+            <div className="organizador-field">
+              <label>Segmento</label>
+              <input
+                type="text"
+                value={editSegmento}
+                onChange={(e) => setEditSegmento(e.target.value)}
+                placeholder="Segmento"
+              />
+            </div>
+
+            <div className="organizador-field">
+              <label>Fecha Inicio</label>
+              <input
+                type="datetime-local"
+                value={editFechaInicio}
+                onChange={(e) => setEditFechaInicio(e.target.value)}
+              />
+            </div>
+
+            <div className="organizador-field">
+              <label>Estado</label>
+              <select
+                value={editEstado}
+                onChange={(e) => setEditEstado(e.target.value)}
+              >
+                <option value="POR EJECUTAR">POR EJECUTAR</option>
+                <option value="EJECUTADO">EJECUTADO</option>
+              </select>
+            </div>
+
+            <div className="organizador-field">
+              <label>Mes</label>
+              <select
+                value={editMes}
+                onChange={(e) => setEditMes(e.target.value)}
+              >
+                <option value="">Seleccionar mes</option>
+                {['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'].map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="organizador-field">
+              <label>Costo por participante (Bs)</label>
+              <input
+                type="number"
+                value={editCosto}
+                onChange={(e) => setEditCosto(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+
+            <div className="nota-total-bar" style={{ marginTop: '8px' }}>
+              <small>TOTAL ESTIMADO</small>
+              <span>{curso.inscritos_formulario * editCosto} Bs</span>
+            </div>
+          </div>
+
+          {/* Botón de guardado del curso */}
+          <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
+            <button
+              className={`btn ${hasCursoChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+              style={{
+                width: '100%',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: hasCursoChanges ? '10px 16px' : '8px 12px',
+                fontSize: hasCursoChanges ? '0.88rem' : '0.82rem',
+                transition: 'all 0.3s ease',
+                boxShadow: hasCursoChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                borderRadius: 'var(--radius-sm, 6px)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}
+              onClick={handleSaveCursoInfo}
+            >
+              <Save size={hasCursoChanges ? 15 : 13} />
+              {hasCursoChanges ? '⚠️ Guardar Datos del Curso' : 'Guardar Datos del Curso'}
+            </button>
+          </div>
         </div>
 
         {/* ─── Columna Derecha ─────────────────────────── */}
@@ -1103,10 +1056,7 @@ export default function NotaCard({
       {/* ─── Middle Section (Unified Actions) ──────────────── */}
       <div className="nota-actions-section">
         <div className="nota-actions-grid-4x2">
-          {/* Row 1: Left column buttons */}
-          <button className="btn btn-warning btn-sm" onClick={() => setIsEditingCurso(true)}>
-            <Edit3 size={12} /> Editar
-          </button>
+          {/* Row 1 */}
           <button className="btn btn-danger btn-sm" onClick={onDelete}>
             <Trash2 size={12} /> Eliminar
           </button>
@@ -1115,20 +1065,6 @@ export default function NotaCard({
           </button>
           <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
             <Globe size={12} /> Insc. online
-          </button>
-
-          {/* Row 2: Right column buttons */}
-          <button className="btn btn-purple btn-sm" onClick={handlePrintFichaInscripcion}>
-            <FileText size={12} /> Ficha inscripción
-          </button>
-          <button className="btn btn-orange btn-sm">
-            <BookOpen size={12} /> Registro Pedg
-          </button>
-          <button 
-            className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
-            onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
-          >
-            <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
           </button>
           <button 
             className="btn btn-primary btn-sm"
@@ -1148,6 +1084,20 @@ export default function NotaCard({
           >
             <Link2 size={12} /> Link público
           </button>
+
+          {/* Row 2 */}
+          <button className="btn btn-purple btn-sm col-span-2" onClick={handlePrintFichaInscripcion}>
+            <FileText size={12} /> Ficha inscripción
+          </button>
+          <button className="btn btn-orange btn-sm">
+            <BookOpen size={12} /> Registro Pedg
+          </button>
+          <button 
+            className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
+            onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
+          >
+            <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
+          </button>
         </div>
       </div>
 
@@ -1163,47 +1113,14 @@ export default function NotaCard({
               noteColor={noteColor}
               initialDate={firstSlot ? new Date(firstSlot.date) : undefined}
               compliance={compliance}
+              planificacionRecibida={curso.planificacion_recibida}
+              evaluacionRealizada={curso.evaluacion_realizada}
+              informeFinalRecibido={curso.informe_final_recibido}
+              onToggleCheck={handleToggleCheck}
             />
           </div>
 
-          {/* Compliance */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {totalHours > 0 && (
-              <div className="soc-days-badge">
-                <Clock size={11} /> {totalHours} hrs total
-                {Object.entries(hoursByCourse).map(([k, v]) => (
-                  <span key={k} style={{ opacity: 0.8 }}> • {k.toUpperCase()}: {v}h</span>
-                ))}
-              </div>
-            )}
 
-            <div className="compliance-checks">
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.planificacion_recibida}
-                  onChange={() => handleToggleCheck('planificacion_recibida')}
-                />
-                Planificación recibida
-              </label>
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.evaluacion_realizada}
-                  onChange={() => handleToggleCheck('evaluacion_realizada')}
-                />
-                Evaluación realizada
-              </label>
-              <label className="compliance-check">
-                <input
-                  type="checkbox"
-                  checked={curso.informe_final_recibido}
-                  onChange={() => handleToggleCheck('informe_final_recibido')}
-                />
-                Informe final recibido
-              </label>
-            </div>
-          </div>
         </div>
 
         {/* ─── Columna Derecha (Mapa) ───────────────────── */}
@@ -1277,17 +1194,6 @@ export default function NotaCard({
                 >
                   <Share2 size={12} /> Compartir ubicación
                 </button>
-              )}
-              {curso.form_url && (
-                <a
-                  href={curso.form_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-purple btn-sm"
-                  style={{ width: '100%', textDecoration: 'none' }}
-                >
-                  <Eye size={12} /> Ver formulario
-                </a>
               )}
             </div>
           </div>

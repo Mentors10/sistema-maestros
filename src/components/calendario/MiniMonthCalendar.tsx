@@ -16,6 +16,10 @@ interface MiniMonthCalendarProps {
   noteColor?: string;
   initialDate?: Date;
   compliance?: ComplianceAlert[];
+  planificacionRecibida: boolean;
+  evaluacionRealizada: boolean;
+  informeFinalRecibido: boolean;
+  onToggleCheck: (field: 'planificacion_recibida' | 'evaluacion_realizada' | 'informe_final_recibido') => void;
 }
 
 export default function MiniMonthCalendar({
@@ -24,6 +28,10 @@ export default function MiniMonthCalendar({
   noteColor = '#2f80ed',
   initialDate,
   compliance = [],
+  planificacionRecibida,
+  evaluacionRealizada,
+  informeFinalRecibido,
+  onToggleCheck,
 }: MiniMonthCalendarProps) {
   const now = new Date();
   const [year, setYear] = useState(initialDate?.getFullYear() || now.getFullYear());
@@ -37,6 +45,38 @@ export default function MiniMonthCalendar({
   const days = getMonthDays(year, month);
   const ranges = useMemo(() => getCourseRanges(slots), [slots]);
   const reportRanges = useMemo(() => getReportRanges(slots), [slots]);
+  const totalHours = useMemo(() => slots.reduce((sum, s) => sum + (s.hours || 0), 0), [slots]);
+
+  const [localPlani, setLocalPlani] = useState(planificacionRecibida);
+  const [localEval, setLocalEval] = useState(evaluacionRealizada);
+  const [localInfo, setLocalInfo] = useState(informeFinalRecibido);
+
+  useEffect(() => {
+    setLocalPlani(planificacionRecibida);
+  }, [planificacionRecibida]);
+
+  useEffect(() => {
+    setLocalEval(evaluacionRealizada);
+  }, [evaluacionRealizada]);
+
+  useEffect(() => {
+    setLocalInfo(informeFinalRecibido);
+  }, [informeFinalRecibido]);
+
+  const handleTogglePlanificacion = () => {
+    setLocalPlani(!localPlani);
+    onToggleCheck('planificacion_recibida');
+  };
+
+  const handleToggleEvaluacion = () => {
+    setLocalEval(!localEval);
+    onToggleCheck('evaluacion_realizada');
+  };
+
+  const handleToggleInforme = () => {
+    setLocalInfo(!localInfo);
+    onToggleCheck('informe_final_recibido');
+  };
 
   // ─── Navigate ───────────────────────────────────────────────
   const prevMonth = () => {
@@ -190,11 +230,63 @@ export default function MiniMonthCalendar({
 
   const popoverSlots = popoverDate ? getSlotsForDate(slots, popoverDate) : [];
 
+  // Compliance calculations for individual cells
+  const getDayComplianceStatus = (dateStr: string) => {
+    const daySlots = getSlotsForDate(slots, dateStr);
+    if (daySlots.length > 0) {
+      const mainSlot = daySlots[0];
+      const key = String(mainSlot.course);
+      if (['1', '2', '3', '4'].includes(key)) {
+        return { hasBar: true, isOk: localPlani };
+      }
+      if (key.startsWith('eval')) {
+        return { hasBar: true, isOk: localEval };
+      }
+      if (key.startsWith('soc')) {
+        return { hasBar: true, isOk: localInfo };
+      }
+    }
+    
+    const rangeNum = ranges.get(dateStr);
+    if (rangeNum) {
+      return { hasBar: true, isOk: localPlani };
+    }
+    
+    const reportInfo = reportRanges.get(dateStr);
+    if (reportInfo) {
+      return { hasBar: true, isOk: localInfo };
+    }
+    
+    return { hasBar: false, isOk: false };
+  };
+
   return (
     <>
+      {popoverDate && (
+        <div 
+          className="day-popover-overlay-transparent" 
+          onClick={() => setPopoverDate(null)} 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99,
+            background: 'transparent',
+            cursor: 'default'
+          }}
+        />
+      )}
+
       {/* Title + Nav */}
-      <div className="calendar-title-bar">
-        <h4><Calendar size={14} /> Calendario de Actividades</h4>
+      <div className="calendar-title-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Calendar size={14} /> 
+          Calendario
+          {totalHours > 0 && (
+            <span style={{ fontSize: '0.72rem', fontWeight: 700, opacity: 0.85, background: '#e2e8f0', color: '#1e293b', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center' }}>
+              {totalHours}h
+            </span>
+          )}
+        </h4>
         <div className="calendar-nav">
           <button onClick={prevMonth}><ChevronLeft size={14} /></button>
           <span className="calendar-month-label">
@@ -215,16 +307,21 @@ export default function MiniMonthCalendar({
         {days.map((day, i) => {
           const daySlots = getSlotsForDate(slots, day.dateStr);
           const cellStyle = getDayCellStyle(day.dateStr);
+          const isSelected = popoverDate === day.dateStr;
           
           const reportInfo = reportRanges.get(day.dateStr);
           const isReportDeadline = reportInfo?.isDeadline;
           const reportCourseNum = reportInfo?.courseNum;
+          const compStatus = getDayComplianceStatus(day.dateStr);
+
+          const colIndex = i % 7; // 0 = Mon, 1 = Tue, ..., 6 = Sun
+          const alignClass = colIndex <= 1 ? 'align-left' : colIndex >= 5 ? 'align-right' : 'align-center';
 
           return (
             <div
               key={i}
               className={`mini-month-day ${!day.isCurrentMonth ? 'muted' : ''} ${day.isToday ? 'today' : ''} ${daySlots.length > 0 ? 'has-slot' : ''}`}
-              style={cellStyle}
+              style={{ ...cellStyle, position: 'relative', zIndex: isSelected ? 100 : undefined }}
               onClick={() => handleDayClick(day.dateStr)}
             >
               <span className="mini-day-number">{day.dayNumber}</span>
@@ -276,82 +373,118 @@ export default function MiniMonthCalendar({
                   </div>
                 );
               })()}
+
+              {/* Compliance Horizontal Bar (red if not presented, green if presented) */}
+              {compStatus.hasBar && (
+                <div 
+                  className={`day-compliance-bar ${compStatus.isOk ? 'ok' : 'pending'}`}
+                  style={{
+                    height: '4px',
+                    width: '90%',
+                    background: compStatus.isOk ? '#10b981' : '#ef4444',
+                    borderRadius: '2px',
+                    marginTop: 'auto',
+                    marginBottom: '2px',
+                    transition: 'all 0.2s ease'
+                  }}
+                />
+              )}
+
+              {/* Day Popover (Centered floating bubble arrow dialog) */}
+              {isSelected && (
+                <div className={`day-popover ${alignClass}`} onClick={(e) => e.stopPropagation()}>
+                  <h4>
+                    <Calendar size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> 
+                    {day.dayNumber} {MONTH_NAMES[month]}
+                  </h4>
+
+                  {/* Existing slots */}
+                  {popoverSlots.length > 0 && (
+                    <div className="day-popover-slots">
+                      {popoverSlots.map((s, idx) => (
+                        <div key={idx} className="day-slot-row" style={{ borderLeftColor: getCourseColor(s.course) }}>
+                          <div>
+                            <strong style={{ color: getCourseColor(s.course) }}>{getCourseLabel(s.course)}</strong>
+                            {' '}{s.startTime}-{s.endTime}
+                          </div>
+                          <button className="btn btn-danger btn-xs" style={{ padding: '2px 4px' }} onClick={() => handleDeleteSlot(idx)}>
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add form */}
+                  <div className="day-popover-form">
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                      <div style={{ flex: 1 }}>
+                        <label>Act.</label>
+                        <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '3px 4px' }}>
+                          <option value="1">C1</option>
+                          <option value="2">C2</option>
+                          <option value="3">C3</option>
+                          <option value="4">C4</option>
+                          <option value="soc">SOC</option>
+                          <option value="eval">EVAL</option>
+                        </select>
+                      </div>
+                      <div style={{ width: '60px' }}>
+                        <label>De</label>
+                        <input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '3px 4px' }} />
+                      </div>
+                      <div style={{ width: '60px' }}>
+                        <label>A</label>
+                        <input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '3px 4px' }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="day-popover-actions">
+                    <button className="btn btn-success" onClick={handleAddSlot}>
+                      <Plus size={11} /> Agregar
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => setPopoverDate(null)}>
+                      <X size={11} /> Cerrar
+                    </button>
+                  </div>
+
+                  {/* Compliance Toggles inside Popover */}
+                  <div className="day-popover-compliance" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={localPlani} 
+                        onChange={handleTogglePlanificacion} 
+                        style={{ width: '12px', height: '12px', margin: 0 }}
+                      />
+                      Planificación
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={localEval} 
+                        onChange={handleToggleEvaluacion} 
+                        style={{ width: '12px', height: '12px', margin: 0 }}
+                      />
+                      Evaluación
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', margin: 0 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={localInfo} 
+                        onChange={handleToggleInforme} 
+                        style={{ width: '12px', height: '12px', margin: 0 }}
+                      />
+                      Informe Final
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-
-      {compliance.length > 0 && (
-        <div className="calendar-compliance-strip" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '10px 14px', background: 'var(--gray-50)', borderTop: '1px solid var(--gray-200)', alignItems: 'center' }}>
-          {compliance.map((alert, idx) => (
-            <div key={idx} className={`compliance-chip ${alert.severity}`} style={{ fontSize: '0.7rem', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
-              {alert.label}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Day Popover */}
-      {popoverDate && (
-        <>
-          <div className="day-popover-overlay" onClick={() => setPopoverDate(null)} />
-          <div className="day-popover">
-            <h4>
-              <Calendar size={14} /> Planificación: {popoverDate}
-            </h4>
-
-            {/* Existing slots */}
-            {popoverSlots.length > 0 && (
-              <div className="day-popover-slots">
-                {popoverSlots.map((s, i) => (
-                  <div key={i} className="day-slot-row" style={{ borderLeftColor: getCourseColor(s.course) }}>
-                    <div>
-                      <strong style={{ color: getCourseColor(s.course) }}>{getCourseLabel(s.course)}</strong>
-                      {' '}{s.startTime} - {s.endTime} ({s.hours}h)
-                    </div>
-                    <button className="btn btn-danger btn-xs" onClick={() => handleDeleteSlot(i)}>
-                      <Trash2 size={11} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add form */}
-            <div className="day-popover-form">
-              <div>
-                <label>Actividad</label>
-                <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)}>
-                  <option value="1">C1</option>
-                  <option value="2">C2</option>
-                  <option value="3">C3</option>
-                  <option value="4">C4</option>
-                  <option value="soc">SOC</option>
-                  <option value="eval">EVAL</option>
-                </select>
-              </div>
-              <div>
-                <label>Entrada</label>
-                <input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} />
-              </div>
-              <div>
-                <label>Salida</label>
-                <input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="day-popover-actions">
-              <button className="btn btn-success" onClick={handleAddSlot}>
-                <Plus size={13} /> Agregar
-              </button>
-              <button className="btn btn-secondary" onClick={() => setPopoverDate(null)}>
-                <X size={13} /> Cerrar
-              </button>
-            </div>
-          </div>
-        </>
-      )}
     </>
   );
 }
