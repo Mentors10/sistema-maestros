@@ -185,7 +185,7 @@ export default function CursoForm({
             {!areaFormativa ? 'Selecciona área formativa primero' : 'Seleccionar ciclo'}
           </option>
           {filteredCiclos.map((c) => (
-            <option key={c.id} value={c.id}>{c.grupo} — {c.nombre}</option>
+            <option key={c.id} value={c.id}>{c.nombre}</option>
           ))}
         </select>
       </div>

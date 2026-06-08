@@ -1376,6 +1376,65 @@ export default function ParticipantesModal({
     printWindow.document.close();
   };
 
+  // Delete ALL enrollments (mass delete)
+  const handleDeleteAllEnrollments = async () => {
+    if (inscripciones.length === 0) {
+      Swal.fire('Sin participantes', 'No hay participantes inscritos para eliminar.', 'info');
+      return;
+    }
+
+    const firstConfirm = await Swal.fire({
+      title: '⚠️ Eliminación Masiva',
+      html: `<p>Estás a punto de eliminar <b>${inscripciones.length}</b> inscripciones de este ciclo formativo.</p><p style="color: #dc2626; font-weight: bold;">Esta acción no se puede deshacer.</p>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Sí, eliminar todos'
+    });
+
+    if (!firstConfirm.isConfirmed) return;
+
+    const secondConfirm = await Swal.fire({
+      title: '¿Estás completamente seguro?',
+      text: `Confirma escribiendo el número de participantes a eliminar: ${inscripciones.length}`,
+      input: 'text',
+      inputPlaceholder: `Escribe ${inscripciones.length}`,
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      confirmButtonText: 'Eliminar definitivamente',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (value !== String(inscripciones.length)) {
+          return `Escribe "${inscripciones.length}" para confirmar`;
+        }
+        return null;
+      }
+    });
+
+    if (!secondConfirm.isConfirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('inscripcion_ciclo')
+        .delete()
+        .eq('curso_id', curso.id);
+
+      if (error) throw error;
+
+      await supabase
+        .from('cursos')
+        .update({ inscritos_formulario: 0 })
+        .eq('id', curso.id);
+
+      Swal.fire('Eliminados', `Se eliminaron ${inscripciones.length} inscripciones exitosamente.`, 'success');
+      onRefresh();
+      fetchParticipantes();
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'No se pudieron eliminar las inscripciones', 'error');
+    }
+  };
+
   // Filter list
   const filteredInscripciones = inscripciones.filter((ins) => {
     const p = ins.participantes;
@@ -1513,6 +1572,9 @@ export default function ParticipantesModal({
                   </button>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPDF} title="Imprimir / Exportar PDF">
                     <Printer size={14} /> PDF
+                  </button>
+                  <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteAllEnrollments} title="Eliminar todas las inscripciones">
+                    <Trash2 size={14} /> Eliminar Todos
                   </button>
                 </div>
               </div>

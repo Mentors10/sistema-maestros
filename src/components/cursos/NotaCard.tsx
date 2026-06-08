@@ -774,7 +774,7 @@ export default function NotaCard({
 
       <div className="nota-layout">
         {/* ─── Columna Izquierda ─────────────────────────── */}
-        <div className="nota-col-left" style={{ borderTop: '4px solid #1e40af' }}>
+        <div className="nota-col-left" style={{ borderTop: '4px solid #1e40af', borderRadius: '12px 12px 0 0' }}>
           {/* ID + State */}
           <div className="nota-id-row">
             <span className="nota-id">ID: {curso.id}</span>
@@ -857,7 +857,7 @@ export default function NotaCard({
                   {!editAreaFormativa ? 'Selecciona área formativa primero' : 'Seleccionar ciclo'}
                 </option>
                 {filteredCiclos.map((c) => (
-                  <option key={c.id} value={c.id}>{c.grupo} — {c.nombre}</option>
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
               </select>
             </div>

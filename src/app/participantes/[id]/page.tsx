@@ -174,29 +174,72 @@ export default function ParticipanteRegistroPage() {
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '16px', background: 'linear-gradient(135deg, #f0f4fa 0%, #e8edf5 100%)' }}>
       <div className="nota-card" style={{ maxWidth: '640px', width: '100%', '--nota-color': curso.grupo_color || '#2f80ed' } as React.CSSProperties}>
         
-        {/* Banner de Cabecera */}
-        <div className="nota-head" style={{ background: curso.grupo_color || '#2f80ed', padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.2)', padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase' }}>
-            <Award size={12} />
-            Formulario Oficial UNEFCO
+        {/* Banner de Cabecera con Logos */}
+        <div className="nota-head" style={{ background: curso.grupo_color || '#2f80ed', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Logos Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <img src="/logo-minedu.jpg" alt="Ministerio de Educación" style={{ height: '48px', objectFit: 'contain', borderRadius: '4px', background: 'rgba(255,255,255,0.95)', padding: '4px 8px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.2)', padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>
+              <Award size={12} />
+              Formulario Oficial UNEFCO
+            </div>
+            <img src="/logo-unefco.jpg" alt="UNEFCO" style={{ height: '48px', objectFit: 'contain', borderRadius: '4px', background: 'rgba(255,255,255,0.95)', padding: '4px 8px' }} />
           </div>
-          <h2 style={{ color: 'var(--white)', fontSize: '1.4rem', fontWeight: 900, margin: 0, lineHeight: 1.2 }}>
+          {/* Title */}
+          <h2 style={{ color: 'var(--white)', fontSize: '1.3rem', fontWeight: 900, margin: 0, lineHeight: 1.2, textAlign: 'center' }}>
             {curso.ciclo_nombre || 'Inscripción a Ciclo Formativo'}
           </h2>
-          <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>
-            <b>Facilitador:</b> {curso.facilitador_nombre || 'Sin asignar'}
-          </span>
         </div>
 
-        {/* Detalles del Curso */}
-        <div style={{ background: 'var(--primary-50)', padding: '14px 20px', borderBottom: '1px solid var(--primary-100)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--primary-800)', fontWeight: 600 }}>
-            <MapPin size={13} />
-            <span>{curso.lugar} ({curso.distrito})</span>
+        {/* Datos del Ciclo Formativo */}
+        <div style={{ background: 'var(--primary-50)', padding: '16px 20px', borderBottom: '1px solid var(--primary-100)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <h4 style={{ margin: 0, fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary-900)', textTransform: 'uppercase', letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FileText size={14} /> Información del Ciclo
+          </h4>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: 'var(--primary-700)' }}>
+              <span style={{ fontWeight: 800, whiteSpace: 'nowrap', minWidth: '100px' }}>Área Formativa:</span>
+              <span style={{ fontWeight: 600 }}>{curso.area_formativa || curso.ciclo_grupo || 'Sin área'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: 'var(--primary-700)' }}>
+              <span style={{ fontWeight: 800, whiteSpace: 'nowrap', minWidth: '100px' }}>Segmento:</span>
+              <span style={{ fontWeight: 600 }}>{curso.segmento || 'General'}</span>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--primary-800)', fontWeight: 600, justifyContent: 'flex-end' }}>
-            <Calendar size={13} />
-            <span>Código de Curso: {curso.id}</span>
+
+          {/* Cursos del ciclo */}
+          <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: '8px', padding: '10px 14px', border: '1px solid var(--primary-100)' }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--primary-800)', marginBottom: '6px', textTransform: 'uppercase' }}>Cursos incluidos:</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', color: 'var(--primary-700)' }}>
+              {curso.tema1 && <div style={{ display: 'flex', gap: '6px' }}><span style={{ fontWeight: 800, color: 'var(--primary-500)' }}>1.</span> {curso.tema1}</div>}
+              {curso.tema2 && <div style={{ display: 'flex', gap: '6px' }}><span style={{ fontWeight: 800, color: 'var(--primary-500)' }}>2.</span> {curso.tema2}</div>}
+              {curso.tema3 && <div style={{ display: 'flex', gap: '6px' }}><span style={{ fontWeight: 800, color: 'var(--primary-500)' }}>3.</span> {curso.tema3}</div>}
+              {curso.tema4 && <div style={{ display: 'flex', gap: '6px' }}><span style={{ fontWeight: 800, color: 'var(--primary-500)' }}>4.</span> {curso.tema4}</div>}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-700)' }}>
+              <Calendar size={13} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 800 }}>Inicio:</span>
+              <span style={{ fontWeight: 600 }}>{curso.fecha_inicio || 'POR CONFIRMAR'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-700)' }}>
+              <User size={13} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 800 }}>Facilitador:</span>
+              <span style={{ fontWeight: 600 }}>{curso.facilitador_nombre || 'Sin asignar'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-700)' }}>
+              <MapPin size={13} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 800 }}>Lugar:</span>
+              <span style={{ fontWeight: 600 }}>{curso.lugar || 'POR CONFIRMAR'} ({curso.distrito || ''})</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-700)' }}>
+              <User size={13} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 800 }}>Técnico:</span>
+              <span style={{ fontWeight: 600 }}>{curso.tecnico_nombre || 'Sin asignar'}</span>
+            </div>
           </div>
         </div>
 
