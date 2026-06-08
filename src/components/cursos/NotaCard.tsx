@@ -243,8 +243,6 @@ export default function NotaCard({
     editGrupoNombre !== (curso.grupo_nombre || '') ||
     editNewGrupoNombre.trim() !== '';
 
-  const hasChanges = hasOrganizerChanges || hasCursoChanges;
-
   const compliance = getNoteCompliance(curso);
   const count = curso.inscritos_formulario;
   const slots = curso.horarios_tentativos || [];
@@ -268,13 +266,9 @@ export default function NotaCard({
 
   const filteredCiclos = ciclos.filter((c) => c.area_formativa === editAreaFormativa);
 
-  // ─── Save all changes ───────────────────────────────────────
-  const handleSaveAll = () => {
-    const finalGrupoNombre = editNewGrupoNombre.trim() ? editNewGrupoNombre.trim() : editGrupoNombre;
-    const finalTotalBs = curso.inscritos_formulario * editCosto;
-
+  // ─── Save organizador ──────────────────────────────────────
+  const handleSaveOrganizador = () => {
     onUpdate({
-      // Datos del Organizador
       observaciones,
       link_inscripcion_externo: linkExterno,
       grupo_color: noteColor,
@@ -282,11 +276,29 @@ export default function NotaCard({
       organizador_nombre: orgNombre,
       organizador_telefono: orgTelefono,
       organizador_maps: orgMaps,
-      
-      // Datos del Curso
-      tecnico_carnet: editTecnico,
-      ciclo_id: editCiclo,
-      facilitador_carnet: editFacilitador,
+    });
+
+    Swal.fire({
+      icon: 'success',
+      title: '¡Guardado con éxito!',
+      text: 'Los datos del organizador se han actualizado correctamente.',
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#bfa05e',
+      timer: 2500,
+      timerProgressBar: true,
+      showConfirmButton: true
+    });
+  };
+
+  // ─── Save curso info ───────────────────────────────────────
+  const handleSaveCursoInfo = () => {
+    const finalGrupoNombre = editNewGrupoNombre.trim() ? editNewGrupoNombre.trim() : editGrupoNombre;
+    const finalTotalBs = curso.inscritos_formulario * editCosto;
+
+    onUpdate({
+      tecnico_carnet: editTecnico || null,
+      ciclo_id: editCiclo || null,
+      facilitador_carnet: editFacilitador || null,
       distrito: editDistrito,
       lugar: editLugar,
       area_urbano_rural: editArea,
@@ -300,12 +312,13 @@ export default function NotaCard({
 
     Swal.fire({
       icon: 'success',
-      title: 'Guardado correctamente',
-      text: 'Todos los datos de la nota se han actualizado.',
-      timer: 2000,
-      showConfirmButton: false,
-      toast: true,
-      position: 'top-end'
+      title: '¡Guardado con éxito!',
+      text: 'Los datos del curso se han actualizado correctamente.',
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#bfa05e',
+      timer: 2500,
+      timerProgressBar: true,
+      showConfirmButton: true
     });
   };
 
@@ -796,7 +809,7 @@ export default function NotaCard({
 
       <div className="nota-layout">
         {/* ─── Columna Izquierda ─────────────────────────── */}
-        <div className="nota-col-left" style={{ borderTop: '4px solid #1e40af', borderRadius: '12px 12px 0 0' }}>
+        <div className="nota-col-left" style={{ border: '1px solid #1e40af', borderTop: '4px solid #1e40af', borderRadius: '12px' }}>
           {/* ID + State */}
           <div className="nota-id-row">
             <span className="nota-id">ID: {curso.id}</span>
@@ -931,7 +944,7 @@ export default function NotaCard({
           {/* Botón de guardado del curso */}
           <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
             <button
-              className={`btn ${hasChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+              className={`btn ${hasCursoChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
               style={{
                 width: '100%',
                 fontWeight: 700,
@@ -939,18 +952,18 @@ export default function NotaCard({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                padding: hasChanges ? '10px 16px' : '8px 12px',
-                fontSize: hasChanges ? '0.88rem' : '0.82rem',
+                padding: hasCursoChanges ? '10px 16px' : '8px 12px',
+                fontSize: hasCursoChanges ? '0.88rem' : '0.82rem',
                 transition: 'all 0.3s ease',
-                boxShadow: hasChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                boxShadow: hasCursoChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
                 borderRadius: 'var(--radius-sm, 6px)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}
-              onClick={handleSaveAll}
+              onClick={handleSaveCursoInfo}
             >
-              <Save size={hasChanges ? 15 : 13} />
-              {hasChanges ? '⚠️ Guardar Datos del Curso' : 'Guardar Datos del Curso'}
+              <Save size={hasCursoChanges ? 15 : 13} />
+              {hasCursoChanges ? '⚠️ Guardar Datos del Curso' : 'Guardar Datos del Curso'}
             </button>
           </div>
         </div>
@@ -958,7 +971,7 @@ export default function NotaCard({
         {/* ─── Columna Derecha ─────────────────────────── */}
         <div className="nota-col-right" style={{ borderRight: 'none', gap: '12px' }}>
           {/* Ubicación y Costo */}
-          <div className="organizador-section" style={{ borderTop: '4px solid #1e40af' }}>
+          <div className="organizador-section" style={{ border: '1px solid #1e40af', borderTop: '4px solid #1e40af', borderRadius: '8px', padding: '12px' }}>
             <div className="organizador-title" style={{ color: '#1e40af', fontWeight: 800 }}>
               <MapPin size={14} /> Ubicación y Costo
             </div>
@@ -1004,7 +1017,7 @@ export default function NotaCard({
               <div className="organizador-field">
                 <label>Mes</label>
                 <select
-                  value={editMes}
+                  value={editMes ? editMes.toUpperCase() : ''}
                   onChange={(e) => setEditMes(e.target.value)}
                 >
                   <option value="">Seleccionar mes</option>
@@ -1025,7 +1038,7 @@ export default function NotaCard({
           </div>
 
           {/* Organizador */}
-          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, borderTop: '4px solid #0d9488' }}>
+          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid #0d9488', borderTop: '4px solid #0d9488', borderRadius: '8px', padding: '12px' }}>
             <div className="organizador-title" style={{ color: '#0d9488', fontWeight: 800 }}>
               <Users size={14} /> Datos del Organizador
             </div>
@@ -1104,7 +1117,7 @@ export default function NotaCard({
 
             <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
               <button
-                className={`btn ${hasChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+                className={`btn ${hasOrganizerChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
                 style={{
                   width: '100%',
                   fontWeight: 700,
@@ -1112,18 +1125,18 @@ export default function NotaCard({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  padding: hasChanges ? '10px 16px' : '8px 12px',
-                  fontSize: hasChanges ? '0.88rem' : '0.82rem',
+                  padding: hasOrganizerChanges ? '10px 16px' : '8px 12px',
+                  fontSize: hasOrganizerChanges ? '0.88rem' : '0.82rem',
                   transition: 'all 0.3s ease',
-                  boxShadow: hasChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                  boxShadow: hasOrganizerChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
                   borderRadius: 'var(--radius-sm, 6px)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}
-                onClick={handleSaveAll}
+                onClick={handleSaveOrganizador}
               >
-                <Save size={hasChanges ? 15 : 13} />
-                {hasChanges ? '⚠️ Guardar Cambios de la Nota' : 'Guardar Datos del Organizador'}
+                <Save size={hasOrganizerChanges ? 15 : 13} />
+                {hasOrganizerChanges ? '⚠️ Guardar Cambios del Organizador' : 'Guardar Datos del Organizador'}
               </button>
             </div>
           </div>

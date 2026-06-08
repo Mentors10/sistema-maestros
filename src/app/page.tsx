@@ -54,7 +54,7 @@ export default function HomePage() {
     setLoading(true);
     try {
       const [cursosRes, tecRes, facRes, cicRes, agendaRes] = await Promise.all([
-        supabase.from('cursos_enriquecidos').select('*, inscripcion_ciclo(count)').order('created_at', { ascending: false }),
+        supabase.from('cursos_enriquecidos').select('*, inscripcion_ciclo(count)').order('created_at', { ascending: false }).order('id', { ascending: true }),
         supabase.from('tecnicos').select('*').order('nombre'),
         supabase.from('facilitadores').select('*').order('nombre'),
         supabase.from('ciclos_formativos').select('*').order('grupo, nombre'),
@@ -142,11 +142,11 @@ export default function HomePage() {
         result.sort((a, b) => b.id.localeCompare(a.id));
         break;
       case 'antiguos':
-        result.sort((a, b) => a.created_at.localeCompare(b.created_at));
+        result.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
         break;
       case 'recientes':
       default:
-        result.sort((a, b) => b.created_at.localeCompare(a.created_at));
+        result.sort((a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id));
         break;
     }
 
@@ -249,11 +249,29 @@ export default function HomePage() {
       if (editingCurso) {
         const { error } = await supabase.from('cursos').update(data).eq('id', editingCurso.id);
         if (error) throw error;
-        Swal.fire({ icon: 'success', title: 'Actualizado', text: `Curso ${editingCurso.id} actualizado`, timer: 1500, showConfirmButton: false });
+        Swal.fire({
+          icon: 'success',
+          title: '¡Actualizado con éxito!',
+          text: `El curso ${editingCurso.id} se ha actualizado correctamente.`,
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#bfa05e',
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: true
+        });
       } else {
         const { error } = await supabase.from('cursos').insert(data);
         if (error) throw error;
-        Swal.fire({ icon: 'success', title: 'Creado', text: `Curso ${data.id} creado exitosamente`, timer: 1500, showConfirmButton: false });
+        Swal.fire({
+          icon: 'success',
+          title: '¡Creado con éxito!',
+          text: `El curso ${data.id} se ha registrado correctamente.`,
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#bfa05e',
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: true
+        });
       }
       setShowForm(false);
       setEditingCurso(null);
@@ -359,7 +377,16 @@ export default function HomePage() {
         .update({ grupo_nombre: newName })
         .eq('grupo_nombre', oldName);
       if (error) throw error;
-      Swal.fire({ icon: 'success', title: 'Grupo renombrado', timer: 1200, showConfirmButton: false });
+      Swal.fire({
+        icon: 'success',
+        title: '¡Grupo renombrado!',
+        text: 'El nombre del grupo se ha actualizado correctamente.',
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#bfa05e',
+        timer: 2500,
+        timerProgressBar: true,
+        showConfirmButton: true
+      });
       loadData();
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
@@ -389,11 +416,29 @@ export default function HomePage() {
       if (editingContacto) {
         const { error } = await supabase.from('agenda_contactos').update(data).eq('id_contacto', editingContacto.id_contacto);
         if (error) throw error;
-        Swal.fire({ icon: 'success', title: 'Actualizado', text: 'Contacto actualizado', timer: 1500, showConfirmButton: false });
+        Swal.fire({
+          icon: 'success',
+          title: '¡Actualizado con éxito!',
+          text: 'El contacto de la agenda se ha actualizado correctamente.',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#bfa05e',
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: true
+        });
       } else {
         const { error } = await supabase.from('agenda_contactos').insert(data);
         if (error) throw error;
-        Swal.fire({ icon: 'success', title: 'Creado', text: 'Contacto creado exitosamente', timer: 1500, showConfirmButton: false });
+        Swal.fire({
+          icon: 'success',
+          title: '¡Creado con éxito!',
+          text: 'El contacto se ha registrado correctamente en la agenda.',
+          confirmButtonText: 'Aceptar',
+          confirmButtonColor: '#bfa05e',
+          timer: 2500,
+          timerProgressBar: true,
+          showConfirmButton: true
+        });
       }
       setShowAgendaForm(false);
       setEditingContacto(null);

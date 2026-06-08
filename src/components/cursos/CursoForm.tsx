@@ -133,6 +133,9 @@ export default function CursoForm({
     if (!form.id.trim()) return;
     onSave({
       ...form,
+      tecnico_carnet: form.tecnico_carnet || null,
+      ciclo_id: form.ciclo_id || null,
+      facilitador_carnet: form.facilitador_carnet || null,
       fecha_inicio: form.fecha_inicio ? form.fecha_inicio.replace('T', ' ') : '',
       grupo_nombre: useNewGrupo ? newGrupoName.trim() : form.grupo_nombre,
       total_bs: totalBs,
@@ -266,7 +269,7 @@ export default function CursoForm({
       <div className="form-field">
         <label>Mes</label>
         <select
-          value={form.mes}
+          value={form.mes ? form.mes.toUpperCase() : ''}
           onChange={(e) => setForm({ ...form, mes: e.target.value })}
         >
           <option value="">Seleccionar mes</option>

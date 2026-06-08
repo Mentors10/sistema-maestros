@@ -6,7 +6,8 @@ import { Curso } from '@/types';
 import {
   X, Search, UserPlus, Trash2, Save, Download, Printer,
   Loader2, ShieldAlert, CheckCircle2, AlertTriangle, Edit,
-  Plus, Phone, ArrowRight, Check, RefreshCw, FileText, Camera, Upload
+  Plus, Phone, ArrowRight, Check, RefreshCw, FileText, Camera, Upload,
+  User, IdCard, Award, Hash, School
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -2073,92 +2074,183 @@ export default function ParticipantesModal({
     </div>
 
     {editingPart && (
-      <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(11,21,32,0.6)', backdropFilter: 'blur(4px)', zIndex: 1100, padding: '20px' }}>
-        <div className="modal-container" style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '500px', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease', overflow: 'hidden' }}>
+      <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(11,21,32,0.6)', backdropFilter: 'blur(8px)', zIndex: 1100, padding: '20px' }}>
+        <div className="modal-container" style={{ background: 'var(--white)', borderRadius: '16px', width: '100%', maxWidth: '520px', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)', overflow: 'hidden', border: '1px solid var(--gray-200)' }}>
           
           {/* Header */}
-          <div className="modal-header" style={{ padding: '16px 20px', background: 'var(--primary-900)', color: 'var(--white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>Corregir Datos del Participante</h4>
-            <button type="button" className="btn btn-icon btn-ghost" onClick={() => setEditingPart(null)} style={{ color: 'var(--white)', padding: '4px', borderRadius: '50%' }}>
-              <X size={18} />
+          <div className="modal-header" style={{ padding: '18px 24px', background: 'linear-gradient(135deg, var(--primary-900), var(--primary-800))', color: 'var(--white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid var(--primary-500)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Edit size={18} style={{ color: 'var(--primary-400)' }} />
+              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--white)', letterSpacing: '0.02em' }}>Editar Datos del Participante</h4>
+            </div>
+            <button type="button" className="btn btn-icon btn-ghost" onClick={() => setEditingPart(null)} style={{ color: 'rgba(255,255,255,0.8)', padding: '6px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.color = '#fff'} onMouseOut={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}>
+              <X size={16} />
             </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSaveCoreParticipant} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>C.I. (No editable)</label>
-              <input type="text" disabled value={editingPart.ci} style={{ background: 'var(--gray-100)', color: 'var(--gray-505)', cursor: 'not-allowed' }} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>NOMBRES *</label>
-              <input 
-                type="text" 
-                required 
-                value={editingPart.nombres} 
-                onChange={(e) => setEditingPart({ ...editingPart, nombres: e.target.value.toUpperCase() })} 
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>APELLIDOS *</label>
-              <input 
-                type="text" 
-                required 
-                value={editingPart.apellidos} 
-                onChange={(e) => setEditingPart({ ...editingPart, apellidos: e.target.value.toUpperCase() })} 
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>RDA (Opcional)</label>
+          <form onSubmit={handleSaveCoreParticipant} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* CI (Disabled) */}
+            <div className="premium-form-group">
+              <label className="premium-form-label">
+                <IdCard size={13} /> C.I. (No editable)
+              </label>
+              <div className="premium-input-wrapper">
                 <input 
                   type="text" 
-                  value={editingPart.rda || ''} 
-                  onChange={(e) => setEditingPart({ ...editingPart, rda: e.target.value })} 
-                  placeholder="RDA"
+                  disabled 
+                  value={editingPart.ci} 
+                  className="premium-form-input"
                 />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>CELULAR (Opcional)</label>
-                <input 
-                  type="text" 
-                  value={editingPart.celular || ''} 
-                  onChange={(e) => setEditingPart({ ...editingPart, celular: e.target.value })} 
-                  placeholder="Celular"
-                />
+                <IdCard className="premium-input-icon" size={16} style={{ color: 'var(--gray-400)' }} />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '12px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>CÓDIGO SIE</label>
+            {/* NOMBRES */}
+            <div className="premium-form-group">
+              <label className="premium-form-label">
+                <User size={13} /> Nombres *
+              </label>
+              <div className="premium-input-wrapper">
                 <input 
                   type="text" 
-                  value={editingPart.sie || ''} 
-                  onChange={(e) => setEditingPart({ ...editingPart, sie: e.target.value })} 
-                  placeholder="SIE"
+                  required 
+                  value={editingPart.nombres} 
+                  onChange={(e) => setEditingPart({ ...editingPart, nombres: e.target.value.toUpperCase() })} 
+                  className="premium-form-input"
+                  placeholder="EJ: CARLOS ALBERTO"
                 />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gray-600)' }}>UNIDAD EDUCATIVA</label>
-                <input 
-                  type="text" 
-                  value={editingPart.unidad_educativa || ''} 
-                  onChange={(e) => setEditingPart({ ...editingPart, unidad_educativa: e.target.value.toUpperCase() })} 
-                  placeholder="Unidad Educativa"
-                />
+                <User className="premium-input-icon" size={16} />
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditingPart(null)}>
+            {/* APELLIDOS */}
+            <div className="premium-form-group">
+              <label className="premium-form-label">
+                <User size={13} /> Apellidos *
+              </label>
+              <div className="premium-input-wrapper">
+                <input 
+                  type="text" 
+                  required 
+                  value={editingPart.apellidos} 
+                  onChange={(e) => setEditingPart({ ...editingPart, apellidos: e.target.value.toUpperCase() })} 
+                  className="premium-form-input"
+                  placeholder="EJ: GÓMEZ PÉREZ"
+                />
+                <User className="premium-input-icon" size={16} />
+              </div>
+            </div>
+
+            {/* RDA and Celular */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="premium-form-group">
+                <label className="premium-form-label">
+                  <Award size={13} /> RDA (Opcional)
+                </label>
+                <div className="premium-input-wrapper">
+                  <input 
+                    type="text" 
+                    value={editingPart.rda || ''} 
+                    onChange={(e) => setEditingPart({ ...editingPart, rda: e.target.value })} 
+                    className="premium-form-input"
+                    placeholder="Ej: 83921"
+                  />
+                  <Award className="premium-input-icon" size={16} />
+                </div>
+              </div>
+
+              <div className="premium-form-group">
+                <label className="premium-form-label">
+                  <Phone size={13} /> Celular (Opcional)
+                </label>
+                <div className="premium-input-wrapper">
+                  <input 
+                    type="text" 
+                    value={editingPart.celular || ''} 
+                    onChange={(e) => setEditingPart({ ...editingPart, celular: e.target.value })} 
+                    className="premium-form-input"
+                    placeholder="Ej: 78901234"
+                  />
+                  <Phone className="premium-input-icon" size={16} />
+                </div>
+              </div>
+            </div>
+
+            {/* SIE and UE */}
+            <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '16px' }}>
+              <div className="premium-form-group">
+                <label className="premium-form-label">
+                  <Hash size={13} /> CÓDIGO SIE
+                </label>
+                <div className="premium-input-wrapper">
+                  <input 
+                    type="text" 
+                    value={editingPart.sie || ''} 
+                    onChange={(e) => setEditingPart({ ...editingPart, sie: e.target.value })} 
+                    className="premium-form-input"
+                    placeholder="Ej: 807300"
+                  />
+                  <Hash className="premium-input-icon" size={16} />
+                </div>
+              </div>
+
+              <div className="premium-form-group">
+                <label className="premium-form-label">
+                  <School size={13} /> Unidad Educativa
+                </label>
+                <div className="premium-input-wrapper">
+                  <input 
+                    type="text" 
+                    value={editingPart.unidad_educativa || ''} 
+                    onChange={(e) => setEditingPart({ ...editingPart, unidad_educativa: e.target.value.toUpperCase() })} 
+                    className="premium-form-input"
+                    placeholder="Nombre de la Institución"
+                  />
+                  <School className="premium-input-icon" size={16} />
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', borderTop: '1px solid var(--gray-100)', paddingTop: '18px' }}>
+              <button 
+                type="button" 
+                onClick={() => setEditingPart(null)} 
+                style={{ 
+                  background: 'var(--white)', 
+                  color: 'var(--gray-600)', 
+                  border: '1px solid var(--gray-300)', 
+                  padding: '10px 20px', 
+                  borderRadius: '8px', 
+                  fontWeight: 600, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s',
+                  fontSize: '0.85rem'
+                }}
+              >
                 Cancelar
               </button>
-              <button type="submit" className="btn btn-success btn-sm">
-                Guardar Cambios
+              <button 
+                type="submit" 
+                style={{ 
+                  background: 'linear-gradient(135deg, var(--primary-900), var(--primary-800))', 
+                  color: 'var(--white)', 
+                  border: 'none', 
+                  padding: '10px 24px', 
+                  borderRadius: '8px', 
+                  fontWeight: 700, 
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s',
+                  boxShadow: 'var(--shadow-md)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.85rem'
+                }}
+              >
+                <Check size={14} /> Guardar Cambios
               </button>
             </div>
           </form>
@@ -2196,13 +2288,47 @@ function RowComponent({
   const [observaciones, setObservaciones] = useState(ins.observaciones || '');
   const [saving, setSaving] = useState(false);
 
-  // Detect changes
-  const hasChanges = pagos !== ins.pagos || observaciones !== (ins.observaciones || '');
+  // Synchronize internal state with changes to props from parent
+  useEffect(() => {
+    setPagos(ins.pagos || 'Pendiente');
+  }, [ins.pagos]);
 
-  const handleSaveClick = async () => {
+  useEffect(() => {
+    setObservaciones(ins.observaciones || '');
+  }, [ins.observaciones]);
+
+  // Auto-save handlers
+  const handlePagosChange = async (newVal: string) => {
+    setPagos(newVal);
     setSaving(true);
-    await onSave(ins.id, pagos, observaciones);
-    setSaving(false);
+    try {
+      await onSave(ins.id, newVal, observaciones);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleObservacionesBlur = async () => {
+    const trimmedVal = observaciones.trim();
+    const originalVal = ins.observaciones || '';
+    if (trimmedVal !== originalVal) {
+      setSaving(true);
+      try {
+        await onSave(ins.id, pagos, trimmedVal);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleObservacionesKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
   };
 
   return (
@@ -2290,29 +2416,31 @@ function RowComponent({
         )}
       </td>
 
-      {/* Pago */}
+      {/* Pago (Auto-save) */}
       <td style={{ padding: '12px 16px' }}>
         <select
           value={pagos}
-          onChange={(e) => setPagos(e.target.value)}
-          style={{ width: '100%', padding: '4px 6px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
+          onChange={(e) => handlePagosChange(e.target.value)}
+          disabled={saving}
+          style={{ width: '100%', padding: '6px 8px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)', cursor: 'pointer' }}
         >
           <option value="Pendiente">Pendiente</option>
           <option value="Pagado">Pagado</option>
-          <option value="Media Beca">Media Beca</option>
-          <option value="Beca Completa">Beca Completa</option>
         </select>
       </td>
 
-      {/* Obs. Internas / Validación */}
+      {/* Obs. Internas / Validación (Auto-save) */}
       <td style={{ padding: '12px 16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <input
             type="text"
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
+            onBlur={handleObservacionesBlur}
+            onKeyDown={handleObservacionesKeyDown}
+            disabled={saving}
             placeholder="Obs. internas..."
-            style={{ width: '100%', padding: '4px 8px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
+            style={{ width: '100%', padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
           />
           {p.observaciones_sie && (
             <div style={{ fontSize: '0.7rem', color: 'var(--red-600)', background: 'var(--red-100)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 600, border: '1px dashed var(--red-400)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.2 }}>
@@ -2324,18 +2452,11 @@ function RowComponent({
 
       {/* Acciones */}
       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-          {hasChanges && (
-            <button
-              type="button"
-              className="btn btn-success btn-xs"
-              onClick={handleSaveClick}
-              disabled={saving}
-              title="Guardar observaciones/pago"
-              style={{ padding: '6px' }}
-            >
-              {saving ? <Loader2 size={12} className="spin" /> : <Save size={12} />}
-            </button>
+        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+          {saving && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--green-600)', marginRight: '2px' }} title="Guardando automáticamente...">
+              <Loader2 size={12} className="spin" />
+            </span>
           )}
           <button
             type="button"
