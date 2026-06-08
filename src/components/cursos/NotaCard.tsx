@@ -36,6 +36,24 @@ const getInitialFechaInicio = (c: Curso | null): string => {
   return '';
 };
 
+const AREAS_FORMATIVAS = [
+  'EDUCACION ALTERNATIVA',
+  'DOCENTES DE INSTITUTOS TECNICOS TECNOLOGICOS',
+  'EDUCACION INICIAL EN FAMILIA COMUNITARIA',
+  'PARA TODOS LOS ACTORES DEL SEP',
+  'TACFI',
+  'EDUCACION ESPECIAL',
+  'EDUCACION SECUNDARIA COMUNITARIA PRODUCTIVA',
+  'EDUCACION PRIMARIA COMUNITARIA VOCACIONAL'
+];
+
+const SEGMENTO_OPTIONS = [
+  'Maestros(as), P. Admin.',
+  'Egresados',
+  'Estudiantes ESFM/UA',
+  'Otros'
+];
+
 interface NotaCardProps {
   curso: Curso;
   tecnicos: Tecnico[];
@@ -75,13 +93,16 @@ export default function NotaCard({
   const [isEditingCurso, setIsEditingCurso] = useState(false);
   const [editTecnico, setEditTecnico] = useState(curso.tecnico_carnet || '');
   const [editCiclo, setEditCiclo] = useState(curso.ciclo_id || '');
+  const [editAreaFormativa, setEditAreaFormativa] = useState(() => {
+    const currentCiclo = ciclos.find((c) => c.id === curso.ciclo_id);
+    return currentCiclo?.area_formativa || '';
+  });
   const [editFacilitador, setEditFacilitador] = useState(curso.facilitador_carnet || '');
   const [editDistrito, setEditDistrito] = useState(curso.distrito || '');
   const [editLugar, setEditLugar] = useState(curso.lugar || '');
   const [editArea, setEditArea] = useState(curso.area_urbano_rural || 'Urbano');
   const [editSegmento, setEditSegmento] = useState(curso.segmento || '');
   const [editFechaInicio, setEditFechaInicio] = useState(getInitialFechaInicio(curso));
-  const [editEstado, setEditEstado] = useState(curso.estado || 'POR EJECUTAR');
   const [editMes, setEditMes] = useState(curso.mes || '');
   const [editCosto, setEditCosto] = useState(curso.costo || 50);
   const [editGrupoNombre, setEditGrupoNombre] = useState(curso.grupo_nombre || '');
@@ -100,13 +121,14 @@ export default function NotaCard({
     if (!isEditingCurso) {
       setEditTecnico(curso.tecnico_carnet || '');
       setEditCiclo(curso.ciclo_id || '');
+      const currentCiclo = ciclos.find((c) => c.id === curso.ciclo_id);
+      setEditAreaFormativa(currentCiclo?.area_formativa || '');
       setEditFacilitador(curso.facilitador_carnet || '');
       setEditDistrito(curso.distrito || '');
       setEditLugar(curso.lugar || '');
       setEditArea(curso.area_urbano_rural || 'Urbano');
       setEditSegmento(curso.segmento || '');
       setEditFechaInicio(getInitialFechaInicio(curso));
-      setEditEstado(curso.estado || 'POR EJECUTAR');
       setEditMes(curso.mes || '');
       setEditCosto(curso.costo || 50);
       setEditGrupoNombre(curso.grupo_nombre || '');
@@ -129,11 +151,11 @@ export default function NotaCard({
     curso.area_urbano_rural,
     curso.segmento,
     curso.fecha_inicio,
-    curso.estado,
     curso.mes,
     curso.costo,
     curso.grupo_nombre,
-    isEditingCurso
+    isEditingCurso,
+    ciclos
   ]);
 
   useEffect(() => {
@@ -181,7 +203,6 @@ export default function NotaCard({
     editArea !== (curso.area_urbano_rural || 'Urbano') ||
     editSegmento !== (curso.segmento || '') ||
     cleanEditFecha !== cleanCursoFecha ||
-    editEstado !== (curso.estado || 'POR EJECUTAR') ||
     editMes !== (curso.mes || '') ||
     editCosto !== (curso.costo || 50) ||
     editGrupoNombre !== (curso.grupo_nombre || '') ||
@@ -199,6 +220,16 @@ export default function NotaCard({
   const firstSlot = slots.length > 0
     ? slots.reduce((a, b) => (a.date < b.date ? a : b))
     : null;
+
+  const handleAreaFormativaChange = (newArea: string) => {
+    setEditAreaFormativa(newArea);
+    const currentCicloObj = ciclos.find((c) => c.id === editCiclo);
+    if (!newArea || currentCicloObj?.area_formativa !== newArea) {
+      setEditCiclo('');
+    }
+  };
+
+  const filteredCiclos = ciclos.filter((c) => c.area_formativa === editAreaFormativa);
 
   // ─── Save organizador ──────────────────────────────────────
   const handleSaveOrganizador = () => {
@@ -237,7 +268,6 @@ export default function NotaCard({
       area_urbano_rural: editArea,
       segmento: editSegmento,
       fecha_inicio: editFechaInicio ? editFechaInicio.replace('T', ' ') : '',
-      estado: editEstado,
       mes: editMes,
       costo: editCosto,
       grupo_nombre: finalGrupoNombre,
@@ -256,7 +286,6 @@ export default function NotaCard({
       position: 'top-end'
     });
   };
-
 
   // ─── Save calendar slots ───────────────────────────────────
   const handleSaveSlots = useCallback((newSlots: HorarioSlot[]) => {
@@ -805,13 +834,29 @@ export default function NotaCard({
             </div>
 
             <div className="organizador-field">
+              <label>Área Formativa</label>
+              <select
+                value={editAreaFormativa}
+                onChange={(e) => handleAreaFormativaChange(e.target.value)}
+              >
+                <option value="">Seleccionar área formativa</option>
+                {AREAS_FORMATIVAS.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="organizador-field">
               <label>Ciclo Formativo</label>
               <select
                 value={editCiclo}
                 onChange={(e) => setEditCiclo(e.target.value)}
+                disabled={!editAreaFormativa}
               >
-                <option value="">Seleccionar ciclo</option>
-                {ciclos.map((c) => (
+                <option value="">
+                  {!editAreaFormativa ? 'Selecciona área formativa primero' : 'Seleccionar ciclo'}
+                </option>
+                {filteredCiclos.map((c) => (
                   <option key={c.id} value={c.id}>{c.grupo} — {c.nombre}</option>
                 ))}
               </select>
@@ -831,44 +876,19 @@ export default function NotaCard({
             </div>
 
             <div className="organizador-field">
-              <label>Distrito</label>
-              <input
-                type="text"
-                value={editDistrito}
-                onChange={(e) => setEditDistrito(e.target.value)}
-                placeholder="Distrito educativo"
-              />
-            </div>
-
-            <div className="organizador-field">
-              <label>Lugar</label>
-              <input
-                type="text"
-                value={editLugar}
-                onChange={(e) => setEditLugar(e.target.value)}
-                placeholder="Lugar de ejecución"
-              />
-            </div>
-
-            <div className="organizador-field">
-              <label>Área</label>
-              <select
-                value={editArea}
-                onChange={(e) => setEditArea(e.target.value)}
-              >
-                <option value="Urbano">Urbano</option>
-                <option value="Rural">Rural</option>
-              </select>
-            </div>
-
-            <div className="organizador-field">
               <label>Segmento</label>
-              <input
-                type="text"
+              <select
                 value={editSegmento}
                 onChange={(e) => setEditSegmento(e.target.value)}
-                placeholder="Segmento"
-              />
+              >
+                <option value="">Selecciona segmento</option>
+                {SEGMENTO_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+                {editSegmento && !SEGMENTO_OPTIONS.includes(editSegmento) && (
+                  <option value={editSegmento}>{editSegmento}</option>
+                )}
+              </select>
             </div>
 
             <div className="organizador-field">
@@ -877,39 +897,6 @@ export default function NotaCard({
                 type="datetime-local"
                 value={editFechaInicio}
                 onChange={(e) => setEditFechaInicio(e.target.value)}
-              />
-            </div>
-
-            <div className="organizador-field">
-              <label>Estado</label>
-              <select
-                value={editEstado}
-                onChange={(e) => setEditEstado(e.target.value)}
-              >
-                <option value="POR EJECUTAR">POR EJECUTAR</option>
-                <option value="EJECUTADO">EJECUTADO</option>
-              </select>
-            </div>
-
-            <div className="organizador-field">
-              <label>Mes</label>
-              <select
-                value={editMes}
-                onChange={(e) => setEditMes(e.target.value)}
-              >
-                <option value="">Seleccionar mes</option>
-                {['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'].map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="organizador-field">
-              <label>Costo por participante (Bs)</label>
-              <input
-                type="number"
-                value={editCosto}
-                onChange={(e) => setEditCosto(parseFloat(e.target.value) || 0)}
               />
             </div>
 
@@ -947,10 +934,67 @@ export default function NotaCard({
         </div>
 
         {/* ─── Columna Derecha ─────────────────────────── */}
-        <div className="nota-col-right" style={{ borderRight: 'none' }}>
+        <div className="nota-col-right" style={{ borderRight: 'none', gap: '12px' }}>
+          {/* Ubicación y Costo */}
+          <div className="organizador-section" style={{ borderTop: '4px solid #1e40af' }}>
+            <div className="organizador-title" style={{ color: '#1e40af', fontWeight: 800 }}>
+              <MapPin size={14} /> Ubicación y Costo
+            </div>
+            <div className="organizador-grid">
+              <div className="organizador-field">
+                <label>Distrito</label>
+                <input
+                  type="text"
+                  value={editDistrito}
+                  onChange={(e) => setEditDistrito(e.target.value)}
+                  placeholder="Distrito educativo"
+                />
+              </div>
+              <div className="organizador-field">
+                <label>Área</label>
+                <select
+                  value={editArea}
+                  onChange={(e) => setEditArea(e.target.value)}
+                >
+                  <option value="Urbano">Urbano</option>
+                  <option value="Rural">Rural</option>
+                </select>
+              </div>
+              <div className="organizador-field full">
+                <label>Lugar</label>
+                <input
+                  type="text"
+                  value={editLugar}
+                  onChange={(e) => setEditLugar(e.target.value)}
+                  placeholder="U.E. o lugar de ejecución"
+                />
+              </div>
+              <div className="organizador-field">
+                <label>Mes</label>
+                <select
+                  value={editMes}
+                  onChange={(e) => setEditMes(e.target.value)}
+                >
+                  <option value="">Seleccionar mes</option>
+                  {['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'].map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="organizador-field">
+                <label>Costo por participante (Bs)</label>
+                <input
+                  type="number"
+                  value={editCosto}
+                  onChange={(e) => setEditCosto(parseFloat(e.target.value) || 0)}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Organizador */}
-          <div className="organizador-section">
-            <div className="organizador-title">
+          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div className="organizador-title" style={{ color: '#475569' }}>
               <Users size={14} /> Datos del Organizador
             </div>
             <div className="organizador-grid">
@@ -1025,6 +1069,7 @@ export default function NotaCard({
                 </div>
               </div>
             </div>
+
             <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
               <button
                 className={`btn ${hasOrganizerChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}

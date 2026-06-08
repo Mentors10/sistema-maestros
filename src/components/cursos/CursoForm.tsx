@@ -35,6 +35,24 @@ const getInitialFechaInicio = (c: Curso | null): string => {
   return '';
 };
 
+const AREAS_FORMATIVAS = [
+  'EDUCACION ALTERNATIVA',
+  'DOCENTES DE INSTITUTOS TECNICOS TECNOLOGICOS',
+  'EDUCACION INICIAL EN FAMILIA COMUNITARIA',
+  'PARA TODOS LOS ACTORES DEL SEP',
+  'TACFI',
+  'EDUCACION ESPECIAL',
+  'EDUCACION SECUNDARIA COMUNITARIA PRODUCTIVA',
+  'EDUCACION PRIMARIA COMUNITARIA VOCACIONAL'
+];
+
+const SEGMENTO_OPTIONS = [
+  'Maestros(as), P. Admin.',
+  'Egresados',
+  'Estudiantes ESFM/UA',
+  'Otros'
+];
+
 export default function CursoForm({
   curso,
   tecnicos,
@@ -67,6 +85,8 @@ export default function CursoForm({
     observaciones: curso?.observaciones || '',
   });
 
+  const [areaFormativa, setAreaFormativa] = useState('');
+
   useEffect(() => {
     setForm({
       id: curso?.id || '',
@@ -88,12 +108,25 @@ export default function CursoForm({
       grupo_color: curso?.grupo_color || '#2f80ed',
       observaciones: curso?.observaciones || '',
     });
-  }, [curso]);
+
+    const currentCiclo = ciclos.find((c) => c.id === curso?.ciclo_id);
+    setAreaFormativa(currentCiclo?.area_formativa || '');
+  }, [curso, ciclos]);
 
   const [newGrupoName, setNewGrupoName] = useState('');
   const useNewGrupo = newGrupoName.trim().length > 0;
 
   const totalBs = form.inscritos * form.costo;
+
+  const handleAreaFormativaChange = (newArea: string) => {
+    setAreaFormativa(newArea);
+    const currentCicloObj = ciclos.find((c) => c.id === form.ciclo_id);
+    if (!newArea || currentCicloObj?.area_formativa !== newArea) {
+      setForm((f) => ({ ...f, ciclo_id: '' }));
+    }
+  };
+
+  const filteredCiclos = ciclos.filter((c) => c.area_formativa === areaFormativa);
 
   const handleSubmit = () => {
     if (!form.id.trim()) return;
@@ -104,7 +137,6 @@ export default function CursoForm({
       total_bs: totalBs,
     });
   };
-
 
   return (
     <div className="curso-form" style={{ marginBottom: '20px', animation: 'slideUp 0.3s ease' }}>
@@ -131,13 +163,28 @@ export default function CursoForm({
         </select>
       </div>
       <div className="form-field">
+        <label>Área Formativa</label>
+        <select
+          value={areaFormativa}
+          onChange={(e) => handleAreaFormativaChange(e.target.value)}
+        >
+          <option value="">Seleccionar área formativa</option>
+          {AREAS_FORMATIVAS.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+      </div>
+      <div className="form-field">
         <label>Ciclo Formativo</label>
         <select
           value={form.ciclo_id}
           onChange={(e) => setForm({ ...form, ciclo_id: e.target.value })}
+          disabled={!areaFormativa}
         >
-          <option value="">Seleccionar ciclo</option>
-          {ciclos.map((c) => (
+          <option value="">
+            {!areaFormativa ? 'Selecciona área formativa primero' : 'Seleccionar ciclo'}
+          </option>
+          {filteredCiclos.map((c) => (
             <option key={c.id} value={c.id}>{c.grupo} — {c.nombre}</option>
           ))}
         </select>
@@ -184,12 +231,18 @@ export default function CursoForm({
       </div>
       <div className="form-field">
         <label>Segmento</label>
-        <input
-          type="text"
+        <select
           value={form.segmento}
           onChange={(e) => setForm({ ...form, segmento: e.target.value })}
-          placeholder="Docentes, Directores..."
-        />
+        >
+          <option value="">Selecciona segmento</option>
+          {SEGMENTO_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+          {form.segmento && !SEGMENTO_OPTIONS.includes(form.segmento) && (
+            <option value={form.segmento}>{form.segmento}</option>
+          )}
+        </select>
       </div>
       <div className="form-field">
         <label>Fecha Inicio</label>
@@ -198,16 +251,6 @@ export default function CursoForm({
           value={form.fecha_inicio}
           onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
         />
-      </div>
-      <div className="form-field">
-        <label>Estado</label>
-        <select
-          value={form.estado}
-          onChange={(e) => setForm({ ...form, estado: e.target.value })}
-        >
-          <option value="POR EJECUTAR">POR EJECUTAR</option>
-          <option value="EJECUTADO">EJECUTADO</option>
-        </select>
       </div>
       <div className="form-field">
         <label>Mes</label>
