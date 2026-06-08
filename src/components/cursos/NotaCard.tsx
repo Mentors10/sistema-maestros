@@ -774,7 +774,7 @@ export default function NotaCard({
 
       <div className="nota-layout">
         {/* ─── Columna Izquierda ─────────────────────────── */}
-        <div className="nota-col-left">
+        <div className="nota-col-left" style={{ borderTop: '4px solid #1e40af' }}>
           {/* ID + State */}
           <div className="nota-id-row">
             <span className="nota-id">ID: {curso.id}</span>
@@ -993,8 +993,8 @@ export default function NotaCard({
           </div>
 
           {/* Organizador */}
-          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <div className="organizador-title" style={{ color: '#475569' }}>
+          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, borderTop: '4px solid #0d9488' }}>
+            <div className="organizador-title" style={{ color: '#0d9488', fontWeight: 800 }}>
               <Users size={14} /> Datos del Organizador
             </div>
             <div className="organizador-grid">
