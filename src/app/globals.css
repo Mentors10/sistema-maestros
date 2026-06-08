@@ -506,7 +506,15 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
   margin-bottom: var(--space-5);
   animation: fadeIn 0.4s ease both;
-  transition: all var(--transition-normal);
+  transition: border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity var(--transition-normal),
+              transform var(--transition-normal);
+}
+
+.grupo-card:not(.collapsed) {
+  border-color: var(--grupo-color, var(--primary-500));
+  box-shadow: var(--shadow-xl), 0 0 0 3px color-mix(in srgb, var(--grupo-color, var(--primary-500)) 12%, transparent);
 }
 
 .grupo-card.dimmed {
@@ -579,12 +587,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .grupo-toggle-arrow {
-  transition: transform var(--transition-fast);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   color: var(--gray-400);
 }
 
 .grupo-card:not(.collapsed) .grupo-toggle-arrow {
-  transform: rotate(90deg);
+  transform: rotate(90deg) scale(1.15);
+  color: var(--grupo-color, var(--primary-500));
 }
 
 .grupo-grid {
@@ -593,10 +602,23 @@ h1, h2, h3, h4, h5, h6 {
   gap: var(--space-5);
   padding: var(--space-5);
   background: transparent;
+  max-height: 5000px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.4s ease,
+              padding 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
 .grupo-card.collapsed .grupo-grid {
-  display: none;
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
 }
 
 /* ─── Nota Card (Single Course Module) ──────────────────── */

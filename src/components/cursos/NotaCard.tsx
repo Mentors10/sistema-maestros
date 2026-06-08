@@ -13,7 +13,7 @@ import {
   Edit3, Trash2, Users, Wrench, Globe, FileText, BookOpen,
   ClipboardEdit, ToggleLeft, Link2, MapPin, ExternalLink,
   Phone, MessageCircle, Share2, Eye, CheckCircle2,
-  Calendar, Clock, Save
+  Calendar, Clock, Save, User
 } from 'lucide-react';
 import InscripcionOnlineModal from '@/components/cursos/InscripcionOnlineModal';
 
@@ -813,6 +813,24 @@ export default function NotaCard({
           {/* ID + State */}
           <div className="nota-id-row">
             <span className="nota-id">ID: {curso.id}</span>
+            {curso.tecnico_nombre && (
+              <span className="nota-tecnico-badge" style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: '#1e3a8a',
+                background: '#e0e7ff',
+                padding: '3px 8px',
+                borderRadius: '6px',
+                border: '1px solid #c7d2fe',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+              }} title={`Técnico encargado: ${curso.tecnico_nombre}`}>
+                <User size={12} />
+                {curso.tecnico_nombre}
+              </span>
+            )}
             <span className={`nota-state-chip ${curso.estado === 'EJECUTADO' ? 'ejecutado' : 'por-ejecutar'}`}>
               {curso.estado === 'EJECUTADO' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
               {curso.estado}
