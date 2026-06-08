@@ -503,11 +503,11 @@ export default function MiniMonthCalendar({
                               <option value="eval">EVAL</option>
                             </select>
                           </div>
-                          <div style={{ width: '60px' }}>
+                          <div style={{ width: '80px' }}>
                             <label>De</label>
                             <input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '3px 4px' }} />
                           </div>
-                          <div style={{ width: '60px' }}>
+                          <div style={{ width: '80px' }}>
                             <label>A</label>
                             <input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '3px 4px' }} />
                           </div>

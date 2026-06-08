@@ -603,7 +603,7 @@ h1, h2, h3, h4, h5, h6 {
 .nota-card {
   background: color-mix(in srgb, var(--nota-color, var(--primary-500)) 6%, #ffffff);
   border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 30%, #e2e8f0);
+  border: 3px solid var(--nota-color, var(--primary-500));
   box-shadow: var(--shadow-md);
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -943,6 +943,9 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 12px;
   position: relative;
   box-shadow: var(--shadow-sm);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .calendar-title-bar {
@@ -991,9 +994,11 @@ h1, h2, h3, h4, h5, h6 {
 .mini-month {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: min-content repeat(6, 1fr);
   padding: 8px;
   gap: 3px;
   background: #ffffff;
+  flex: 1;
 }
 
 .mini-month-head {
@@ -1562,7 +1567,7 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--popover-bg, #ffffff);
   border-radius: 8px;
   padding: 8px;
-  width: 200px; /* Reduced width */
+  width: 245px; /* Increased to prevent time inputs truncation */
   box-shadow: var(--shadow-xl), 0 4px 15px rgba(0, 0, 0, 0.12);
   z-index: 105;
   border: 1px solid var(--popover-border, #cbd5e1);
