@@ -91,7 +91,7 @@ export default function NotaCard({
   const [resolvedMapSrc, setResolvedMapSrc] = useState('');
 
   // Estados locales para la edición directa del curso
-  const [isEditingCurso, setIsEditingCurso] = useState(false);
+  const [lastCursoId, setLastCursoId] = useState(curso.id);
   const [editTecnico, setEditTecnico] = useState(curso.tecnico_carnet || '');
   const [editCiclo, setEditCiclo] = useState(curso.ciclo_id || '');
   const [editAreaFormativa, setEditAreaFormativa] = useState(() => {
@@ -111,15 +111,49 @@ export default function NotaCard({
 
   // Sincronizar estados locales con las props del curso
   useEffect(() => {
-    setOrgNombre(curso.organizador_nombre || '');
-    setOrgTelefono(curso.organizador_telefono || '');
-    setOrgMaps(curso.organizador_maps || '');
-    setObservaciones(curso.observaciones || '');
-    setLinkExterno(curso.link_inscripcion_externo || '');
-    setNoteColor(curso.grupo_color || '#2f80ed');
+    const isDifferentCurso = curso.id !== lastCursoId;
+    if (isDifferentCurso) {
+      setLastCursoId(curso.id);
+    }
+
+    const hasOrgChanges = !isDifferentCurso && (
+      orgNombre !== (curso.organizador_nombre || '') ||
+      orgTelefono !== (curso.organizador_telefono || '') ||
+      orgMaps !== (curso.organizador_maps || '') ||
+      observaciones !== (curso.observaciones || '') ||
+      linkExterno !== (curso.link_inscripcion_externo || '') ||
+      noteColor !== (curso.grupo_color || '#2f80ed')
+    );
+
+    const cleanEditFecha = editFechaInicio.replace('T', ' ').substring(0, 16);
+    const cleanCursoFecha = (curso.fecha_inicio || '').trim().replace(/\s+/g, ' ').substring(0, 16);
+    const hasCurChanges = !isDifferentCurso && (
+      editTecnico !== (curso.tecnico_carnet || '') ||
+      editCiclo !== (curso.ciclo_id || '') ||
+      editFacilitador !== (curso.facilitador_carnet || '') ||
+      editDistrito !== (curso.distrito || '') ||
+      editLugar !== (curso.lugar || '') ||
+      editArea !== (curso.area_urbano_rural || 'Urbano') ||
+      editSegmento !== (curso.segmento || '') ||
+      cleanEditFecha !== cleanCursoFecha ||
+      editMes !== (curso.mes || '') ||
+      editCosto !== (curso.costo || 50) ||
+      editGrupoNombre !== (curso.grupo_nombre || '') ||
+      editNewGrupoNombre.trim() !== ''
+    );
+
+    if (!hasOrgChanges) {
+      setOrgNombre(curso.organizador_nombre || '');
+      setOrgTelefono(curso.organizador_telefono || '');
+      setOrgMaps(curso.organizador_maps || '');
+      setObservaciones(curso.observaciones || '');
+      setLinkExterno(curso.link_inscripcion_externo || '');
+      setNoteColor(curso.grupo_color || '#2f80ed');
+    }
+
     setPrev(curso.prev || '');
 
-    if (!isEditingCurso) {
+    if (!hasCurChanges) {
       setEditTecnico(curso.tecnico_carnet || '');
       setEditCiclo(curso.ciclo_id || '');
       const currentCiclo = ciclos.find((c) => c.id === curso.ciclo_id);
@@ -155,8 +189,8 @@ export default function NotaCard({
     curso.mes,
     curso.costo,
     curso.grupo_nombre,
-    isEditingCurso,
-    ciclos
+    ciclos,
+    lastCursoId
   ]);
 
   useEffect(() => {
@@ -209,6 +243,8 @@ export default function NotaCard({
     editGrupoNombre !== (curso.grupo_nombre || '') ||
     editNewGrupoNombre.trim() !== '';
 
+  const hasChanges = hasOrganizerChanges || hasCursoChanges;
+
   const compliance = getNoteCompliance(curso);
   const count = curso.inscritos_formulario;
   const slots = curso.horarios_tentativos || [];
@@ -232,9 +268,13 @@ export default function NotaCard({
 
   const filteredCiclos = ciclos.filter((c) => c.area_formativa === editAreaFormativa);
 
-  // ─── Save organizador ──────────────────────────────────────
-  const handleSaveOrganizador = () => {
+  // ─── Save all changes ───────────────────────────────────────
+  const handleSaveAll = () => {
+    const finalGrupoNombre = editNewGrupoNombre.trim() ? editNewGrupoNombre.trim() : editGrupoNombre;
+    const finalTotalBs = curso.inscritos_formulario * editCosto;
+
     onUpdate({
+      // Datos del Organizador
       observaciones,
       link_inscripcion_externo: linkExterno,
       grupo_color: noteColor,
@@ -242,25 +282,8 @@ export default function NotaCard({
       organizador_nombre: orgNombre,
       organizador_telefono: orgTelefono,
       organizador_maps: orgMaps,
-    });
-
-    Swal.fire({
-      icon: 'success',
-      title: 'Guardado correctamente',
-      text: 'Los datos del organizador se han actualizado.',
-      timer: 2000,
-      showConfirmButton: false,
-      toast: true,
-      position: 'top-end'
-    });
-  };
-
-  // ─── Save curso info ───────────────────────────────────────
-  const handleSaveCursoInfo = () => {
-    const finalGrupoNombre = editNewGrupoNombre.trim() ? editNewGrupoNombre.trim() : editGrupoNombre;
-    const finalTotalBs = curso.inscritos_formulario * editCosto;
-
-    onUpdate({
+      
+      // Datos del Curso
       tecnico_carnet: editTecnico,
       ciclo_id: editCiclo,
       facilitador_carnet: editFacilitador,
@@ -275,12 +298,10 @@ export default function NotaCard({
       total_bs: finalTotalBs,
     });
 
-    setIsEditingCurso(false);
-
     Swal.fire({
       icon: 'success',
       title: 'Guardado correctamente',
-      text: 'Los datos del curso se han actualizado.',
+      text: 'Todos los datos de la nota se han actualizado.',
       timer: 2000,
       showConfirmButton: false,
       toast: true,
@@ -910,7 +931,7 @@ export default function NotaCard({
           {/* Botón de guardado del curso */}
           <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
             <button
-              className={`btn ${hasCursoChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+              className={`btn ${hasChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
               style={{
                 width: '100%',
                 fontWeight: 700,
@@ -918,18 +939,18 @@ export default function NotaCard({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                padding: hasCursoChanges ? '10px 16px' : '8px 12px',
-                fontSize: hasCursoChanges ? '0.88rem' : '0.82rem',
+                padding: hasChanges ? '10px 16px' : '8px 12px',
+                fontSize: hasChanges ? '0.88rem' : '0.82rem',
                 transition: 'all 0.3s ease',
-                boxShadow: hasCursoChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                boxShadow: hasChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
                 borderRadius: 'var(--radius-sm, 6px)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}
-              onClick={handleSaveCursoInfo}
+              onClick={handleSaveAll}
             >
-              <Save size={hasCursoChanges ? 15 : 13} />
-              {hasCursoChanges ? '⚠️ Guardar Datos del Curso' : 'Guardar Datos del Curso'}
+              <Save size={hasChanges ? 15 : 13} />
+              {hasChanges ? '⚠️ Guardar Datos del Curso' : 'Guardar Datos del Curso'}
             </button>
           </div>
         </div>
@@ -1083,7 +1104,7 @@ export default function NotaCard({
 
             <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
               <button
-                className={`btn ${hasOrganizerChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+                className={`btn ${hasChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
                 style={{
                   width: '100%',
                   fontWeight: 700,
@@ -1091,18 +1112,18 @@ export default function NotaCard({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  padding: hasOrganizerChanges ? '10px 16px' : '8px 12px',
-                  fontSize: hasOrganizerChanges ? '0.88rem' : '0.82rem',
+                  padding: hasChanges ? '10px 16px' : '8px 12px',
+                  fontSize: hasChanges ? '0.88rem' : '0.82rem',
                   transition: 'all 0.3s ease',
-                  boxShadow: hasOrganizerChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                  boxShadow: hasChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
                   borderRadius: 'var(--radius-sm, 6px)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}
-                onClick={handleSaveOrganizador}
+                onClick={handleSaveAll}
               >
-                <Save size={hasOrganizerChanges ? 15 : 13} />
-                {hasOrganizerChanges ? '⚠️ Guardar Cambios del Organizador' : 'Guardar Datos del Organizador'}
+                <Save size={hasChanges ? 15 : 13} />
+                {hasChanges ? '⚠️ Guardar Cambios de la Nota' : 'Guardar Datos del Organizador'}
               </button>
             </div>
           </div>
