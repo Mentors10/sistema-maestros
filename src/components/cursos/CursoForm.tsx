@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Curso, CursoFormData, Tecnico, Facilitador, CicloFormativo } from '@/types';
 import { GROUP_COLORS } from '@/lib/utils/colors';
 import { Save, X } from 'lucide-react';
+import { distritosData } from '@/lib/utils/distritos';
 
 interface CursoFormProps {
   curso: Curso | null;
@@ -203,12 +204,22 @@ export default function CursoForm({
       </div>
       <div className="form-field">
         <label>Distrito</label>
-        <input
-          type="text"
+        <select
           value={form.distrito}
           onChange={(e) => setForm({ ...form, distrito: e.target.value })}
-          placeholder="Distrito educativo"
-        />
+        >
+          {distritosData.map((d, index) => {
+            const val = index === 0 ? "" : d[1];
+            return (
+              <option key={index} value={val}>
+                {d[1]}
+              </option>
+            );
+          })}
+          {form.distrito && !distritosData.some((d) => d[1] === form.distrito) && (
+            <option value={form.distrito}>{form.distrito}</option>
+          )}
+        </select>
       </div>
       <div className="form-field">
         <label>Lugar</label>

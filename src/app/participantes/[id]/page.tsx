@@ -7,6 +7,22 @@ import { Curso } from '@/types';
 import { Calendar, MapPin, User, FileText, CheckCircle2, Award, ClipboardCheck, ArrowRight, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
+const formatOnlyDate = (fechaStr: string | null | undefined): string => {
+  if (!fechaStr) return 'POR CONFIRMAR';
+  // Try to parse YYYY-MM-DD
+  const match = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  // Try DD/MM/YYYY
+  const matchES = fechaStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (matchES) {
+    return `${matchES[1]}/${matchES[2]}/${matchES[3]}`;
+  }
+  // Fallback to splitting by space/T and taking the first part
+  return fechaStr.split(/[ T]/)[0];
+};
+
 export default function ParticipanteRegistroPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -171,22 +187,39 @@ export default function ParticipanteRegistroPage() {
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '16px', background: 'linear-gradient(135deg, #f0f4fa 0%, #e8edf5 100%)' }}>
-      <div className="nota-card" style={{ maxWidth: '640px', width: '100%', '--nota-color': curso.grupo_color || '#2f80ed' } as React.CSSProperties}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '16px', background: 'linear-gradient(135deg, #f7f6f2 0%, #eae8e1 100%)' }}>
+      <style>{`
+        @media (max-width: 600px) {
+          .form-grid-responsive {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .form-grid-responsive > div {
+            grid-column: span 1 !important;
+          }
+          .info-grid-responsive {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
+          .nota-card {
+            border-radius: 8px !important;
+          }
+        }
+      `}</style>
+      <div className="nota-card" style={{ maxWidth: '640px', width: '100%', '--nota-color': '#bfa05e' } as React.CSSProperties}>
         
-        {/* Banner de Cabecera con Logos */}
-        <div className="nota-head" style={{ background: curso.grupo_color || '#2f80ed', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Logos Row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <img src="/logo-minedu.jpg" alt="Ministerio de Educación" style={{ height: '48px', objectFit: 'contain', borderRadius: '4px', background: 'rgba(255,255,255,0.95)', padding: '4px 8px' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.2)', padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>
-              <Award size={12} />
-              Formulario Oficial UNEFCO
-            </div>
-            <img src="/logo-unefco.jpg" alt="UNEFCO" style={{ height: '48px', objectFit: 'contain', borderRadius: '4px', background: 'rgba(255,255,255,0.95)', padding: '4px 8px' }} />
-          </div>
-          {/* Title */}
-          <h2 style={{ color: 'var(--white)', fontSize: '1.3rem', fontWeight: 900, margin: 0, lineHeight: 1.2, textAlign: 'center' }}>
+        {/* Banner de Cabecera */}
+        <div style={{ width: '100%', overflow: 'hidden', borderTopLeftRadius: '12px', borderTopRightRadius: '12px', borderBottom: '4px solid #bfa05e' }}>
+          <img 
+            src="/header-banner.jpg" 
+            alt="UNEFCO Banner" 
+            style={{ width: '100%', height: 'auto', display: 'block' }} 
+          />
+        </div>
+
+        {/* Título Principal */}
+        <div style={{ padding: '24px 20px 12px 20px', backgroundColor: 'var(--white)', textAlign: 'center' }}>
+          <h2 style={{ color: 'var(--primary-900)', fontSize: '1.4rem', fontWeight: 900, margin: 0, lineHeight: 1.3 }}>
             {curso.ciclo_nombre || 'Inscripción a Ciclo Formativo'}
           </h2>
         </div>
@@ -197,7 +230,7 @@ export default function ParticipanteRegistroPage() {
             <FileText size={14} /> Información del Ciclo
           </h4>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
+          <div className="info-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: 'var(--primary-700)' }}>
               <span style={{ fontWeight: 800, whiteSpace: 'nowrap', minWidth: '100px' }}>Área Formativa:</span>
               <span style={{ fontWeight: 600 }}>{curso.area_formativa || curso.ciclo_grupo || 'Sin área'}</span>
@@ -219,11 +252,11 @@ export default function ParticipanteRegistroPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
+          <div className="info-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-700)' }}>
               <Calendar size={13} style={{ flexShrink: 0 }} />
               <span style={{ fontWeight: 800 }}>Inicio:</span>
-              <span style={{ fontWeight: 600 }}>{curso.fecha_inicio || 'POR CONFIRMAR'}</span>
+              <span style={{ fontWeight: 600 }}>{formatOnlyDate(curso.fecha_inicio)}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-700)' }}>
               <User size={13} style={{ flexShrink: 0 }} />
@@ -275,7 +308,7 @@ export default function ParticipanteRegistroPage() {
               Por favor, rellena todos tus datos correspondientes de manera correcta para asegurar tu registro en este ciclo formativo.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {/* Nombres */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
                 <label style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--gray-600)' }}>Nombres *</label>

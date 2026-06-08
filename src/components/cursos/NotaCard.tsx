@@ -8,6 +8,7 @@ import { buildMapEmbedSrc, buildMapOpenLink } from '@/lib/utils/maps';
 import { GROUP_COLORS } from '@/lib/utils/colors';
 import { formatFechaDisplay, getTotalHours, getHoursByCourse } from '@/lib/utils/calendar';
 import MiniMonthCalendar from '@/components/calendario/MiniMonthCalendar';
+import { distritosData } from '@/lib/utils/distritos';
 import {
   Edit3, Trash2, Users, Wrench, Globe, FileText, BookOpen,
   ClipboardEdit, ToggleLeft, Link2, MapPin, ExternalLink,
@@ -943,12 +944,22 @@ export default function NotaCard({
             <div className="organizador-grid">
               <div className="organizador-field">
                 <label>Distrito</label>
-                <input
-                  type="text"
+                <select
                   value={editDistrito}
                   onChange={(e) => setEditDistrito(e.target.value)}
-                  placeholder="Distrito educativo"
-                />
+                >
+                  {distritosData.map((d, index) => {
+                    const val = index === 0 ? "" : d[1];
+                    return (
+                      <option key={index} value={val}>
+                        {d[1]}
+                      </option>
+                    );
+                  })}
+                  {editDistrito && !distritosData.some((d) => d[1] === editDistrito) && (
+                    <option value={editDistrito}>{editDistrito}</option>
+                  )}
+                </select>
               </div>
               <div className="organizador-field">
                 <label>Área</label>

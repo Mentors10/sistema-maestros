@@ -37,7 +37,6 @@ export default function MiniMonthCalendar({
   const [year, setYear] = useState(initialDate?.getFullYear() || now.getFullYear());
   const [month, setMonth] = useState(initialDate?.getMonth() ?? now.getMonth());
   const [popoverDate, setPopoverDate] = useState<string | null>(null);
-  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
   const [newCourse, setNewCourse] = useState('1');
   const [newStart, setNewStart] = useState('08:00');
   const [newEnd, setNewEnd] = useState('12:00');
@@ -103,9 +102,50 @@ export default function MiniMonthCalendar({
     return () => el.removeEventListener('wheel', handler);
   });
 
-  // ─── Day click → popover ───────────────────────────────────
-  const handleDayClick = (dateStr: string) => {
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Global click listener to close popover when clicking outside
+  useEffect(() => {
+    if (!popoverDate) return;
+    const handleGlobalClick = (e: MouseEvent) => {
+      const popoverEl = calRef.current?.querySelector('.day-popover');
+      if (popoverEl && !popoverEl.contains(e.target as Node)) {
+        setPopoverDate(null);
+      }
+    };
+    document.addEventListener('mousedown', handleGlobalClick);
+    return () => document.removeEventListener('mousedown', handleGlobalClick);
+  }, [popoverDate]);
+
+  const handleMouseEnterDay = (dateStr: string) => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
     setPopoverDate(dateStr);
+  };
+
+  const handleMouseLeaveDay = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
+    closeTimeoutRef.current = setTimeout(() => {
+      const activeEl = document.activeElement;
+      const popoverEl = calRef.current?.querySelector('.day-popover');
+      if (popoverEl && activeEl && popoverEl.contains(activeEl)) {
+        return;
+      }
+      setPopoverDate(null);
+    }, 250);
   };
 
   // ─── Add slot ──────────────────────────────────────────────
@@ -263,19 +303,7 @@ export default function MiniMonthCalendar({
 
   return (
     <>
-      {popoverDate && (
-        <div 
-          className="day-popover-overlay-transparent" 
-          onClick={() => setPopoverDate(null)} 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99,
-            background: 'transparent',
-            cursor: 'default'
-          }}
-        />
-      )}
+
 
       {/* Title + Nav */}
       <div className="calendar-title-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -323,9 +351,8 @@ export default function MiniMonthCalendar({
               key={i}
               className={`mini-month-day ${!day.isCurrentMonth ? 'muted' : ''} ${day.isToday ? 'today' : ''} ${daySlots.length > 0 ? 'has-slot' : ''}`}
               style={{ ...cellStyle, position: 'relative', zIndex: isSelected ? 100 : undefined }}
-              onClick={() => handleDayClick(day.dateStr)}
-              onMouseEnter={() => { if (daySlots.length > 0 && !popoverDate) setHoveredDate(day.dateStr); }}
-              onMouseLeave={() => setHoveredDate(null)}
+              onMouseEnter={() => handleMouseEnterDay(day.dateStr)}
+              onMouseLeave={handleMouseLeaveDay}
             >
               <span className="mini-day-number">{day.dayNumber}</span>
               {daySlots.length > 0 && (
@@ -393,17 +420,7 @@ export default function MiniMonthCalendar({
                 />
               )}
 
-              {/* Hover Tooltip (shows schedule on mouse hover) */}
-              {hoveredDate === day.dateStr && !isSelected && daySlots.length > 0 && (
-                <div className={`day-hover-tooltip ${alignClass}`}>
-                  {daySlots.map((s, idx) => (
-                    <div key={idx} className="day-hover-tooltip-row">
-                      <span className="day-hover-tooltip-label" style={{ color: getCourseColor(s.course) }}>{getCourseLabel(s.course)}</span>
-                      <span className="day-hover-tooltip-time">{s.startTime} - {s.endTime}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+
 
               {/* Day Popover (Centered floating bubble arrow dialog) */}
               {isSelected && (
