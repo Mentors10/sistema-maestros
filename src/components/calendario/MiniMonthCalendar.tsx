@@ -20,6 +20,7 @@ interface MiniMonthCalendarProps {
   evaluacionRealizada: boolean;
   informeFinalRecibido: boolean;
   onToggleCheck: (field: 'planificacion_recibida' | 'evaluacion_realizada' | 'informe_final_recibido') => void;
+  readOnly?: boolean;
 }
 
 export default function MiniMonthCalendar({
@@ -32,6 +33,7 @@ export default function MiniMonthCalendar({
   evaluacionRealizada,
   informeFinalRecibido,
   onToggleCheck,
+  readOnly = false,
 }: MiniMonthCalendarProps) {
   const now = new Date();
   const [year, setYear] = useState(initialDate?.getFullYear() || now.getFullYear());
@@ -205,9 +207,9 @@ export default function MiniMonthCalendar({
   const getDayCellStyle = (dateStr: string) => {
     const daySlots = getSlotsForDate(slots, dateStr);
 
-    const hasPlanningDelay = compliance.some((a) => a.type === 'planificacion-atrasada');
-    const hasPlanningRequired = compliance.some((a) => a.type === 'planificacion-requerida');
-    const hasEvalDelay = compliance.some((a) => a.type === 'eval-pendiente');
+    const hasPlanningDelay = !readOnly && compliance.some((a) => a.type === 'planificacion-atrasada');
+    const hasPlanningRequired = !readOnly && compliance.some((a) => a.type === 'planificacion-requerida');
+    const hasEvalDelay = !readOnly && compliance.some((a) => a.type === 'eval-pendiente');
 
     if (daySlots.length > 0) {
       const mainSlot = daySlots[0];
@@ -250,33 +252,35 @@ export default function MiniMonthCalendar({
       const rc = RANGE_COLORS[String(rangeNum)];
       if (rc) return { background: rc.bg, borderColor: rc.border };
     }
-    // Check report ranges
-    const reportInfo = reportRanges.get(dateStr);
-    if (reportInfo) {
-      const hasReportDelay = compliance.some((a) => a.type === 'informe-atrasado');
-      const hasReportWarning = compliance.some((a) => a.type === 'informe-por-vencer');
+    // Check report ranges (only paint for non-readOnly)
+    if (!readOnly) {
+      const reportInfo = reportRanges.get(dateStr);
+      if (reportInfo) {
+        const hasReportDelay = compliance.some((a) => a.type === 'informe-atrasado');
+        const hasReportWarning = compliance.some((a) => a.type === 'informe-por-vencer');
 
-      if (hasReportDelay) {
-        return {
-          background: '#fef2f2',
-          borderColor: '#fca5a5',
-          borderStyle: 'dashed',
-          borderWidth: '1.5px',
-        };
-      } else if (hasReportWarning) {
-        return {
-          background: '#fffbeb',
-          borderColor: '#fde047',
-          borderStyle: 'dashed',
-          borderWidth: '1.5px',
-        };
-      } else {
-        return {
-          background: '#eef2ff',
-          borderColor: '#c7d2fe',
-          borderStyle: 'dashed',
-          borderWidth: '1.5px',
-        };
+        if (hasReportDelay) {
+          return {
+            background: '#fef2f2',
+            borderColor: '#fca5a5',
+            borderStyle: 'dashed',
+            borderWidth: '1.5px',
+          };
+        } else if (hasReportWarning) {
+          return {
+            background: '#fffbeb',
+            borderColor: '#fde047',
+            borderStyle: 'dashed',
+            borderWidth: '1.5px',
+          };
+        } else {
+          return {
+            background: '#eef2ff',
+            borderColor: '#c7d2fe',
+            borderStyle: 'dashed',
+            borderWidth: '1.5px',
+          };
+        }
       }
     }
     return {};
@@ -359,12 +363,12 @@ export default function MiniMonthCalendar({
           const colIndex = i % 7; // 0 = Mon, 1 = Tue, ..., 6 = Sun
           const alignClass = colIndex <= 1 ? 'align-left' : colIndex >= 5 ? 'align-right' : 'align-center';
 
-          const isPaintedDay = daySlots.length > 0 || ranges.has(day.dateStr) || reportRanges.has(day.dateStr);
+          const isPaintedDay = daySlots.length > 0 || ranges.has(day.dateStr) || (!readOnly && reportRanges.has(day.dateStr));
 
           // Determine theme color for popover background tint
           const firstSlot = daySlots[0];
           const hasRange = ranges.get(day.dateStr);
-          const rangeInfo = reportRanges.get(day.dateStr);
+          const rangeInfo = !readOnly && reportRanges.get(day.dateStr);
           let themeColor = noteColor; // fallback
           if (firstSlot) {
             themeColor = getCourseColor(firstSlot.course);
@@ -383,9 +387,9 @@ export default function MiniMonthCalendar({
               key={i}
               className={`mini-month-day ${!day.isCurrentMonth ? 'muted' : ''} ${day.isToday ? 'today' : ''} ${daySlots.length > 0 ? 'has-slot' : ''}`}
               style={{ ...cellStyle, position: 'relative', zIndex: isSelected ? 100 : undefined, cursor: 'pointer' }}
-              onMouseEnter={() => isPaintedDay && handleMouseEnterDay(day.dateStr)}
-              onMouseLeave={handleMouseLeaveDay}
-              onClick={() => handleDayClick(day.dateStr)}
+              onMouseEnter={() => !readOnly && isPaintedDay && handleMouseEnterDay(day.dateStr)}
+              onMouseLeave={() => !readOnly && handleMouseLeaveDay()}
+              onClick={() => !readOnly && handleDayClick(day.dateStr)}
             >
               <span className="mini-day-number">{day.dayNumber}</span>
               {daySlots.length > 0 && (
@@ -397,7 +401,7 @@ export default function MiniMonthCalendar({
                   ))}
                 </div>
               )}
-              {isReportDeadline && (() => {
+              {!readOnly && isReportDeadline && (() => {
                 const hasReportDelay = compliance.some((a) => a.type === 'informe-atrasado');
                 const hasReportWarning = compliance.some((a) => a.type === 'informe-por-vencer');
 
@@ -438,7 +442,7 @@ export default function MiniMonthCalendar({
               })()}
 
               {/* Compliance Horizontal Bar (red if not presented, green if presented) */}
-              {compStatus.hasBar && (
+              {!readOnly && compStatus.hasBar && (
                 <div 
                   className={`day-compliance-bar ${compStatus.isOk ? 'ok' : 'pending'}`}
                   style={{
@@ -453,8 +457,8 @@ export default function MiniMonthCalendar({
                 />
               )}
 
-              {/* Day Popover (Centered floating bubble arrow dialog) */}
-              {isSelected && (
+              {/* Day Popover (Centered floating bubble arrow dialog) — hidden in readOnly mode */}
+              {isSelected && !readOnly && (
                 <div 
                   className={`day-popover ${alignClass}`} 
                   onClick={(e) => e.stopPropagation()}

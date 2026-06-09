@@ -4,15 +4,50 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Curso, Grupo, AppFilters, DEFAULT_FILTERS, Tecnico, Facilitador, CicloFormativo, AgendaContacto } from '@/types';
 import { getNoteCompliance, getReviewCount } from '@/lib/utils/compliance';
 import { supabase } from '@/lib/supabase/client';
-import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut } from 'lucide-react';
+import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye } from 'lucide-react';
 import GrupoCard from '@/components/cursos/GrupoCard';
 import CursoForm from '@/components/cursos/CursoForm';
 import AgendaCard from '@/components/agenda/AgendaCard';
 import AgendaForm from '@/components/agenda/AgendaForm';
 import ParticipantesModal from '@/components/participantes/ParticipantesModal';
+import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
+import LoginPage from '@/components/auth/LoginPage';
+import ChangePasswordPage from '@/components/auth/ChangePasswordPage';
+import CiclosProximos from '@/components/supervisor/CiclosProximos';
+import MonitoreoTecnicos from '@/components/supervisor/MonitoreoTecnicos';
 import Swal from 'sweetalert2';
 
-export default function HomePage() {
+export default function PageWrapper() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  );
+}
+
+function AuthGate() {
+  const { isLoggedIn, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' }}>
+        <div className="login-spinner" style={{ width: 40, height: 40 }} />
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return <LoginPage />;
+  }
+
+  if (user?.requiere_cambio_clave) {
+    return <ChangePasswordPage />;
+  }
+
+  return <HomePage />;
+}
+
+function HomePage() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [facilitadores, setFacilitadores] = useState<Facilitador[]>([]);
@@ -553,9 +588,13 @@ export default function HomePage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // ─── Auth ───────────────────────────────────────────────────
+  const { user, isSupervisor, logout } = useAuth();
+  const readOnly = isSupervisor;
+
   // ─── Render ─────────────────────────────────────────────────
   return (
-    <div className="page-container">
+    <div className={`page-container ${readOnly ? 'supervisor-mode' : ''}`}>
       {/* Header */}
       <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--gray-200)' }}>
         <h1 style={{ margin: 0, padding: 0 }}>
@@ -563,6 +602,28 @@ export default function HomePage() {
           Sistema de Control de Maestros
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Role indicator */}
+          {user && (
+            <div className="role-indicator">
+              {isSupervisor ? <Eye size={14} /> : <Shield size={14} />}
+              <span className="role-name">{user.nombre_completo}</span>
+              <span className={`role-badge ${isSupervisor ? 'supervisor' : 'tecnico'}`}>
+                {isSupervisor ? 'Supervisor' : 'Técnico'}
+              </span>
+            </div>
+          )}
+
+          {/* Logout */}
+          <button
+            type="button"
+            className="btn btn-sm"
+            style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600 }}
+            onClick={logout}
+            title="Cerrar sesión"
+          >
+            <LogOut size={13} /> Salir
+          </button>
+
           {/* Zoom / Lupa Controls */}
           <div className="magnifier-container">
             <span className="magnifier-label">
@@ -771,25 +832,29 @@ export default function HomePage() {
 
         <div className="toolbar-right">
           {viewMode === 'cursos' ? (
-            <button
-              className="btn btn-success"
-              onClick={() => { setEditingCurso(null); setShowForm(!showForm); }}
-            >
-              <Plus size={14} /> Nuevo curso
-            </button>
+            !readOnly && (
+              <button
+                className="btn btn-success"
+                onClick={() => { setEditingCurso(null); setShowForm(!showForm); }}
+              >
+                <Plus size={14} /> Nuevo curso
+              </button>
+            )
           ) : (
-            <button
-              className="btn btn-success"
-              onClick={() => { setEditingContacto(null); setShowAgendaForm(!showAgendaForm); }}
-            >
-              <Plus size={14} /> Nuevo contacto
-            </button>
+            !readOnly && (
+              <button
+                className="btn btn-success"
+                onClick={() => { setEditingContacto(null); setShowAgendaForm(!showAgendaForm); }}
+              >
+                <Plus size={14} /> Nuevo contacto
+              </button>
+            )
           )}
         </div>
       </div>
 
-      {/* Curso Form */}
-      {viewMode === 'cursos' && showForm && (
+      {/* Curso Form (hidden for supervisor) */}
+      {!readOnly && viewMode === 'cursos' && showForm && (
         <CursoForm
           curso={editingCurso}
           tecnicos={tecnicos}
@@ -802,8 +867,8 @@ export default function HomePage() {
         />
       )}
 
-      {/* Agenda Form */}
-      {viewMode === 'agenda' && showAgendaForm && (
+      {/* Agenda Form (hidden for supervisor) */}
+      {!readOnly && viewMode === 'agenda' && showAgendaForm && (
         <AgendaForm
           contacto={editingContacto}
           tecnicos={tecnicos}
@@ -821,6 +886,14 @@ export default function HomePage() {
         </div>
       ) : viewMode === 'cursos' ? (
         <>
+          {/* Dashboard Panels (supervisor only) */}
+          {readOnly && (
+            <>
+              <MonitoreoTecnicos cursos={cursos} tecnicos={tecnicos} />
+              <CiclosProximos cursos={cursos} />
+            </>
+          )}
+
           {selectedTecnicoObj && (
             <div style={{
               background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
@@ -920,6 +993,7 @@ export default function HomePage() {
                         const key = `${tg.tecnicoCarnet}-${distrito.nombre}`;
                         setExpandedGrupo(expandedGrupo === key ? null : key);
                       }}
+                      readOnly={readOnly}
                     />
                   ))}
                 </div>
@@ -945,6 +1019,7 @@ export default function HomePage() {
                 onManageParticipantes={setActiveCursoParticipantes}
                 collapsed={expandedGrupo !== grupo.nombre}
                 onToggleCollapse={() => setExpandedGrupo(expandedGrupo === grupo.nombre ? null : grupo.nombre)}
+                readOnly={readOnly}
               />
             ))
           )}
@@ -970,6 +1045,7 @@ export default function HomePage() {
                 tecnicos={tecnicos}
                 onEdit={() => handleEditContacto(contacto)}
                 onDelete={() => handleDeleteContacto(contacto.id_contacto)}
+                readOnly={readOnly}
               />
             ))}
           </div>

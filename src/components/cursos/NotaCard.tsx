@@ -66,6 +66,7 @@ interface NotaCardProps {
   onUpdate: (data: Partial<Curso>) => void;
   onManageParticipantes: (curso: Curso) => void;
   animationDelay?: number;
+  readOnly?: boolean;
 }
 
 export default function NotaCard({
@@ -79,6 +80,7 @@ export default function NotaCard({
   onUpdate,
   onManageParticipantes,
   animationDelay = 0,
+  readOnly = false,
 }: NotaCardProps) {
   const [orgNombre, setOrgNombre] = useState(curso.organizador_nombre || '');
   const [orgTelefono, setOrgTelefono] = useState(curso.organizador_telefono || '');
@@ -776,7 +778,7 @@ export default function NotaCard({
 
   return (
     <div
-      className="nota-card"
+      className={`nota-card ${readOnly ? 'read-only-card' : ''}`}
       style={{
         '--nota-color': noteColor,
         animationDelay: `${animationDelay}s`,
@@ -795,9 +797,11 @@ export default function NotaCard({
             <div className="nota-count-value">{count}</div>
             <div className="nota-count-label">INSCRITOS</div>
           </div>
-          <button className="btn btn-sm" onClick={onDelete} title="Eliminar">
-            <Trash2 size={13} />
-          </button>
+          {!readOnly && (
+            <button className="btn btn-sm" onClick={onDelete} title="Eliminar">
+              <Trash2 size={13} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -807,7 +811,8 @@ export default function NotaCard({
         <span>{dateRangeLabel}</span>
       </div>
 
-      <div className="nota-layout">
+      <div className="nota-main-content">
+        <div className="nota-layout">
         {/* ─── Columna Izquierda ─────────────────────────── */}
         <div className="nota-col-left" style={{ border: '1px solid #1e40af', borderTop: '4px solid #1e40af', borderRadius: '12px' }}>
           {/* ID + State */}
@@ -840,117 +845,153 @@ export default function NotaCard({
           {/* Preventivo */}
           <div className="nota-preventivo">
             <span className="prev-label">PREV:</span>
-            <input
-              type="text"
-              value={prev}
-              onChange={(e) => setPrev(e.target.value)}
-              placeholder="N° preventivo"
-            />
-            <button className="btn btn-success btn-xs" onClick={() => onUpdate({ prev })}>
-              <Save size={11} />
-            </button>
+            {readOnly ? (
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#1e293b' }}>{prev || '—'}</span>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  value={prev}
+                  onChange={(e) => setPrev(e.target.value)}
+                  placeholder="N° preventivo"
+                />
+                <button className="btn btn-success btn-xs" onClick={() => onUpdate({ prev })}>
+                  <Save size={11} />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Formulario de Edición Directa */}
           <div className="nota-edit-form" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div className="organizador-field">
               <label>Grupo</label>
-              <select
-                value={editGrupoNombre}
-                onChange={(e) => setEditGrupoNombre(e.target.value)}
-              >
-                <option value="">Sin grupo</option>
-                {grupoNames.map((g) => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={editNewGrupoNombre}
-                onChange={(e) => setEditNewGrupoNombre(e.target.value)}
-                placeholder="O crear grupo nuevo..."
-                style={{ marginTop: '4px' }}
-              />
+              {readOnly ? (
+                <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editGrupoNombre || '—'}</span>
+              ) : (
+                <>
+                  <select
+                    value={editGrupoNombre}
+                    onChange={(e) => setEditGrupoNombre(e.target.value)}
+                  >
+                    <option value="">Sin grupo</option>
+                    {grupoNames.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={editNewGrupoNombre}
+                    onChange={(e) => setEditNewGrupoNombre(e.target.value)}
+                    placeholder="O crear grupo nuevo..."
+                    style={{ marginTop: '4px' }}
+                  />
+                </>
+              )}
             </div>
 
             <div className="organizador-field">
               <label>Técnico</label>
-              <select
-                value={editTecnico}
-                onChange={(e) => setEditTecnico(e.target.value)}
-              >
-                <option value="">Seleccionar técnico</option>
-                {tecnicos.map((t) => (
-                  <option key={t.carnet} value={t.carnet}>{t.nombre}</option>
-                ))}
-              </select>
+              {readOnly ? (
+                <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{curso.tecnico_nombre || '—'}</span>
+              ) : (
+                <select
+                  value={editTecnico}
+                  onChange={(e) => setEditTecnico(e.target.value)}
+                >
+                  <option value="">Seleccionar técnico</option>
+                  {tecnicos.map((t) => (
+                    <option key={t.carnet} value={t.carnet}>{t.nombre}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="organizador-field">
               <label>Área Formativa</label>
-              <select
-                value={editAreaFormativa}
-                onChange={(e) => handleAreaFormativaChange(e.target.value)}
-              >
-                <option value="">Seleccionar área formativa</option>
-                {AREAS_FORMATIVAS.map((a) => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </select>
+              {readOnly ? (
+                <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editAreaFormativa || '—'}</span>
+              ) : (
+                <select
+                  value={editAreaFormativa}
+                  onChange={(e) => handleAreaFormativaChange(e.target.value)}
+                >
+                  <option value="">Seleccionar área formativa</option>
+                  {AREAS_FORMATIVAS.map((a) => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="organizador-field">
               <label>Ciclo Formativo</label>
-              <select
-                value={editCiclo}
-                onChange={(e) => setEditCiclo(e.target.value)}
-                disabled={!editAreaFormativa}
-              >
-                <option value="">
-                  {!editAreaFormativa ? 'Selecciona área formativa primero' : 'Seleccionar ciclo'}
-                </option>
-                {filteredCiclos.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-              </select>
+              {readOnly ? (
+                <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{curso.ciclo_nombre || '—'}</span>
+              ) : (
+                <select
+                  value={editCiclo}
+                  onChange={(e) => setEditCiclo(e.target.value)}
+                  disabled={!editAreaFormativa}
+                >
+                  <option value="">
+                    {!editAreaFormativa ? 'Selecciona área formativa primero' : 'Seleccionar ciclo'}
+                  </option>
+                  {filteredCiclos.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="organizador-field">
               <label>Facilitador</label>
-              <select
-                value={editFacilitador}
-                onChange={(e) => setEditFacilitador(e.target.value)}
-              >
-                <option value="">Seleccionar facilitador</option>
-                {facilitadores.map((f) => (
-                  <option key={f.carnet} value={f.carnet}>{f.nombre}</option>
-                ))}
-              </select>
+              {readOnly ? (
+                <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{curso.facilitador_nombre || '—'}</span>
+              ) : (
+                <select
+                  value={editFacilitador}
+                  onChange={(e) => setEditFacilitador(e.target.value)}
+                >
+                  <option value="">Seleccionar facilitador</option>
+                  {facilitadores.map((f) => (
+                    <option key={f.carnet} value={f.carnet}>{f.nombre}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="organizador-field">
               <label>Segmento</label>
-              <select
-                value={editSegmento}
-                onChange={(e) => setEditSegmento(e.target.value)}
-              >
-                <option value="">Selecciona segmento</option>
-                {SEGMENTO_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-                {editSegmento && !SEGMENTO_OPTIONS.includes(editSegmento) && (
-                  <option value={editSegmento}>{editSegmento}</option>
-                )}
-              </select>
+              {readOnly ? (
+                <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editSegmento || '—'}</span>
+              ) : (
+                <select
+                  value={editSegmento}
+                  onChange={(e) => setEditSegmento(e.target.value)}
+                >
+                  <option value="">Selecciona segmento</option>
+                  {SEGMENTO_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                  {editSegmento && !SEGMENTO_OPTIONS.includes(editSegmento) && (
+                    <option value={editSegmento}>{editSegmento}</option>
+                  )}
+                </select>
+              )}
             </div>
 
             <div className="organizador-field">
               <label>Fecha Inicio</label>
-              <input
-                type="datetime-local"
-                value={editFechaInicio}
-                onChange={(e) => setEditFechaInicio(e.target.value)}
-              />
+              {readOnly ? (
+                <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editFechaInicio ? editFechaInicio.replace('T', ' ') : '—'}</span>
+              ) : (
+                <input
+                  type="datetime-local"
+                  value={editFechaInicio}
+                  onChange={(e) => setEditFechaInicio(e.target.value)}
+                />
+              )}
             </div>
 
             <div className="nota-total-bar" style={{ marginTop: '8px' }}>
@@ -959,31 +1000,33 @@ export default function NotaCard({
             </div>
           </div>
 
-          {/* Botón de guardado del curso */}
-          <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
-            <button
-              className={`btn ${hasCursoChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
-              style={{
-                width: '100%',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: hasCursoChanges ? '10px 16px' : '8px 12px',
-                fontSize: hasCursoChanges ? '0.88rem' : '0.82rem',
-                transition: 'all 0.3s ease',
-                boxShadow: hasCursoChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
-                borderRadius: 'var(--radius-sm, 6px)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
-              onClick={handleSaveCursoInfo}
-            >
-              <Save size={hasCursoChanges ? 15 : 13} />
-              {hasCursoChanges ? '⚠️ Guardar Datos del Curso' : 'Guardar Datos del Curso'}
-            </button>
-          </div>
+          {/* Botón de guardado del curso (hidden in readOnly) */}
+          {!readOnly && (
+            <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
+              <button
+                className={`btn ${hasCursoChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+                style={{
+                  width: '100%',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: hasCursoChanges ? '10px 16px' : '8px 12px',
+                  fontSize: hasCursoChanges ? '0.88rem' : '0.82rem',
+                  transition: 'all 0.3s ease',
+                  boxShadow: hasCursoChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                  borderRadius: 'var(--radius-sm, 6px)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+                onClick={handleSaveCursoInfo}
+              >
+                <Save size={hasCursoChanges ? 15 : 13} />
+                {hasCursoChanges ? '⚠️ Guardar Datos del Curso' : 'Guardar Datos del Curso'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ─── Columna Derecha ─────────────────────────── */}
@@ -996,218 +1039,242 @@ export default function NotaCard({
             <div className="organizador-grid">
               <div className="organizador-field">
                 <label>Distrito</label>
-                <select
-                  value={editDistrito}
-                  onChange={(e) => setEditDistrito(e.target.value)}
-                >
-                  {distritosData.map((d, index) => {
-                    const val = index === 0 ? "" : d[1];
-                    return (
-                      <option key={index} value={val}>
-                        {d[1]}
-                      </option>
-                    );
-                  })}
-                  {editDistrito && !distritosData.some((d) => d[1] === editDistrito) && (
-                    <option value={editDistrito}>{editDistrito}</option>
-                  )}
-                </select>
+                {readOnly ? (
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editDistrito || '—'}</span>
+                ) : (
+                  <select
+                    value={editDistrito}
+                    onChange={(e) => setEditDistrito(e.target.value)}
+                  >
+                    {distritosData.map((d, index) => {
+                      const val = index === 0 ? "" : d[1];
+                      return (
+                        <option key={index} value={val}>
+                          {d[1]}
+                        </option>
+                      );
+                    })}
+                    {editDistrito && !distritosData.some((d) => d[1] === editDistrito) && (
+                      <option value={editDistrito}>{editDistrito}</option>
+                    )}
+                  </select>
+                )}
               </div>
               <div className="organizador-field">
                 <label>Área</label>
-                <select
-                  value={editArea}
-                  onChange={(e) => setEditArea(e.target.value)}
-                >
-                  <option value="Urbano">Urbano</option>
-                  <option value="Rural">Rural</option>
-                </select>
+                {readOnly ? (
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editArea}</span>
+                ) : (
+                  <select
+                    value={editArea}
+                    onChange={(e) => setEditArea(e.target.value)}
+                  >
+                    <option value="Urbano">Urbano</option>
+                    <option value="Rural">Rural</option>
+                  </select>
+                )}
               </div>
               <div className="organizador-field full">
                 <label>Lugar</label>
-                <input
-                  type="text"
-                  value={editLugar}
-                  onChange={(e) => setEditLugar(e.target.value)}
-                  placeholder="U.E. o lugar de ejecución"
-                />
+                {readOnly ? (
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editLugar || '—'}</span>
+                ) : (
+                  <input
+                    type="text"
+                    value={editLugar}
+                    onChange={(e) => setEditLugar(e.target.value)}
+                    placeholder="U.E. o lugar de ejecución"
+                  />
+                )}
               </div>
               <div className="organizador-field">
                 <label>Mes</label>
-                <select
-                  value={editMes ? editMes.toUpperCase() : ''}
-                  onChange={(e) => setEditMes(e.target.value)}
-                >
-                  <option value="">Seleccionar mes</option>
-                  {['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'].map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
+                {readOnly ? (
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editMes || '—'}</span>
+                ) : (
+                  <select
+                    value={editMes ? editMes.toUpperCase() : ''}
+                    onChange={(e) => setEditMes(e.target.value)}
+                  >
+                    <option value="">Seleccionar mes</option>
+                    {['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'].map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div className="organizador-field">
                 <label>Costo por participante (Bs)</label>
-                <input
-                  type="number"
-                  value={editCosto}
-                  onChange={(e) => setEditCosto(parseFloat(e.target.value) || 0)}
-                />
+                {readOnly ? (
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{editCosto} Bs</span>
+                ) : (
+                  <input
+                    type="number"
+                    value={editCosto}
+                    onChange={(e) => setEditCosto(parseFloat(e.target.value) || 0)}
+                  />
+                )}
               </div>
             </div>
           </div>
 
-          {/* Organizador */}
-          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid #0d9488', borderTop: '4px solid #0d9488', borderRadius: '8px', padding: '12px' }}>
-            <div className="organizador-title" style={{ color: '#0d9488', fontWeight: 800 }}>
-              <Users size={14} /> Datos del Organizador
-            </div>
-            <div className="organizador-grid">
-              <div className="organizador-field">
-                <label>Organizador</label>
-                <input
-                  type="text"
-                  value={orgNombre}
-                  onChange={(e) => setOrgNombre(e.target.value)}
-                  placeholder="Nombre del organizador"
-                />
+          {/* Organizador (hidden in readOnly) */}
+          {!readOnly && (
+            <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid #0d9488', borderTop: '4px solid #0d9488', borderRadius: '8px', padding: '12px' }}>
+              <div className="organizador-title" style={{ color: '#0d9488', fontWeight: 800 }}>
+                <Users size={14} /> Datos del Organizador
               </div>
-              <div className="organizador-field">
-                <label>Celular</label>
-                <input
-                  type="text"
-                  value={orgTelefono}
-                  onChange={(e) => setOrgTelefono(e.target.value)}
-                  placeholder="Teléfono"
-                />
-              </div>
-              <div className="organizador-field full">
-                <label>Link Maps</label>
-                <input
-                  type="text"
-                  value={orgMaps}
-                  onChange={(e) => setOrgMaps(e.target.value)}
-                  placeholder="https://maps.app.goo.gl/..."
-                />
-              </div>
-              <div className="organizador-field full">
-                <label>Observaciones</label>
-                <textarea
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  placeholder="Pendientes, detalles del organizador..."
-                />
-              </div>
-              <div className="organizador-field full">
-                <label>Link de inscripción</label>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div className="organizador-grid">
+                <div className="organizador-field">
+                  <label>Organizador</label>
                   <input
                     type="text"
-                    value={linkExterno}
-                    onChange={(e) => setLinkExterno(e.target.value)}
-                    placeholder="Google Sheet, formulario externo o lista compartida..."
-                    style={{ flex: 1 }}
+                    value={orgNombre}
+                    onChange={(e) => setOrgNombre(e.target.value)}
+                    placeholder="Nombre del organizador"
                   />
-                  {linkExterno && (
-                    <a
-                      href={linkExterno}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-primary btn-xs"
-                    >
-                      <ExternalLink size={11} /> Abrir
-                    </a>
-                  )}
                 </div>
-              </div>
-              <div className="organizador-field full">
-                <label>Color</label>
-                <div className="color-swatches">
-                  {GROUP_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      className={`color-swatch ${noteColor === c ? 'active' : ''}`}
-                      style={{ background: c }}
-                      onClick={() => setNoteColor(c)}
+                <div className="organizador-field">
+                  <label>Celular</label>
+                  <input
+                    type="text"
+                    value={orgTelefono}
+                    onChange={(e) => setOrgTelefono(e.target.value)}
+                    placeholder="Teléfono"
+                  />
+                </div>
+                <div className="organizador-field full">
+                  <label>Link Maps</label>
+                  <input
+                    type="text"
+                    value={orgMaps}
+                    onChange={(e) => setOrgMaps(e.target.value)}
+                    placeholder="https://maps.app.goo.gl/..."
+                  />
+                </div>
+                <div className="organizador-field full">
+                  <label>Observaciones</label>
+                  <textarea
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
+                    placeholder="Pendientes, detalles del organizador..."
+                  />
+                </div>
+                <div className="organizador-field full">
+                  <label>Link de inscripción</label>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      value={linkExterno}
+                      onChange={(e) => setLinkExterno(e.target.value)}
+                      placeholder="Google Sheet, formulario externo o lista compartida..."
+                      style={{ flex: 1 }}
                     />
-                  ))}
+                    {linkExterno && (
+                      <a
+                        href={linkExterno}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary btn-xs"
+                      >
+                        <ExternalLink size={11} /> Abrir
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div className="organizador-field full">
+                  <label>Color</label>
+                  <div className="color-swatches">
+                    {GROUP_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        className={`color-swatch ${noteColor === c ? 'active' : ''}`}
+                        style={{ background: c }}
+                        onClick={() => setNoteColor(c)}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
-              <button
-                className={`btn ${hasOrganizerChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
-                style={{
-                  width: '100%',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: hasOrganizerChanges ? '10px 16px' : '8px 12px',
-                  fontSize: hasOrganizerChanges ? '0.88rem' : '0.82rem',
-                  transition: 'all 0.3s ease',
-                  boxShadow: hasOrganizerChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
-                  borderRadius: 'var(--radius-sm, 6px)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-                onClick={handleSaveOrganizador}
-              >
-                <Save size={hasOrganizerChanges ? 15 : 13} />
-                {hasOrganizerChanges ? '⚠️ Guardar Cambios del Organizador' : 'Guardar Datos del Organizador'}
-              </button>
+              <div className="organizador-save-container" style={{ display: 'flex', width: '100%', marginTop: 'auto', paddingTop: '12px' }}>
+                <button
+                  className={`btn ${hasOrganizerChanges ? 'btn-danger pulse-danger-btn' : 'btn-success'}`}
+                  style={{
+                    width: '100%',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: hasOrganizerChanges ? '10px 16px' : '8px 12px',
+                    fontSize: hasOrganizerChanges ? '0.88rem' : '0.82rem',
+                    transition: 'all 0.3s ease',
+                    boxShadow: hasOrganizerChanges ? '0 4px 12px rgba(220, 38, 38, 0.3)' : 'none',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                  onClick={handleSaveOrganizador}
+                >
+                  <Save size={hasOrganizerChanges ? 15 : 13} />
+                  {hasOrganizerChanges ? '⚠️ Guardar Cambios del Organizador' : 'Guardar Datos del Organizador'}
+                </button>
+              </div>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Middle Section (Unified Actions) — hidden in readOnly ────── */}
+      {!readOnly && (
+        <div className="nota-actions-section">
+          <div className="nota-actions-grid-4x2">
+            {/* Row 1 */}
+            <button className="btn btn-danger btn-sm" onClick={onDelete}>
+              <Trash2 size={12} /> Eliminar
+            </button>
+            <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
+              <Users size={12} /> Participantes
+            </button>
+            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
+              <Globe size={12} /> Insc. online
+            </button>
+            <button 
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                const link = `${window.location.origin}/participantes/${curso.id}`;
+                navigator.clipboard.writeText(link);
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Enlace copiado',
+                  text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
+                  timer: 2500,
+                  showConfirmButton: false,
+                  toast: true,
+                  position: 'top-end'
+                });
+              }}
+            >
+              <Link2 size={12} /> Link público
+            </button>
+
+            {/* Row 2 */}
+            <button className="btn btn-purple btn-sm col-span-2" onClick={handlePrintFichaInscripcion}>
+              <FileText size={12} /> Ficha inscripción
+            </button>
+            <button className="btn btn-orange btn-sm">
+              <BookOpen size={12} /> Registro Pedg
+            </button>
+            <button 
+              className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
+              onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
+            >
+              <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* ─── Middle Section (Unified Actions) ──────────────── */}
-      <div className="nota-actions-section">
-        <div className="nota-actions-grid-4x2">
-          {/* Row 1 */}
-          <button className="btn btn-danger btn-sm" onClick={onDelete}>
-            <Trash2 size={12} /> Eliminar
-          </button>
-          <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
-            <Users size={12} /> Participantes
-          </button>
-          <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
-            <Globe size={12} /> Insc. online
-          </button>
-          <button 
-            className="btn btn-primary btn-sm"
-            onClick={() => {
-              const link = `${window.location.origin}/participantes/${curso.id}`;
-              navigator.clipboard.writeText(link);
-              Swal.fire({
-                icon: 'success',
-                title: 'Enlace copiado',
-                text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
-                timer: 2500,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-              });
-            }}
-          >
-            <Link2 size={12} /> Link público
-          </button>
-
-          {/* Row 2 */}
-          <button className="btn btn-purple btn-sm col-span-2" onClick={handlePrintFichaInscripcion}>
-            <FileText size={12} /> Ficha inscripción
-          </button>
-          <button className="btn btn-orange btn-sm">
-            <BookOpen size={12} /> Registro Pedg
-          </button>
-          <button 
-            className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
-            onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
-          >
-            <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* ─── Bottom Section (Widgets) ────────────────────── */}
       <div className="nota-widgets-layout">
@@ -1225,6 +1292,7 @@ export default function NotaCard({
               evaluacionRealizada={curso.evaluacion_realizada}
               informeFinalRecibido={curso.informe_final_recibido}
               onToggleCheck={handleToggleCheck}
+              readOnly={readOnly}
             />
           </div>
 
@@ -1263,7 +1331,7 @@ export default function NotaCard({
 
             {/* Share / Comm Actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-              {orgTelefono && (
+              {!readOnly && orgTelefono && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                   <a
                     href={`https://wa.me/${orgTelefono.replace(/\D/g, '')}`}
@@ -1307,6 +1375,8 @@ export default function NotaCard({
           </div>
         </div>
       </div>
+
+      </div> {/* Closing nota-main-content */}
 
       {showInscripcionModal && (
         <InscripcionOnlineModal

@@ -26,6 +26,7 @@ interface GrupoCardProps {
   onManageParticipantes: (curso: Curso) => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  readOnly?: boolean;
 }
 
 export default function GrupoCard({
@@ -45,6 +46,7 @@ export default function GrupoCard({
   onManageParticipantes,
   collapsed: controlledCollapsed,
   onToggleCollapse,
+  readOnly = false,
 }: GrupoCardProps) {
   const [localCollapsed, setLocalCollapsed] = useState(true); // default to collapsed
 
@@ -355,8 +357,8 @@ export default function GrupoCard({
         </div>
 
         <div className="grupo-header-right">
-          {/* Move Up/Down arrows */}
-          {onMoveGrupo && (
+          {/* Move Up/Down arrows (hidden in readOnly) */}
+          {!readOnly && onMoveGrupo && (
             <div style={{ display: 'flex', gap: '4px', marginRight: '4px' }}>
               <button
                 type="button"
@@ -381,13 +383,15 @@ export default function GrupoCard({
             </div>
           )}
 
-          {/* Rename */}
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={(e) => { e.stopPropagation(); handleRename(); }}
-          >
-            <Edit3 size={12} /> Renombrar
-          </button>
+          {/* Rename (hidden in readOnly) */}
+          {!readOnly && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={(e) => { e.stopPropagation(); handleRename(); }}
+            >
+              <Edit3 size={12} /> Renombrar
+            </button>
+          )}
 
           {/* Toggle */}
           <ChevronRight size={18} className="grupo-toggle-arrow" />
@@ -409,6 +413,7 @@ export default function GrupoCard({
             onUpdate={(data) => onUpdateCurso(curso.id, data)}
             onManageParticipantes={onManageParticipantes}
             animationDelay={idx * 0.06}
+            readOnly={readOnly}
           />
         ))}
       </div>

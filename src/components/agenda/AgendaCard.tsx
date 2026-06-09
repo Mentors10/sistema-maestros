@@ -9,9 +9,10 @@ interface AgendaCardProps {
   tecnicos: Tecnico[];
   onEdit: () => void;
   onDelete: () => void;
+  readOnly?: boolean;
 }
 
-export default function AgendaCard({ contacto, tecnicos, onEdit, onDelete }: AgendaCardProps) {
+export default function AgendaCard({ contacto, tecnicos, onEdit, onDelete, readOnly = false }: AgendaCardProps) {
   const tecnicoNombre = tecnicos.find(t => t.carnet === contacto.tecnico_carnet)?.nombre || 'Sin técnico';
 
   // Traffic light styling
@@ -41,14 +42,16 @@ export default function AgendaCard({ contacto, tecnicos, onEdit, onDelete }: Age
           <span className="status-dot"></span>
           {contacto.estado_semaforo || 'Pendiente'}
         </div>
-        <div className="agenda-card-actions">
-          <button className="btn btn-ghost btn-icon btn-xs" onClick={onEdit} title="Editar contacto">
-            <Edit3 size={13} />
-          </button>
-          <button className="btn btn-ghost btn-icon btn-xs" onClick={onDelete} title="Eliminar contacto" style={{ color: 'var(--red-500)' }}>
-            <Trash2 size={13} />
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="agenda-card-actions">
+            <button className="btn btn-ghost btn-icon btn-xs" onClick={onEdit} title="Editar contacto">
+              <Edit3 size={13} />
+            </button>
+            <button className="btn btn-ghost btn-icon btn-xs" onClick={onDelete} title="Eliminar contacto" style={{ color: 'var(--red-500)' }}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}

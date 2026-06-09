@@ -2423,3 +2423,533 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 
+/* ============================================================
+   LOGIN PAGE
+   ============================================================ */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f172a 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+/* Animated background shapes */
+.login-bg-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.login-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+  animation: loginFloat 12s ease-in-out infinite;
+}
+
+.login-shape-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(191, 160, 94, 0.4) 0%, transparent 70%);
+  top: -100px;
+  left: -100px;
+  animation-delay: 0s;
+}
+
+.login-shape-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%);
+  bottom: -80px;
+  right: -80px;
+  animation-delay: -4s;
+  animation-duration: 15s;
+}
+
+.login-shape-3 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%);
+  top: 50%;
+  left: 60%;
+  animation-delay: -8s;
+  animation-duration: 18s;
+}
+
+@keyframes loginFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -30px) scale(1.05); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(15px, 10px) scale(1.02); }
+}
+
+/* Card */
+.login-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 36px;
+  background: rgba(30, 41, 59, 0.65);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  animation: slideUp 0.5s ease both;
+}
+
+/* Branding */
+.login-brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-logo-circle {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(191, 160, 94, 0.25) 0%, rgba(191, 160, 94, 0.08) 100%);
+  border: 2px solid rgba(191, 160, 94, 0.35);
+  color: #bfa05e;
+  animation: fadeIn 0.6s ease 0.2s both;
+}
+
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f8fafc 0%, #bfa05e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.login-subtitle {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Form */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.login-input-wrapper {
+  position: relative;
+}
+
+.login-input-wrapper input {
+  width: 100%;
+  padding: 12px 16px;
+  padding-right: 44px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  background: rgba(15, 23, 42, 0.5);
+  color: #f1f5f9;
+  transition: all 0.2s ease;
+}
+
+.login-input-wrapper input:focus {
+  outline: none;
+  border-color: rgba(191, 160, 94, 0.5);
+  box-shadow: 0 0 0 3px rgba(191, 160, 94, 0.12);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.login-input-wrapper input::placeholder {
+  color: #475569;
+}
+
+.login-input-wrapper input:disabled {
+  opacity: 0.5;
+}
+
+.login-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.login-eye-btn:hover {
+  color: #94a3b8;
+}
+
+/* Error */
+.login-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 0.82rem;
+  font-weight: 600;
+  animation: slideDown 0.2s ease;
+}
+
+/* Submit */
+.login-submit-btn {
+  width: 100%;
+  padding: 13px 20px;
+  border: none;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #bfa05e 0%, #d4b87a 100%);
+  color: #0f172a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -8px rgba(191, 160, 94, 0.4);
+  background: linear-gradient(135deg, #cfb374 0%, #e0c98c 100%);
+}
+
+.login-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+/* Spinner */
+.login-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(15, 23, 42, 0.25);
+  border-top-color: #0f172a;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Footer */
+.login-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.login-footer p {
+  font-size: 0.7rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+
+/* ============================================================
+   ROLE INDICATOR (Header)
+   ============================================================ */
+
+.role-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  box-shadow: var(--shadow-sm);
+}
+
+.role-name {
+  font-weight: 700;
+  color: var(--primary-800);
+}
+
+.role-badge {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.role-badge.tecnico {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.role-badge.supervisor {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+
+/* ============================================================
+   CICLOS PRÓXIMOS PANEL (Supervisor)
+   ============================================================ */
+
+.ciclos-proximos-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: var(--space-6);
+  box-shadow: var(--shadow-lg);
+  animation: slideDown 0.35s ease both;
+}
+
+.ciclos-proximos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.ciclos-proximos-header h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary-900);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.ciclos-proximos-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary-500);
+  background: rgba(191, 160, 94, 0.1);
+  border: 1px solid rgba(191, 160, 94, 0.2);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+.ciclos-proximos-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px;
+  color: var(--gray-400);
+}
+
+.ciclos-proximos-empty p {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ciclos-proximos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.ciclo-proximo-card {
+  padding: 14px 16px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-left: 4px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+  animation: fadeIn 0.3s ease both;
+}
+
+.ciclo-proximo-card:hover {
+  border-color: var(--primary-500);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.ciclo-proximo-urgencia {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  width: fit-content;
+}
+
+.ciclo-proximo-nombre {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--primary-900);
+  line-height: 1.3;
+}
+
+.ciclo-proximo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ciclo-proximo-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gray-500);
+}
+
+.ciclo-proximo-id {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--gray-400);
+  letter-spacing: 0.03em;
+}
+
+
+/* ============================================================
+   SUPERVISOR MODE OVERRIDES
+   ============================================================ */
+
+/* In supervisor mode, use a subtle header accent to signal monitor-only */
+.supervisor-mode .app-header {
+  border-bottom-color: #fde68a;
+}
+
+.supervisor-mode .app-header h1 {
+  background: linear-gradient(135deg, var(--primary-900), #d97706);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+
+/* ============================================================
+   SUPERVISOR HORIZONTAL VIEW OVERRIDES
+   ============================================================ */
+
+/* Span style for read-only fields */
+.read-only-card .organizador-field span {
+  display: block;
+  padding: 4px 0 6px 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.read-only-card .organizador-field span:empty::after {
+  content: '—';
+  color: #94a3b8;
+}
+
+.read-only-card .organizador-title {
+  margin-bottom: 12px;
+}
+
+/* Base style for the content wrapper */
+.read-only-card .nota-main-content {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+@media (min-width: 1024px) {
+  /* Make cards span full-width inside the group grid for supervisor */
+  .supervisor-mode .grupo-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-6);
+  }
+
+  /* Force side-by-side horizontal sections */
+  .read-only-card .nota-main-content {
+    flex-direction: row;
+    align-items: stretch;
+    min-height: 440px;
+  }
+
+  /* Left columns (forms) */
+  .read-only-card .nota-layout {
+    flex: 1.1;
+    border-right: none;
+    border-bottom: none;
+    min-height: 0;
+  }
+
+  /* Right columns (calendar + map) */
+  .read-only-card .nota-widgets-layout {
+    flex: 1.9;
+    height: auto;
+    border-left: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
+  }
+}
+
+@media (max-width: 1023px) {
+  /* Fallback layout for tablets/mobiles */
+  .read-only-card .nota-main-content {
+    flex-direction: column;
+  }
+  
+  .read-only-card .nota-widgets-layout {
+    border-top: 1px solid #e2e8f0;
+    height: auto;
+    min-height: 400px;
+  }
+}
+
+
+
