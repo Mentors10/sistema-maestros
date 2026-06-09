@@ -2951,5 +2951,66 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* ─── Row Alignment, Progress Bar and Marquee scroll adjustments ─── */
+
+/* Progress Bar Background for Group Card Header */
+.grupo-header-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background-color: color-mix(in srgb, var(--grupo-color, var(--primary-500)) 15%, #cbd5e1);
+  z-index: 1;
+  transition: width 0.4s ease-in-out;
+  pointer-events: none;
+}
+
+/* Ensure other content sits on top of progress bar */
+.grupo-header-left,
+.grupo-header-right {
+  position: relative;
+  z-index: 2;
+}
+
+/* Row elements vertical alignment on Desktop */
+@media (min-width: 1024px) {
+  .grupo-header-left {
+    display: grid !important;
+    grid-template-columns: minmax(300px, 1fr) 240px 340px !important;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+  .week-calendar-strip {
+    margin-left: 0 !important;
+  }
+  .news-ticker-container {
+    margin-left: 0 !important;
+    width: 340px !important;
+    max-width: 340px !important;
+  }
+}
+
+/* Marquee Scrolling animation for Alert news */
+.news-ticker-text.scrolling {
+  display: inline-block;
+  white-space: nowrap;
+  text-overflow: clip;
+  overflow: visible;
+  /* Duration will be set dynamically via inline style, fallback is 6s */
+  animation: marquee-scroll var(--marquee-duration, 6s) linear infinite alternate;
+}
+
+@keyframes marquee-scroll {
+  0%, 15% {
+    transform: translateX(0);
+  }
+  85%, 100% {
+    transform: translateX(calc(-1 * var(--scroll-dist, 0px)));
+  }
+}
+
+
 
 

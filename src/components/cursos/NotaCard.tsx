@@ -246,6 +246,9 @@ export default function NotaCard({
     editNewGrupoNombre.trim() !== '';
 
   const compliance = getNoteCompliance(curso);
+  const isConfirmado = !!curso.facilitador_nombre && 
+    curso.facilitador_nombre.trim() !== '' && 
+    !/por confirmar/i.test(curso.facilitador_nombre);
   const count = curso.inscritos_formulario;
   const slots = curso.horarios_tentativos || [];
   const totalHours = getTotalHours(slots);
@@ -839,6 +842,23 @@ export default function NotaCard({
             <span className={`nota-state-chip ${curso.estado === 'EJECUTADO' ? 'ejecutado' : 'por-ejecutar'}`}>
               {curso.estado === 'EJECUTADO' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
               {curso.estado}
+            </span>
+            <span className={`nota-confirm-badge ${isConfirmado ? 'confirmado' : 'proyectado'}`} style={{
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: '6px',
+              border: '1px solid',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+              backgroundColor: isConfirmado ? '#ecfdf5' : '#fff7ed',
+              color: isConfirmado ? '#047857' : '#c2410c',
+              borderColor: isConfirmado ? '#a7f3d0' : '#ffedd5',
+              whiteSpace: 'nowrap'
+            }}>
+              {isConfirmado ? '✓ Confirmado' : '⚡ Proyectado'}
             </span>
           </div>
 

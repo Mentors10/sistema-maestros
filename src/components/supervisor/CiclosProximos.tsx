@@ -117,12 +117,34 @@ export default function CiclosProximos({ cursos }: CiclosProximosProps) {
       <div className="ciclos-proximos-grid">
         {cursosProximos.map((cp) => {
           const style = URGENCIA_STYLES[cp.urgencia];
+          const isConfirmado = !!cp.curso.facilitador_nombre && 
+            cp.curso.facilitador_nombre.trim() !== '' && 
+            !/por confirmar/i.test(cp.curso.facilitador_nombre);
           return (
             <div key={cp.curso.id} className="ciclo-proximo-card" style={{ borderLeftColor: style.border }}>
-              {/* Urgency badge */}
-              <div className="ciclo-proximo-urgencia" style={{ background: style.bg, color: style.color, border: `1px solid ${style.border}` }}>
-                <Clock size={11} />
-                {cp.etiqueta}
+              {/* Badges container */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="ciclo-proximo-urgencia" style={{ background: style.bg, color: style.color, border: `1px solid ${style.border}` }}>
+                  <Clock size={11} />
+                  {cp.etiqueta}
+                </div>
+                <div style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.03em',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  border: '1px solid',
+                  backgroundColor: isConfirmado ? '#ecfdf5' : '#fff7ed',
+                  color: isConfirmado ? '#047857' : '#c2410c',
+                  borderColor: isConfirmado ? '#a7f3d0' : '#ffedd5',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  {isConfirmado ? '✓ Confirmado' : '⚡ Proyectado'}
+                </div>
               </div>
 
               {/* Ciclo name */}

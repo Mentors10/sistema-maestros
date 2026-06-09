@@ -206,36 +206,87 @@ export default function GrupoCard({
     return msgs;
   }, [grupo.cursos]);
 
-  // Rotate news ticker every 5 seconds
+  // Rotate news ticker every 8 seconds (gives more time for marquee text)
   useEffect(() => {
     if (announcements.length <= 1) return;
     const interval = setInterval(() => {
       setNewsIndex(prev => (prev + 1) % announcements.length);
-    }, 5000);
+    }, 8000);
     return () => clearInterval(interval);
   }, [announcements.length]);
+
+  // ─── Progress bar percentage calculation ────────────────
+  const progressPercentage = useMemo(() => {
+    const todayStr = formatDateStr(new Date());
+    const slots = grupo.cursos.flatMap(c => c.horarios_tentativos || []);
+    if (slots.length === 0) {
+      const allExecuted = grupo.cursos.every(c => c.estado === 'EJECUTADO');
+      return allExecuted && grupo.cursos.length > 0 ? 100 : 0;
+    }
+    const completed = slots.filter(s => s.date <= todayStr).length;
+    return Math.round((completed / slots.length) * 100);
+  }, [grupo.cursos]);
+
+  // ─── Marquee news ticker detection ──────────────────────
+  const textRef = useRef<HTMLSpanElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [shouldScroll, setShouldScroll] = useState(false);
+  const [scrollDistance, setScrollDistance] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (textRef.current && containerRef.current) {
+        const textWidth = textRef.current.scrollWidth;
+        const containerWidth = containerRef.current.clientWidth;
+        if (textWidth > containerWidth) {
+          setShouldScroll(true);
+          setScrollDistance(textWidth - containerWidth);
+        } else {
+          setShouldScroll(false);
+          setScrollDistance(0);
+        }
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [announcements, newsIndex]);
+
+  const marqueeStyle = shouldScroll
+    ? ({
+        '--scroll-dist': `${scrollDistance + 12}px`,
+        '--marquee-duration': `${Math.max(4, Math.round((scrollDistance + 12) / 30))}s`,
+      } as React.CSSProperties)
+    : {};
 
   return (
     <div
       className={`grupo-card ${collapsed ? 'collapsed' : ''} ${isDimmed ? 'dimmed' : ''} ${isActive ? 'active-group' : ''}`}
       style={{ '--grupo-color': grupo.color, zIndex: hoveredDayStr ? 50 : undefined } as React.CSSProperties}
     >
+      {/* Progress Bar Background */}
+      <div 
+        className="grupo-header-progress-bar" 
+        style={{ width: `${progressPercentage}%` }} 
+      />
+
       {/* Header */}
       <div className="grupo-header-bar" onClick={toggleCollapsed}>
         <div className="grupo-header-left">
-          <h2 className="grupo-title">
-            <LayoutGrid size={20} className="grupo-icon" />
-            {grupo.nombre}
-          </h2>
-          <span className="grupo-count-badge">
-            <Hash size={12} />
-            {grupo.cursos.length} nota{grupo.cursos.length !== 1 ? 's' : ''}
-          </span>
+          {/* Info column grouped and styled for vertical alignment */}
+          <div className="grupo-header-info-col" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+            <h2 className="grupo-title" style={{ minWidth: 0, flex: '0 1 auto', margin: 0 }}>
+              <LayoutGrid size={20} className="grupo-icon" />
+              <span className="grupo-title-text" title={grupo.nombre} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {grupo.nombre}
+              </span>
+            </h2>
+            <span className="grupo-count-badge" style={{ flexShrink: 0 }}>
+              <Hash size={12} />
+              {grupo.cursos.length} nota{grupo.cursos.length !== 1 ? 's' : ''}
+            </span>
 
-          {/* Indicadores de cumplimiento */}
-          <div style={{ display: 'flex', gap: '8px', marginLeft: '12px', flexWrap: 'wrap' }} onClick={(e) => e.stopPropagation()}>
             {uniqueTecnicos.length > 0 && (
               <span 
+                className="grupo-tecnico-badge"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -248,8 +299,14 @@ export default function GrupoCard({
                   color: 'color-mix(in srgb, var(--grupo-color, var(--primary-500)) 85%, #1e293b)',
                   border: '1px solid color-mix(in srgb, var(--grupo-color, var(--primary-500)) 30%, #cbd5e1)',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '180px',
+                  flexShrink: 0
                 }}
                 title={`Técnico(s) asignado(s): ${uniqueTecnicos.join(', ')}`}
+                onClick={(e) => e.stopPropagation()}
               >
                 👤 {uniqueTecnicos.join(', ')}
               </span>
@@ -348,11 +405,18 @@ export default function GrupoCard({
           </div>
 
           {/* ─── News Ticker ──────────────────────────── */}
-          <div className="news-ticker-container" onClick={(e) => e.stopPropagation()}>
+          <div className="news-ticker-container" ref={containerRef} onClick={(e) => e.stopPropagation()}>
             <div className="news-ticker-dot" />
-            <span className="news-ticker-text" key={newsIndex}>
-              {announcements[newsIndex % announcements.length]}
-            </span>
+            <div className="news-ticker-scroll-wrapper" style={{ overflow: 'hidden', flex: 1, display: 'flex', alignItems: 'center', minWidth: 0 }}>
+              <span 
+                className={`news-ticker-text ${shouldScroll ? 'scrolling' : ''}`} 
+                ref={textRef} 
+                key={newsIndex}
+                style={marqueeStyle}
+              >
+                {announcements[newsIndex % announcements.length]}
+              </span>
+            </div>
           </div>
         </div>
 
