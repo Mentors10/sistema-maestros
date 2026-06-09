@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Curso, Grupo, AppFilters, DEFAULT_FILTERS, Tecnico, Facilitador, CicloFormativo, AgendaContacto } from '@/types';
 import { getNoteCompliance, getReviewCount } from '@/lib/utils/compliance';
 import { supabase } from '@/lib/supabase/client';
-import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users } from 'lucide-react';
+import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut } from 'lucide-react';
 import GrupoCard from '@/components/cursos/GrupoCard';
 import CursoForm from '@/components/cursos/CursoForm';
 import AgendaCard from '@/components/agenda/AgendaCard';
@@ -21,6 +21,30 @@ export default function HomePage() {
   const [filters, setFilters] = useState<AppFilters>(DEFAULT_FILTERS);
   const [viewMode, setViewMode] = useState<'cursos' | 'agenda'>('cursos');
   const [loading, setLoading] = useState(true);
+
+  const [fontSize, setFontSize] = useState<number>(13);
+
+  // Initialize and apply font size adjustment
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('font-size');
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 10 && parsed <= 20) {
+          setFontSize(parsed);
+          document.documentElement.style.setProperty('--base-font-size', parsed + 'px');
+        }
+      }
+    }
+  }, []);
+
+  const handleFontSizeChange = (newSize: number) => {
+    if (newSize >= 10 && newSize <= 20) {
+      setFontSize(newSize);
+      document.documentElement.style.setProperty('--base-font-size', newSize + 'px');
+      localStorage.setItem('font-size', newSize.toString());
+    }
+  };
   
   const [showForm, setShowForm] = useState(false);
   const [editingCurso, setEditingCurso] = useState<Curso | null>(null);
@@ -538,33 +562,67 @@ export default function HomePage() {
           <CalendarDays className="header-icon" size={32} />
           Sistema de Control de Maestros
         </h1>
-        <div style={{ display: 'flex', gap: '4px', background: 'rgba(255, 255, 255, 0.75)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)', backdropFilter: 'blur(8px)' }}>
-          <button 
-            type="button"
-            className="btn btn-sm" 
-            style={{ 
-              background: viewMode === 'cursos' ? 'var(--primary-500)' : 'transparent',
-              color: viewMode === 'cursos' ? 'var(--white)' : 'var(--gray-700)',
-              borderRadius: 'var(--radius-sm)',
-              boxShadow: viewMode === 'cursos' ? 'var(--shadow-sm)' : 'none'
-            }} 
-            onClick={() => { setViewMode('cursos'); setShowForm(false); setShowAgendaForm(false); }}
-          >
-            <CalendarDays size={14} /> Cursos
-          </button>
-          <button 
-            type="button"
-            className="btn btn-sm" 
-            style={{ 
-              background: viewMode === 'agenda' ? 'var(--primary-500)' : 'transparent',
-              color: viewMode === 'agenda' ? 'var(--white)' : 'var(--gray-700)',
-              borderRadius: 'var(--radius-sm)',
-              boxShadow: viewMode === 'agenda' ? 'var(--shadow-sm)' : 'none'
-            }} 
-            onClick={() => { setViewMode('agenda'); setShowForm(false); setShowAgendaForm(false); }}
-          >
-            <Contact size={14} /> Agenda
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Zoom / Lupa Controls */}
+          <div className="magnifier-container">
+            <span className="magnifier-label">
+              <ZoomOut size={12} style={{ opacity: 0.7 }} /> Lupa
+            </span>
+            <button
+              type="button"
+              className="magnifier-btn"
+              onClick={() => handleFontSizeChange(fontSize - 1)}
+              disabled={fontSize <= 10}
+              title="Reducir tamaño de letra"
+            >
+              -
+            </button>
+            <span
+              className="magnifier-value"
+              onClick={() => handleFontSizeChange(13)}
+              title="Restablecer tamaño predeterminado (100%)"
+            >
+              {Math.round((fontSize / 13) * 100)}%
+            </span>
+            <button
+              type="button"
+              className="magnifier-btn"
+              onClick={() => handleFontSizeChange(fontSize + 1)}
+              disabled={fontSize >= 20}
+              title="Aumentar tamaño de letra"
+            >
+              +
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '4px', background: 'rgba(255, 255, 255, 0.75)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)', backdropFilter: 'blur(8px)' }}>
+            <button 
+              type="button"
+              className="btn btn-sm" 
+              style={{ 
+                background: viewMode === 'cursos' ? 'var(--primary-500)' : 'transparent',
+                color: viewMode === 'cursos' ? 'var(--white)' : 'var(--gray-700)',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: viewMode === 'cursos' ? 'var(--shadow-sm)' : 'none'
+              }} 
+              onClick={() => { setViewMode('cursos'); setShowForm(false); setShowAgendaForm(false); }}
+            >
+              <CalendarDays size={14} /> Cursos
+            </button>
+            <button 
+              type="button"
+              className="btn btn-sm" 
+              style={{ 
+                background: viewMode === 'agenda' ? 'var(--primary-500)' : 'transparent',
+                color: viewMode === 'agenda' ? 'var(--white)' : 'var(--gray-700)',
+                borderRadius: 'var(--radius-sm)',
+                boxShadow: viewMode === 'agenda' ? 'var(--shadow-sm)' : 'none'
+              }} 
+              onClick={() => { setViewMode('agenda'); setShowForm(false); setShowAgendaForm(false); }}
+            >
+              <Contact size={14} /> Agenda
+            </button>
+          </div>
         </div>
       </header>
 
@@ -740,6 +798,7 @@ export default function HomePage() {
           grupoNames={grupoNames}
           onSave={handleSaveCurso}
           onCancel={() => { setShowForm(false); setEditingCurso(null); }}
+          cursos={cursos}
         />
       )}
 

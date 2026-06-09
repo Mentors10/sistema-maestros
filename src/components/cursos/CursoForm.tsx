@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Curso, CursoFormData, Tecnico, Facilitador, CicloFormativo } from '@/types';
 import { GROUP_COLORS } from '@/lib/utils/colors';
-import { Save, X } from 'lucide-react';
+import { Save, X, BookOpen } from 'lucide-react';
 import { distritosData } from '@/lib/utils/distritos';
 
 interface CursoFormProps {
@@ -14,6 +14,7 @@ interface CursoFormProps {
   grupoNames: string[];
   onSave: (data: Partial<Curso>) => void;
   onCancel: () => void;
+  cursos?: Curso[];
 }
 
 const getInitialFechaInicio = (c: Curso | null): string => {
@@ -62,6 +63,7 @@ export default function CursoForm({
   grupoNames,
   onSave,
   onCancel,
+  cursos = [],
 }: CursoFormProps) {
   const isEdit = !!curso;
 
@@ -87,10 +89,27 @@ export default function CursoForm({
   });
 
   const [areaFormativa, setAreaFormativa] = useState('');
+  const [isSuggestedId, setIsSuggestedId] = useState(false);
 
   useEffect(() => {
+    let suggestedId = '';
+    let isSuggested = false;
+    if (!curso && cursos && cursos.length > 0) {
+      let maxId = 0;
+      cursos.forEach((c) => {
+        const parsed = parseInt(c.id, 10);
+        if (!isNaN(parsed) && parsed > maxId) {
+          maxId = parsed;
+        }
+      });
+      if (maxId > 0) {
+        suggestedId = (maxId + 1).toString();
+        isSuggested = true;
+      }
+    }
+
     setForm({
-      id: curso?.id || '',
+      id: curso?.id || suggestedId || '',
       tecnico_carnet: curso?.tecnico_carnet || '',
       ciclo_id: curso?.ciclo_id || '',
       facilitador_carnet: curso?.facilitador_carnet || '',
@@ -109,10 +128,11 @@ export default function CursoForm({
       grupo_color: curso?.grupo_color || '#2f80ed',
       observaciones: curso?.observaciones || '',
     });
+    setIsSuggestedId(isSuggested);
 
     const currentCiclo = ciclos.find((c) => c.id === curso?.ciclo_id);
     setAreaFormativa(currentCiclo?.area_formativa || '');
-  }, [curso, ciclos]);
+  }, [curso, ciclos, cursos]);
 
   const [newGrupoName, setNewGrupoName] = useState('');
   const useNewGrupo = newGrupoName.trim().length > 0;
@@ -143,17 +163,26 @@ export default function CursoForm({
   };
 
   return (
-    <div className="curso-form" style={{ marginBottom: '20px', animation: 'slideUp 0.3s ease' }}>
+    <div className="curso-form">
+      <h3 className="curso-form-title">
+        <BookOpen size={18} style={{ color: 'var(--primary-500)' }} />
+        {isEdit ? `Modificar Curso (ID: ${curso.id})` : 'Registrar Nuevo Curso'}
+      </h3>
+
       <div className="form-field">
-        <label>ID del Curso *</label>
+        <label>
+          ID del Curso *
+          {isSuggestedId && <span className="id-suggested-badge">Sugerido</span>}
+        </label>
         <input
           type="text"
           value={form.id}
-          onChange={(e) => setForm({ ...form, id: e.target.value })}
+          onChange={(e) => { setForm({ ...form, id: e.target.value }); setIsSuggestedId(false); }}
           placeholder="Ej: 10001"
           disabled={isEdit}
         />
       </div>
+
       <div className="form-field">
         <label>Técnico</label>
         <select
@@ -166,6 +195,7 @@ export default function CursoForm({
           ))}
         </select>
       </div>
+
       <div className="form-field">
         <label>Área Formativa</label>
         <select
@@ -178,6 +208,7 @@ export default function CursoForm({
           ))}
         </select>
       </div>
+
       <div className="form-field">
         <label>Ciclo Formativo</label>
         <select
@@ -193,6 +224,7 @@ export default function CursoForm({
           ))}
         </select>
       </div>
+
       <div className="form-field">
         <label>Facilitador</label>
         <select
@@ -205,6 +237,7 @@ export default function CursoForm({
           ))}
         </select>
       </div>
+
       <div className="form-field">
         <label>Distrito</label>
         <select
@@ -224,6 +257,7 @@ export default function CursoForm({
           )}
         </select>
       </div>
+
       <div className="form-field">
         <label>Lugar</label>
         <input
@@ -233,6 +267,7 @@ export default function CursoForm({
           placeholder="U.E. o lugar de ejecución"
         />
       </div>
+
       <div className="form-field">
         <label>Área</label>
         <select
@@ -243,6 +278,7 @@ export default function CursoForm({
           <option value="Rural">Rural</option>
         </select>
       </div>
+
       <div className="form-field">
         <label>Segmento</label>
         <select
@@ -258,6 +294,7 @@ export default function CursoForm({
           )}
         </select>
       </div>
+
       <div className="form-field">
         <label>Fecha Inicio</label>
         <input
@@ -266,6 +303,7 @@ export default function CursoForm({
           onChange={(e) => setForm({ ...form, fecha_inicio: e.target.value })}
         />
       </div>
+
       <div className="form-field">
         <label>Mes</label>
         <select
@@ -278,6 +316,7 @@ export default function CursoForm({
           ))}
         </select>
       </div>
+
       <div className="form-field">
         <label>Preventivo</label>
         <input
@@ -286,6 +325,7 @@ export default function CursoForm({
           onChange={(e) => setForm({ ...form, prev: e.target.value })}
         />
       </div>
+
       <div className="form-field">
         <label>Participantes inscritos</label>
         <input
@@ -294,6 +334,7 @@ export default function CursoForm({
           disabled={true}
         />
       </div>
+
       <div className="form-field">
         <label>Costo por participante (Bs)</label>
         <input
@@ -302,9 +343,14 @@ export default function CursoForm({
           onChange={(e) => setForm({ ...form, costo: parseFloat(e.target.value) || 0 })}
         />
       </div>
-      <div className="form-field">
-        <label>Total Bs: <strong>{totalBs}</strong></label>
+
+      <div className="form-field" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <label>Total recaudado (Bs)</label>
+        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--green-600)', background: 'var(--green-100)', border: '1.5px solid var(--green-400)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', width: 'fit-content' }}>
+          {totalBs} Bs
+        </div>
       </div>
+
       <div className="form-field">
         <label>Grupo existente</label>
         <select
@@ -318,6 +364,7 @@ export default function CursoForm({
           ))}
         </select>
       </div>
+
       <div className="form-field">
         <label>O crear grupo nuevo</label>
         <input
@@ -327,12 +374,14 @@ export default function CursoForm({
           placeholder="Nombre del nuevo grupo"
         />
       </div>
+
       <div className="form-field">
         <label>Color del grupo</label>
         <div className="color-swatches">
           {GROUP_COLORS.map((c) => (
             <button
               key={c}
+              type="button"
               className={`color-swatch ${form.grupo_color === c ? 'active' : ''}`}
               style={{ background: c }}
               onClick={() => setForm({ ...form, grupo_color: c })}
@@ -340,6 +389,7 @@ export default function CursoForm({
           ))}
         </div>
       </div>
+
       <div className="form-field full">
         <label>Observaciones</label>
         <textarea
@@ -350,11 +400,11 @@ export default function CursoForm({
       </div>
 
       <div className="form-actions">
-        <button className="btn btn-success" onClick={handleSubmit}>
-          <Save size={14} /> {isEdit ? 'Actualizar curso' : 'Crear curso'}
-        </button>
-        <button className="btn btn-secondary" onClick={onCancel}>
+        <button className="btn btn-secondary" onClick={onCancel} type="button">
           <X size={14} /> Cancelar
+        </button>
+        <button className="btn btn-success" onClick={handleSubmit} type="button">
+          <Save size={14} /> {isEdit ? 'Actualizar curso' : 'Crear curso'}
         </button>
       </div>
     </div>
