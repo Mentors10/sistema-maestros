@@ -608,7 +608,7 @@ function HomePage() {
               {isSupervisor ? <Eye size={14} /> : <Shield size={14} />}
               <span className="role-name">{user.nombre_completo}</span>
               <span className={`role-badge ${isSupervisor ? 'supervisor' : 'tecnico'}`}>
-                {isSupervisor ? 'Supervisor' : 'Técnico'}
+                {isSupervisor ? 'Técnico Pedagógico' : 'Técnico'}
               </span>
             </div>
           )}
@@ -670,19 +670,21 @@ function HomePage() {
             >
               <CalendarDays size={14} /> Cursos
             </button>
-            <button 
-              type="button"
-              className="btn btn-sm" 
-              style={{ 
-                background: viewMode === 'agenda' ? 'var(--primary-500)' : 'transparent',
-                color: viewMode === 'agenda' ? 'var(--white)' : 'var(--gray-700)',
-                borderRadius: 'var(--radius-sm)',
-                boxShadow: viewMode === 'agenda' ? 'var(--shadow-sm)' : 'none'
-              }} 
-              onClick={() => { setViewMode('agenda'); setShowForm(false); setShowAgendaForm(false); }}
-            >
-              <Contact size={14} /> Agenda
-            </button>
+            {isSupervisor && (
+              <button 
+                type="button"
+                className="btn btn-sm" 
+                style={{ 
+                  background: viewMode === 'agenda' ? 'var(--primary-500)' : 'transparent',
+                  color: viewMode === 'agenda' ? 'var(--white)' : 'var(--gray-700)',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: viewMode === 'agenda' ? 'var(--shadow-sm)' : 'none'
+                }} 
+                onClick={() => { setViewMode('agenda'); setShowForm(false); setShowAgendaForm(false); }}
+              >
+                <Contact size={14} /> Agenda
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -890,7 +892,6 @@ function HomePage() {
           {readOnly && (
             <>
               <MonitoreoTecnicos cursos={cursos} tecnicos={tecnicos} />
-              <CiclosProximos cursos={cursos} />
             </>
           )}
 

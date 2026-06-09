@@ -2883,7 +2883,7 @@ h1, h2, h3, h4, h5, h6 {
    ============================================================ */
 
 /* Span style for read-only fields */
-.read-only-card .organizador-field span {
+.nota-card .organizador-field span {
   display: block;
   padding: 4px 0 6px 0;
   font-size: 0.85rem;
@@ -2892,38 +2892,38 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom: 1px dashed #e2e8f0;
 }
 
-.read-only-card .organizador-field span:empty::after {
+.nota-card .organizador-field span:empty::after {
   content: '—';
   color: #94a3b8;
 }
 
-.read-only-card .organizador-title {
+.nota-card .organizador-title {
   margin-bottom: 12px;
 }
 
 /* Base style for the content wrapper */
-.read-only-card .nota-main-content {
+.nota-card .nota-main-content {
   display: flex;
   flex-direction: column;
   background: #ffffff;
 }
 
-@media (min-width: 1024px) {
-  /* Make cards span full-width inside the group grid for supervisor */
-  .supervisor-mode .grupo-grid {
-    grid-template-columns: 1fr !important;
-    gap: var(--space-6);
-  }
+/* Force cards to take full width and display horizontally for both roles */
+.grupo-grid {
+  grid-template-columns: 1fr !important;
+  gap: var(--space-6) !important;
+}
 
+@media (min-width: 1024px) {
   /* Force side-by-side horizontal sections */
-  .read-only-card .nota-main-content {
+  .nota-card .nota-main-content {
     flex-direction: row;
     align-items: stretch;
     min-height: 440px;
   }
 
   /* Left columns (forms) */
-  .read-only-card .nota-layout {
+  .nota-card .nota-layout {
     flex: 1.1;
     border-right: none;
     border-bottom: none;
@@ -2931,7 +2931,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   /* Right columns (calendar + map) */
-  .read-only-card .nota-widgets-layout {
+  .nota-card .nota-widgets-layout {
     flex: 1.9;
     height: auto;
     border-left: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
@@ -2940,11 +2940,11 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 1023px) {
   /* Fallback layout for tablets/mobiles */
-  .read-only-card .nota-main-content {
+  .nota-card .nota-main-content {
     flex-direction: column;
   }
   
-  .read-only-card .nota-widgets-layout {
+  .nota-card .nota-widgets-layout {
     border-top: 1px solid #e2e8f0;
     height: auto;
     min-height: 400px;

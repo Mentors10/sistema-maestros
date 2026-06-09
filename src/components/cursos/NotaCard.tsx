@@ -1226,55 +1226,6 @@ export default function NotaCard({
         </div>
       </div>
 
-      {/* ─── Middle Section (Unified Actions) — hidden in readOnly ────── */}
-      {!readOnly && (
-        <div className="nota-actions-section">
-          <div className="nota-actions-grid-4x2">
-            {/* Row 1 */}
-            <button className="btn btn-danger btn-sm" onClick={onDelete}>
-              <Trash2 size={12} /> Eliminar
-            </button>
-            <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
-              <Users size={12} /> Participantes
-            </button>
-            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
-              <Globe size={12} /> Insc. online
-            </button>
-            <button 
-              className="btn btn-primary btn-sm"
-              onClick={() => {
-                const link = `${window.location.origin}/participantes/${curso.id}`;
-                navigator.clipboard.writeText(link);
-                Swal.fire({
-                  icon: 'success',
-                  title: 'Enlace copiado',
-                  text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
-                  timer: 2500,
-                  showConfirmButton: false,
-                  toast: true,
-                  position: 'top-end'
-                });
-              }}
-            >
-              <Link2 size={12} /> Link público
-            </button>
-
-            {/* Row 2 */}
-            <button className="btn btn-purple btn-sm col-span-2" onClick={handlePrintFichaInscripcion}>
-              <FileText size={12} /> Ficha inscripción
-            </button>
-            <button className="btn btn-orange btn-sm">
-              <BookOpen size={12} /> Registro Pedg
-            </button>
-            <button 
-              className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
-              onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
-            >
-              <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ─── Bottom Section (Widgets) ────────────────────── */}
       <div className="nota-widgets-layout">
@@ -1377,6 +1328,56 @@ export default function NotaCard({
       </div>
 
       </div> {/* Closing nota-main-content */}
+
+      {/* ─── Middle Section (Unified Actions) — hidden in readOnly ────── */}
+      {!readOnly && (
+        <div className="nota-actions-section">
+          <div className="nota-actions-grid-4x2">
+            {/* Row 1 */}
+            <button className="btn btn-danger btn-sm" onClick={onDelete}>
+              <Trash2 size={12} /> Eliminar
+            </button>
+            <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
+              <Users size={12} /> Participantes
+            </button>
+            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
+              <Globe size={12} /> Insc. online
+            </button>
+            <button 
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                const link = `${window.location.origin}/participantes/${curso.id}`;
+                navigator.clipboard.writeText(link);
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Enlace copiado',
+                  text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
+                  timer: 2500,
+                  showConfirmButton: false,
+                  toast: true,
+                  position: 'top-end'
+                });
+              }}
+            >
+              <Link2 size={12} /> Link público
+            </button>
+
+            {/* Row 2 */}
+            <button className="btn btn-purple btn-sm col-span-2" onClick={handlePrintFichaInscripcion}>
+              <FileText size={12} /> Ficha inscripción
+            </button>
+            <button className="btn btn-orange btn-sm">
+              <BookOpen size={12} /> Registro Pedg
+            </button>
+            <button 
+              className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
+              onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
+            >
+              <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {showInscripcionModal && (
         <InscripcionOnlineModal
