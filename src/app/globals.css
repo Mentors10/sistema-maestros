@@ -1010,10 +1010,9 @@ h6 {
 
 /* Widgets Nesting Layout */
 .nota-col-widgets .calendar-section {
-  flex: 1 1 0%;
+  flex: none;
   display: flex;
   flex-direction: column;
-  min-height: 220px;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -1021,17 +1020,17 @@ h6 {
 }
 
 .nota-col-widgets .map-panel {
-  flex: 1 1 0%;
+  flex: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 220px;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
   border-top: 1px dashed color-mix(in srgb, var(--nota-color, var(--primary-500)) 25%, #cbd5e1) !important;
   padding-top: 16px !important;
+  margin-top: 8px;
 }
 
 /* ─── Calendar Section ──────────────────────────────────────── */
@@ -1767,6 +1766,45 @@ h6 {
   border-style: solid;
   border-color: var(--popover-border, #cbd5e1) transparent transparent transparent;
   z-index: -1;
+}
+
+/* Popover below for the first row of calendar days to avoid clipping */
+.day-popover.popover-below {
+  bottom: auto;
+  top: 115%;
+}
+
+.day-popover.popover-below.align-left::after {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent var(--popover-bg, #ffffff) transparent;
+}
+.day-popover.popover-below.align-left::before {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent var(--popover-border, #cbd5e1) transparent;
+}
+
+.day-popover.popover-below.align-right::after {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent var(--popover-bg, #ffffff) transparent;
+}
+.day-popover.popover-below.align-right::before {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent var(--popover-border, #cbd5e1) transparent;
+}
+
+.day-popover.popover-below.align-center::after {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent var(--popover-bg, #ffffff) transparent;
+}
+.day-popover.popover-below.align-center::before {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent var(--popover-border, #cbd5e1) transparent;
 }
 
 .day-popover h4 {

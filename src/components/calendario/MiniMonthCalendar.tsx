@@ -130,37 +130,20 @@ export default function MiniMonthCalendar({
     return () => document.removeEventListener('mousedown', handleGlobalClick);
   }, [popoverDate]);
 
-  const handleMouseEnterDay = (dateStr: string) => {
-    if (isInteractive) return;
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-    setPopoverDate(dateStr);
-  };
 
-  const handleMouseLeaveDay = () => {
-    if (isInteractive) return;
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-    }
-    closeTimeoutRef.current = setTimeout(() => {
-      const activeEl = document.activeElement;
-      const popoverEl = calRef.current?.querySelector('.day-popover');
-      if (popoverEl && activeEl && popoverEl.contains(activeEl)) {
-        return;
-      }
-      setPopoverDate(null);
-    }, 250);
-  };
 
   const handleDayClick = (dateStr: string) => {
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
     }
-    setPopoverDate(dateStr);
-    setIsInteractive(true);
+    if (popoverDate === dateStr && isInteractive) {
+      setPopoverDate(null);
+      setIsInteractive(false);
+    } else {
+      setPopoverDate(dateStr);
+      setIsInteractive(true);
+    }
   };
 
   // ─── Add slot ──────────────────────────────────────────────
@@ -387,8 +370,6 @@ export default function MiniMonthCalendar({
               key={i}
               className={`mini-month-day ${!day.isCurrentMonth ? 'muted' : ''} ${day.isToday ? 'today' : ''} ${daySlots.length > 0 ? 'has-slot' : ''}`}
               style={{ ...cellStyle, position: 'relative', zIndex: isSelected ? 100 : undefined, cursor: 'pointer' }}
-              onMouseEnter={() => !readOnly && isPaintedDay && handleMouseEnterDay(day.dateStr)}
-              onMouseLeave={() => !readOnly && handleMouseLeaveDay()}
               onClick={() => !readOnly && handleDayClick(day.dateStr)}
             >
               <span className="mini-day-number">{day.dayNumber}</span>
@@ -460,7 +441,7 @@ export default function MiniMonthCalendar({
               {/* Day Popover (Centered floating bubble arrow dialog) — hidden in readOnly mode */}
               {isSelected && !readOnly && (
                 <div 
-                  className={`day-popover ${alignClass}`} 
+                  className={`day-popover ${alignClass} ${i < 7 ? 'popover-below' : ''}`} 
                   onClick={(e) => e.stopPropagation()}
                   style={{
                     '--popover-bg': popoverBg,

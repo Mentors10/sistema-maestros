@@ -390,8 +390,6 @@ export default function GrupoCard({
                   key={day.dateStr}
                   className={`week-day-cell ${day.isToday ? 'today' : ''}`}
                   style={{ ...cellStyle }}
-                  onMouseEnter={() => painted && setHoveredDayStr(day.dateStr)}
-                  onMouseLeave={() => setHoveredDayStr(null)}
                 >
                   <span className="day-name">{DAY_NAMES_SHORT[day.dayIndex]}</span>
                   <span className="day-number">{day.dayNumber}</span>

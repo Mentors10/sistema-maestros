@@ -127,8 +127,8 @@ export default function NotaCard({
       noteColor !== (curso.grupo_color || '#2f80ed')
     );
 
-    const cleanEditFecha = (editFechaInicio || '').replace('T', ' ').substring(0, 16);
-    const cleanCursoFecha = (curso.fecha_inicio || '').trim().replace(/\s+/g, ' ').substring(0, 16);
+    const cleanEditFecha = (editFechaInicio || '').replace('T', ' ').trim().substring(0, 16);
+    const cleanCursoFecha = (curso.fecha_inicio || '').replace('T', ' ').trim().replace(/\s+/g, ' ').substring(0, 16);
     const hasCurChanges = !isDifferentCurso && (
       editTecnico !== (curso.tecnico_carnet || '') ||
       editCiclo !== (curso.ciclo_id || '') ||
@@ -229,8 +229,8 @@ export default function NotaCard({
     linkExterno !== (curso.link_inscripcion_externo || '') ||
     noteColor !== (curso.grupo_color || '#2f80ed');
 
-  const cleanEditFecha = (editFechaInicio || '').replace('T', ' ').substring(0, 16);
-  const cleanCursoFecha = (curso.fecha_inicio || '').trim().replace(/\s+/g, ' ').substring(0, 16);
+  const cleanEditFecha = (editFechaInicio || '').replace('T', ' ').trim().substring(0, 16);
+  const cleanCursoFecha = (curso.fecha_inicio || '').replace('T', ' ').trim().replace(/\s+/g, ' ').substring(0, 16);
   const hasCursoChanges =
     editTecnico !== (curso.tecnico_carnet || '') ||
     editCiclo !== (curso.ciclo_id || '') ||
@@ -298,7 +298,14 @@ export default function NotaCard({
   // ─── Save curso info ───────────────────────────────────────
   const handleSaveCursoInfo = () => {
     const finalGrupoNombre = editNewGrupoNombre.trim() ? editNewGrupoNombre.trim() : editGrupoNombre;
-    const finalTotalBs = curso.inscritos_formulario * editCosto;
+    let numCursos = 0;
+    if (curso.tema1 && curso.tema1.trim() !== '') numCursos++;
+    if (curso.tema2 && curso.tema2.trim() !== '') numCursos++;
+    if (curso.tema3 && curso.tema3.trim() !== '') numCursos++;
+    if (curso.tema4 && curso.tema4.trim() !== '') numCursos++;
+    if (numCursos === 0) numCursos = 1;
+
+    const finalTotalBs = curso.inscritos_formulario * editCosto * numCursos;
 
     onUpdate({
       tecnico_carnet: editTecnico || null,
@@ -314,6 +321,10 @@ export default function NotaCard({
       grupo_nombre: finalGrupoNombre,
       total_bs: finalTotalBs,
     });
+
+    // Clear new group name state input and select final group name to prevent comparison lock
+    setEditNewGrupoNombre('');
+    setEditGrupoNombre(finalGrupoNombre);
 
     Swal.fire({
       icon: 'success',
@@ -1015,7 +1026,14 @@ export default function NotaCard({
 
             <div className="nota-total-bar" style={{ marginTop: '8px' }}>
               <small>TOTAL ESTIMADO</small>
-              <span>{curso.inscritos_formulario * editCosto} Bs</span>
+              <span>{curso.inscritos_formulario * editCosto * (() => {
+                let numCursos = 0;
+                if (curso.tema1 && curso.tema1.trim() !== '') numCursos++;
+                if (curso.tema2 && curso.tema2.trim() !== '') numCursos++;
+                if (curso.tema3 && curso.tema3.trim() !== '') numCursos++;
+                if (curso.tema4 && curso.tema4.trim() !== '') numCursos++;
+                return numCursos || 1;
+              })()} Bs</span>
             </div>
           </div>
 
