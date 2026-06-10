@@ -120,8 +120,13 @@ export default function MiniMonthCalendar({
   useEffect(() => {
     if (!popoverDate) return;
     const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // If clicking inside a calendar day cell, let handleDayClick handle it
+      if (target.closest('.mini-month-day')) {
+        return;
+      }
       const popoverEl = calRef.current?.querySelector('.day-popover');
-      if (popoverEl && !popoverEl.contains(e.target as Node)) {
+      if (popoverEl && !popoverEl.contains(target)) {
         setPopoverDate(null);
         setIsInteractive(false);
       }
