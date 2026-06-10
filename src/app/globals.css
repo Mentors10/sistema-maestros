@@ -827,6 +827,7 @@ h6 {
   display: flex;
   flex-direction: column;
   background: #ffffff;
+  padding: 16px;
 }
 
 .nota-col-info {
@@ -844,7 +845,7 @@ h6 {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-4);
+  padding: 0;
   background: transparent;
 }
 
@@ -852,7 +853,7 @@ h6 {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: var(--space-4);
+  padding: 0;
   background: transparent;
 }
 
@@ -1035,8 +1036,6 @@ h6 {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
-  padding-top: 16px;
   min-height: 220px;
 }
 
@@ -1410,7 +1409,7 @@ h6 {
 /* ─── Map Panel & Action Row ───────────────────────────────── */
 .map-panel {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
@@ -3043,16 +3042,17 @@ h6 {
     gap: 20px !important;
     align-items: stretch !important;
     min-height: 480px;
+    padding: 20px !important;
   }
 
   .nota-col-costo {
-    border-left: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
-    padding-left: 20px !important;
+    border-left: none !important;
+    padding: 0 !important;
   }
 
   .nota-col-widgets {
-    border-left: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
-    padding-left: 20px !important;
+    border-left: none !important;
+    padding: 0 !important;
   }
 }
 
@@ -3063,20 +3063,21 @@ h6 {
     display: flex !important;
     flex-direction: column !important;
     gap: 20px !important;
+    padding: 16px !important;
   }
 
   .nota-col-costo {
     border-left: none !important;
-    padding-left: 0 !important;
-    border-top: 1px solid #e2e8f0;
-    padding-top: 16px;
+    padding: 0 !important;
+    border-top: none !important;
+    padding-top: 0 !important;
   }
 
   .nota-col-widgets {
     border-left: none !important;
-    padding-left: 0 !important;
-    border-top: 1px solid #e2e8f0;
-    padding-top: 16px;
+    padding: 0 !important;
+    border-top: none !important;
+    padding-top: 0 !important;
   }
 }
 

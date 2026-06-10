@@ -56,6 +56,7 @@ function HomePage() {
   const [filters, setFilters] = useState<AppFilters>(DEFAULT_FILTERS);
   const [viewMode, setViewMode] = useState<'cursos' | 'agenda'>('cursos');
   const [loading, setLoading] = useState(true);
+  const [selectedView, setSelectedView] = useState<'grupal' | 'area' | 'estados'>('grupal');
 
   const [fontSize, setFontSize] = useState<number>(13);
 
@@ -264,6 +265,67 @@ function HomePage() {
 
     return result.sort((a, b) => a.tecnicoNombre.localeCompare(b.tecnicoNombre));
   }, [filteredCursos, filters.agruparPor, filters.tecnico]);
+ 
+  const areaGroups = useMemo<Grupo[]>(() => {
+    if (selectedView !== 'area') return [];
+    const map = new Map<string, Grupo>();
+
+    filteredCursos.forEach((c) => {
+      const key = c.area_formativa || 'Sin Área';
+      let color = '#bfa05e';
+      if (key === 'TACFI') color = '#dc2626';
+      else if (key === 'TIC') color = '#eab308';
+      else if (key === 'GENERAL') color = '#2563eb';
+      else if (key === 'INCLUSIVA') color = '#10b981';
+      else if (key === 'LENGUAS') color = '#8b5cf6';
+      
+      if (!map.has(key)) {
+        map.set(key, { nombre: key, color, cursos: [] });
+      }
+      map.get(key)!.cursos.push(c);
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [filteredCursos, selectedView]);
+
+  const estadoGroups = useMemo<Grupo[]>(() => {
+    if (selectedView !== 'estados') return [];
+    
+    const confirmados: Curso[] = [];
+    const proyectados: Curso[] = [];
+    
+    filteredCursos.forEach((c) => {
+      const isConfirmado = !!c.facilitador_nombre && 
+        c.facilitador_nombre.trim() !== '' && 
+        !/por confirmar/i.test(c.facilitador_nombre);
+        
+      if (isConfirmado) {
+        confirmados.push(c);
+      } else {
+        proyectados.push(c);
+      }
+    });
+    
+    const list: Grupo[] = [];
+    
+    if (confirmados.length > 0) {
+      list.push({
+        nombre: 'Confirmado',
+        color: '#10b981',
+        cursos: confirmados
+      });
+    }
+    
+    if (proyectados.length > 0) {
+      list.push({
+        nombre: 'Proyectado',
+        color: '#f59e0b',
+        cursos: proyectados
+      });
+    }
+    
+    return list;
+  }, [filteredCursos, selectedView]);
 
   // ─── Filter Logic for Agenda ────────────────────────────────
   const filteredAgenda = useMemo(() => {
@@ -689,6 +751,70 @@ function HomePage() {
         </div>
       </header>
 
+      {/* View Switcher Bar */}
+      {viewMode === 'cursos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '24px' }}>
+          <div className="view-switcher-bar" style={{ display: 'flex', width: '100%', gap: '8px', height: '10px' }}>
+            <button 
+              type="button"
+              onClick={() => setSelectedView('grupal')} 
+              title="Vista Grupal"
+              style={{
+                flex: 1,
+                height: '100%',
+                backgroundColor: '#dc2626',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                opacity: selectedView === 'grupal' ? 1 : 0.3,
+                transform: selectedView === 'grupal' ? 'scaleY(1.4)' : 'none',
+                boxShadow: selectedView === 'grupal' ? '0 0 8px rgba(220, 38, 38, 0.5)' : 'none',
+                transition: 'all 0.25s ease'
+              }}
+            />
+            <button 
+              type="button"
+              onClick={() => setSelectedView('area')} 
+              title="Vista por Área"
+              style={{
+                flex: 1,
+                height: '100%',
+                backgroundColor: '#f59e0b',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                opacity: selectedView === 'area' ? 1 : 0.3,
+                transform: selectedView === 'area' ? 'scaleY(1.4)' : 'none',
+                boxShadow: selectedView === 'area' ? '0 0 8px rgba(245, 158, 11, 0.5)' : 'none',
+                transition: 'all 0.25s ease'
+              }}
+            />
+            <button 
+              type="button"
+              onClick={() => setSelectedView('estados')} 
+              title="Vista Estados"
+              style={{
+                flex: 1,
+                height: '100%',
+                backgroundColor: '#10b981',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                opacity: selectedView === 'estados' ? 1 : 0.3,
+                transform: selectedView === 'estados' ? 'scaleY(1.4)' : 'none',
+                boxShadow: selectedView === 'estados' ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none',
+                transition: 'all 0.25s ease'
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--gray-600)' }}>
+            <span style={{ color: selectedView === 'grupal' ? '#dc2626' : 'inherit', transition: 'color 0.2s' }}>Vista Grupal (Por Defecto)</span>
+            <span style={{ color: selectedView === 'area' ? '#d97706' : 'inherit', transition: 'color 0.2s' }}>Vista por Área</span>
+            <span style={{ color: selectedView === 'estados' ? '#10b981' : 'inherit', transition: 'color 0.2s' }}>Vista Estados</span>
+          </div>
+        </div>
+      )}
+
       {/* Filter Bar */}
       <div className="filter-bar">
         <div className="filter-group">
@@ -753,8 +879,8 @@ function HomePage() {
               value={filters.orden}
               onChange={(e) => setFilters({ ...filters, orden: e.target.value as AppFilters['orden'] })}
             >
-              <option value="recientes">Últimas notas creadas</option>
-              <option value="antiguos">Primeras notas creadas</option>
+              <option value="recientes">Últimos grupos creados</option>
+              <option value="antiguos">Primeros grupos creados</option>
               <option value="id-asc">ID ascendente</option>
               <option value="id-desc">ID descendente</option>
             </select>
@@ -806,7 +932,7 @@ function HomePage() {
                   value={filters.alerta}
                   onChange={(e) => setFilters({ ...filters, alerta: e.target.value })}
                 >
-                  <option value="todas">Todas las notas</option>
+                  <option value="todas">Todos los grupos</option>
                   <option value="sin-fecha">Sin fechas programadas</option>
                   <option value="proximo">Curso próximo</option>
                   <option value="inminente">Curso inminente</option>
@@ -914,7 +1040,7 @@ function HomePage() {
                   👨‍💻 Técnico: <span style={{ color: '#f59e0b' }}>{selectedTecnicoObj.nombre}</span>
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#94a3b8' }}>
-                  Carnet: {selectedTecnicoObj.carnet} | Mostrando notas y distritos asignados
+                  Carnet: {selectedTecnicoObj.carnet} | Mostrando grupos y distritos asignados
                 </p>
               </div>
               <span style={{
@@ -931,7 +1057,15 @@ function HomePage() {
             </div>
           )}
 
-          {cursos.length === 0 || (filters.agruparPor === 'distrito' && filters.tecnico === "" ? tecnicoGroups.length === 0 : grupos.length === 0) ? (
+          {cursos.length === 0 || (
+            selectedView === 'grupal' ? (
+              filters.agruparPor === 'distrito' && filters.tecnico === "" ? tecnicoGroups.length === 0 : grupos.length === 0
+            ) : selectedView === 'area' ? (
+              areaGroups.length === 0
+            ) : (
+              estadoGroups.length === 0
+            )
+          ) ? (
             <div className="empty-state">
               <div className="empty-icon">📋</div>
               <p>No se encontraron cursos</p>
@@ -941,67 +1075,92 @@ function HomePage() {
                   : 'Intenta cambiar los filtros de búsqueda'}
               </p>
             </div>
-          ) : filters.agruparPor === 'distrito' && filters.tecnico === "" ? (
-            tecnicoGroups.map((tg) => (
-              <div key={tg.tecnicoCarnet} className="tecnico-section-wrapper" style={{ marginBottom: '30px' }}>
-                <div className="tecnico-section-header" style={{
-                  background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                  color: '#ffffff',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  marginBottom: '12px',
-                  fontSize: '0.95rem',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  borderLeft: '4px solid #bfa05e',
-                  boxShadow: 'var(--shadow-sm)'
-                }}>
-                  👨‍💻 Técnico: <span style={{ color: '#f59e0b' }}>{tg.tecnicoNombre}</span>
-                  <span style={{
-                    fontSize: '0.72rem',
-                    background: 'rgba(191, 160, 94, 0.15)',
-                    border: '1px solid rgba(191, 160, 94, 0.3)',
-                    color: '#f59e0b',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    fontWeight: 700,
-                    marginLeft: 'auto'
+          ) : selectedView === 'grupal' ? (
+            filters.agruparPor === 'distrito' && filters.tecnico === "" ? (
+              tecnicoGroups.map((tg) => (
+                <div key={tg.tecnicoCarnet} className="tecnico-section-wrapper" style={{ marginBottom: '30px' }}>
+                  <div className="tecnico-section-header" style={{
+                    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                    color: '#ffffff',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    marginBottom: '12px',
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    borderLeft: '4px solid #bfa05e',
+                    boxShadow: 'var(--shadow-sm)'
                   }}>
-                    {tg.distritos.length} distrito{tg.distritos.length !== 1 ? 's' : ''}
-                  </span>
+                    👨‍💻 Técnico: <span style={{ color: '#f59e0b' }}>{tg.tecnicoNombre}</span>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      background: 'rgba(191, 160, 94, 0.15)',
+                      border: '1px solid rgba(191, 160, 94, 0.3)',
+                      color: '#f59e0b',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontWeight: 700,
+                      marginLeft: 'auto'
+                    }}>
+                      {tg.distritos.length} distrito{tg.distritos.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="tecnico-distritos-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '8px' }}>
+                    {tg.distritos.map((distrito, idx) => (
+                      <GrupoCard
+                        key={`${tg.tecnicoCarnet}-${distrito.nombre}`}
+                        grupo={distrito}
+                        activeGroup={filters.grupo}
+                        tecnicos={tecnicos}
+                        facilitadores={facilitadores}
+                        ciclos={ciclos}
+                        grupoNames={grupoNames}
+                        onEditCurso={handleEditCurso}
+                        onDeleteCurso={handleDeleteCurso}
+                        onUpdateCurso={handleUpdateCurso}
+                        onRenameGrupo={handleRenameGrupo}
+                        isFirst={idx === 0}
+                        isLast={idx === tg.distritos.length - 1}
+                        onManageParticipantes={setActiveCursoParticipantes}
+                        collapsed={expandedGrupo !== `${tg.tecnicoCarnet}-${distrito.nombre}`}
+                        onToggleCollapse={() => {
+                          const key = `${tg.tecnicoCarnet}-${distrito.nombre}`;
+                          setExpandedGrupo(expandedGrupo === key ? null : key);
+                        }}
+                        readOnly={readOnly}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="tecnico-distritos-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '8px' }}>
-                  {tg.distritos.map((distrito, idx) => (
-                    <GrupoCard
-                      key={`${tg.tecnicoCarnet}-${distrito.nombre}`}
-                      grupo={distrito}
-                      activeGroup={filters.grupo}
-                      tecnicos={tecnicos}
-                      facilitadores={facilitadores}
-                      ciclos={ciclos}
-                      grupoNames={grupoNames}
-                      onEditCurso={handleEditCurso}
-                      onDeleteCurso={handleDeleteCurso}
-                      onUpdateCurso={handleUpdateCurso}
-                      onRenameGrupo={handleRenameGrupo}
-                      isFirst={idx === 0}
-                      isLast={idx === tg.distritos.length - 1}
-                      onManageParticipantes={setActiveCursoParticipantes}
-                      collapsed={expandedGrupo !== `${tg.tecnicoCarnet}-${distrito.nombre}`}
-                      onToggleCollapse={() => {
-                        const key = `${tg.tecnicoCarnet}-${distrito.nombre}`;
-                        setExpandedGrupo(expandedGrupo === key ? null : key);
-                      }}
-                      readOnly={readOnly}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))
-          ) : (
-            grupos.map((grupo, idx) => (
+              ))
+            ) : (
+              grupos.map((grupo, idx) => (
+                <GrupoCard
+                  key={grupo.nombre}
+                  grupo={grupo}
+                  activeGroup={filters.grupo}
+                  tecnicos={tecnicos}
+                  facilitadores={facilitadores}
+                  ciclos={ciclos}
+                  grupoNames={grupoNames}
+                  onEditCurso={handleEditCurso}
+                  onDeleteCurso={handleDeleteCurso}
+                  onUpdateCurso={handleUpdateCurso}
+                  onRenameGrupo={handleRenameGrupo}
+                  onMoveGrupo={filters.agruparPor === 'grupo' ? handleMoveGrupo : undefined}
+                  isFirst={idx === 0}
+                  isLast={idx === grupos.length - 1}
+                  onManageParticipantes={setActiveCursoParticipantes}
+                  collapsed={expandedGrupo !== grupo.nombre}
+                  onToggleCollapse={() => setExpandedGrupo(expandedGrupo === grupo.nombre ? null : grupo.nombre)}
+                  readOnly={readOnly}
+                />
+              ))
+            )
+          ) : selectedView === 'area' ? (
+            areaGroups.map((grupo, idx) => (
               <GrupoCard
                 key={grupo.nombre}
                 grupo={grupo}
@@ -1014,12 +1173,33 @@ function HomePage() {
                 onDeleteCurso={handleDeleteCurso}
                 onUpdateCurso={handleUpdateCurso}
                 onRenameGrupo={handleRenameGrupo}
-                onMoveGrupo={filters.agruparPor === 'grupo' ? handleMoveGrupo : undefined}
                 isFirst={idx === 0}
-                isLast={idx === grupos.length - 1}
+                isLast={idx === areaGroups.length - 1}
                 onManageParticipantes={setActiveCursoParticipantes}
-                collapsed={expandedGrupo !== grupo.nombre}
-                onToggleCollapse={() => setExpandedGrupo(expandedGrupo === grupo.nombre ? null : grupo.nombre)}
+                collapsed={expandedGrupo !== `area-${grupo.nombre}`}
+                onToggleCollapse={() => setExpandedGrupo(expandedGrupo === `area-${grupo.nombre}` ? null : `area-${grupo.nombre}`)}
+                readOnly={readOnly}
+              />
+            ))
+          ) : (
+            estadoGroups.map((grupo, idx) => (
+              <GrupoCard
+                key={grupo.nombre}
+                grupo={grupo}
+                activeGroup={filters.grupo}
+                tecnicos={tecnicos}
+                facilitadores={facilitadores}
+                ciclos={ciclos}
+                grupoNames={grupoNames}
+                onEditCurso={handleEditCurso}
+                onDeleteCurso={handleDeleteCurso}
+                onUpdateCurso={handleUpdateCurso}
+                onRenameGrupo={handleRenameGrupo}
+                isFirst={idx === 0}
+                isLast={idx === estadoGroups.length - 1}
+                onManageParticipantes={setActiveCursoParticipantes}
+                collapsed={expandedGrupo !== `estado-${grupo.nombre}`}
+                onToggleCollapse={() => setExpandedGrupo(expandedGrupo === `estado-${grupo.nombre}` ? null : `estado-${grupo.nombre}`)}
                 readOnly={readOnly}
               />
             ))

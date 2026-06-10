@@ -810,7 +810,7 @@ export default function NotaCard({
 
       {/* ─── Subbar ──────────────────────────────────────── */}
       <div className="nota-subbar">
-        <span><Calendar size={13} /> Calendario y control de la nota</span>
+        <span><Calendar size={13} /> Calendario y control del grupo</span>
         <span>{dateRangeLabel}</span>
       </div>
 
@@ -1051,7 +1051,7 @@ export default function NotaCard({
         {/* ─── Columna Central (Costo y Organizador) ─────────────────────────── */}
         <div className="nota-col-costo">
           {/* Ubicación y Costo */}
-          <div className="organizador-section" style={{ border: '1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 30%, #e2e8f0)', borderTop: '4px solid var(--nota-color, var(--primary-500))', borderRadius: '8px', padding: '12px' }}>
+          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 30%, #e2e8f0)', borderTop: '4px solid var(--nota-color, var(--primary-500))', borderRadius: '8px', padding: '12px' }}>
             <div className="organizador-title" style={{ color: 'var(--nota-color, var(--primary-500))', fontWeight: 800 }}>
               <MapPin size={14} /> Ubicación y Costo
             </div>

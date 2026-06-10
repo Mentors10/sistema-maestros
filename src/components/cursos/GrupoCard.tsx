@@ -330,7 +330,7 @@ export default function GrupoCard({
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <span className="grupo-count-badge" style={{ flexShrink: 0 }}>
                 <Hash size={12} />
-                {grupo.cursos.length} nota{grupo.cursos.length !== 1 ? 's' : ''}
+                {grupo.cursos.length} grupo{grupo.cursos.length !== 1 ? 's' : ''}
               </span>
 
               {uniqueTecnicos.length > 0 && (
