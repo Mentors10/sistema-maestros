@@ -751,28 +751,37 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Columns Layout */
-.nota-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 0;
-  flex: 1;
+.nota-main-content {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
 }
 
-.nota-col-left {
-  padding: var(--space-4);
-  background: transparent;
-  border-right: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
+.nota-col-info {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.nota-col-right {
   padding: var(--space-4);
   background: transparent;
+  border: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 30%, #e2e8f0);
+  border-top: 4px solid var(--nota-color, var(--primary-500));
+  border-radius: var(--radius-md);
+}
+
+.nota-col-costo {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  padding: var(--space-4);
+  background: transparent;
+}
+
+.nota-col-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: var(--space-4);
+  background: transparent;
 }
 
 /* Left Column Styling */
@@ -941,27 +950,22 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-sm);
 }
 
-/* Widgets Layout (Bottom Section) */
-.nota-widgets-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  background: transparent;
-  height: 460px;
-}
-
-.nota-widget-left {
-  padding: var(--space-4);
-  border-right: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
+/* Widgets Nesting Layout */
+.nota-col-widgets .calendar-section {
+  flex: 1 1 0%;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  min-height: 220px;
 }
 
-.nota-widget-right {
-  padding: var(--space-4);
+.nota-col-widgets .map-panel {
+  flex: 1 1 0%;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
+  padding-top: 16px;
+  min-height: 220px;
 }
 
 /* ─── Calendar Section ──────────────────────────────────────── */
@@ -1946,23 +1950,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 880px) {
-  .nota-layout {
-    grid-template-columns: 1fr;
-  }
-  .nota-col-left {
-    border-right: none;
-    border-bottom: 1px solid #e2e8f0;
-  }
   .filter-bar {
     grid-template-columns: 1fr 1fr;
-  }
-  .nota-widgets-layout {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-  .nota-widget-left {
-    border-right: none;
-    border-bottom: 1px solid #e2e8f0;
   }
   .nota-actions-grid-4x2 {
     grid-template-columns: repeat(2, 1fr);
@@ -2915,39 +2904,42 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (min-width: 1024px) {
-  /* Force side-by-side horizontal sections */
+  /* Force side-by-side 3-column horizontal sections of equal width */
   .nota-card .nota-main-content {
-    flex-direction: row;
-    align-items: stretch;
-    min-height: 440px;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 20px !important;
+    align-items: stretch !important;
+    min-height: 480px;
   }
-
-  /* Left columns (forms) */
-  .nota-card .nota-layout {
-    flex: 1.1;
-    border-right: none;
-    border-bottom: none;
-    min-height: 0;
-  }
-
-  /* Right columns (calendar + map) */
-  .nota-card .nota-widgets-layout {
-    flex: 1.9;
-    height: auto;
+  .nota-col-costo {
     border-left: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
+    padding-left: 20px !important;
+  }
+  .nota-col-widgets {
+    border-left: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
+    padding-left: 20px !important;
   }
 }
 
 @media (max-width: 1023px) {
-  /* Fallback layout for tablets/mobiles */
+  /* Fallback layout for tablets/mobiles - stack elements vertically */
   .nota-card .nota-main-content {
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
   }
-  
-  .nota-card .nota-widgets-layout {
+  .nota-col-costo {
+    border-left: none !important;
+    padding-left: 0 !important;
     border-top: 1px solid #e2e8f0;
-    height: auto;
-    min-height: 400px;
+    padding-top: 16px;
+  }
+  .nota-col-widgets {
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
   }
 }
 
@@ -2959,7 +2951,7 @@ h1, h2, h3, h4, h5, h6 {
   top: 0;
   left: 0;
   bottom: 0;
-  background-color: color-mix(in srgb, var(--grupo-color, var(--primary-500)) 15%, #cbd5e1);
+  background-color: color-mix(in srgb, var(--grupo-color, var(--primary-500)) 14%, #cbd5e1);
   z-index: 1;
   transition: width 0.4s ease-in-out;
   pointer-events: none;
@@ -3010,6 +3002,7 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateX(calc(-1 * var(--scroll-dist, 0px)));
   }
 }
+
 
 
 

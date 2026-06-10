@@ -262,55 +262,57 @@ export default function GrupoCard({
       className={`grupo-card ${collapsed ? 'collapsed' : ''} ${isDimmed ? 'dimmed' : ''} ${isActive ? 'active-group' : ''}`}
       style={{ '--grupo-color': grupo.color, zIndex: hoveredDayStr ? 50 : undefined } as React.CSSProperties}
     >
-      {/* Progress Bar Background */}
-      <div 
-        className="grupo-header-progress-bar" 
-        style={{ width: `${progressPercentage}%` }} 
-      />
-
       {/* Header */}
       <div className="grupo-header-bar" onClick={toggleCollapsed}>
+        {/* Progress Bar Background */}
+        <div 
+          className="grupo-header-progress-bar" 
+          style={{ width: `${progressPercentage}%` }} 
+        />
+
         <div className="grupo-header-left">
-          {/* Info column grouped and styled for vertical alignment */}
-          <div className="grupo-header-info-col" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-            <h2 className="grupo-title" style={{ minWidth: 0, flex: '0 1 auto', margin: 0 }}>
-              <LayoutGrid size={20} className="grupo-icon" />
+          {/* Info column grouped and styled with stacked layouts for title and badges */}
+          <div className="grupo-header-info-col" style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1, alignItems: 'flex-start' }}>
+            <h2 className="grupo-title" style={{ minWidth: 0, flex: '0 1 auto', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <LayoutGrid size={20} className="grupo-icon" style={{ flexShrink: 0 }} />
               <span className="grupo-title-text" title={grupo.nombre} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {grupo.nombre}
               </span>
             </h2>
-            <span className="grupo-count-badge" style={{ flexShrink: 0 }}>
-              <Hash size={12} />
-              {grupo.cursos.length} nota{grupo.cursos.length !== 1 ? 's' : ''}
-            </span>
-
-            {uniqueTecnicos.length > 0 && (
-              <span 
-                className="grupo-tecnico-badge"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  backgroundColor: 'color-mix(in srgb, var(--grupo-color, var(--primary-500)) 12%, #f1f5f9)',
-                  color: 'color-mix(in srgb, var(--grupo-color, var(--primary-500)) 85%, #1e293b)',
-                  border: '1px solid color-mix(in srgb, var(--grupo-color, var(--primary-500)) 30%, #cbd5e1)',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  maxWidth: '180px',
-                  flexShrink: 0
-                }}
-                title={`Técnico(s) asignado(s): ${uniqueTecnicos.join(', ')}`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                👤 {uniqueTecnicos.join(', ')}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span className="grupo-count-badge" style={{ flexShrink: 0 }}>
+                <Hash size={12} />
+                {grupo.cursos.length} nota{grupo.cursos.length !== 1 ? 's' : ''}
               </span>
-            )}
+
+              {uniqueTecnicos.length > 0 && (
+                <span 
+                  className="grupo-tecnico-badge"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    backgroundColor: 'color-mix(in srgb, var(--grupo-color, var(--primary-500)) 12%, #f1f5f9)',
+                    color: 'color-mix(in srgb, var(--grupo-color, var(--primary-500)) 85%, #1e293b)',
+                    border: '1px solid color-mix(in srgb, var(--grupo-color, var(--primary-500)) 30%, #cbd5e1)',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '280px',
+                    flexShrink: 0
+                  }}
+                  title={`Técnico(s) asignado(s): ${uniqueTecnicos.join(', ')}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  👤 {uniqueTecnicos.join(', ')}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* ─── Mini Week Calendar Strip ─────────────── */}
@@ -462,9 +464,9 @@ export default function GrupoCard({
         </div>
       </div>
 
-      {/* Grid of notas */}
+      {/* Grid of notas (rendered only when expanded for DOM performance and lag reduction) */}
       <div className="grupo-grid">
-        {grupo.cursos.map((curso, idx) => (
+        {!collapsed && grupo.cursos.map((curso, idx) => (
           <NotaCard
             key={curso.id}
             curso={curso}

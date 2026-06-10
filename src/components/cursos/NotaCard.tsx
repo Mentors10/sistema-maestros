@@ -127,7 +127,7 @@ export default function NotaCard({
       noteColor !== (curso.grupo_color || '#2f80ed')
     );
 
-    const cleanEditFecha = editFechaInicio.replace('T', ' ').substring(0, 16);
+    const cleanEditFecha = (editFechaInicio || '').replace('T', ' ').substring(0, 16);
     const cleanCursoFecha = (curso.fecha_inicio || '').trim().replace(/\s+/g, ' ').substring(0, 16);
     const hasCurChanges = !isDifferentCurso && (
       editTecnico !== (curso.tecnico_carnet || '') ||
@@ -229,7 +229,7 @@ export default function NotaCard({
     linkExterno !== (curso.link_inscripcion_externo || '') ||
     noteColor !== (curso.grupo_color || '#2f80ed');
 
-  const cleanEditFecha = editFechaInicio.replace('T', ' ').substring(0, 16);
+  const cleanEditFecha = (editFechaInicio || '').replace('T', ' ').substring(0, 16);
   const cleanCursoFecha = (curso.fecha_inicio || '').trim().replace(/\s+/g, ' ').substring(0, 16);
   const hasCursoChanges =
     editTecnico !== (curso.tecnico_carnet || '') ||
@@ -815,9 +815,8 @@ export default function NotaCard({
       </div>
 
       <div className="nota-main-content">
-        <div className="nota-layout">
-        {/* ─── Columna Izquierda ─────────────────────────── */}
-        <div className="nota-col-left" style={{ border: '1px solid #1e40af', borderTop: '4px solid #1e40af', borderRadius: '12px' }}>
+        {/* ─── Columna Izquierda (Información) ─────────────────────────── */}
+        <div className="nota-col-info">
           {/* ID + State */}
           <div className="nota-id-row">
             <span className="nota-id">ID: {curso.id}</span>
@@ -1049,11 +1048,11 @@ export default function NotaCard({
           )}
         </div>
 
-        {/* ─── Columna Derecha ─────────────────────────── */}
-        <div className="nota-col-right" style={{ borderRight: 'none', gap: '12px' }}>
+        {/* ─── Columna Central (Costo y Organizador) ─────────────────────────── */}
+        <div className="nota-col-costo">
           {/* Ubicación y Costo */}
-          <div className="organizador-section" style={{ border: '1px solid #1e40af', borderTop: '4px solid #1e40af', borderRadius: '8px', padding: '12px' }}>
-            <div className="organizador-title" style={{ color: '#1e40af', fontWeight: 800 }}>
+          <div className="organizador-section" style={{ border: '1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 30%, #e2e8f0)', borderTop: '4px solid var(--nota-color, var(--primary-500))', borderRadius: '8px', padding: '12px' }}>
+            <div className="organizador-title" style={{ color: 'var(--nota-color, var(--primary-500))', fontWeight: 800 }}>
               <MapPin size={14} /> Ubicación y Costo
             </div>
             <div className="organizador-grid">
@@ -1140,8 +1139,8 @@ export default function NotaCard({
 
           {/* Organizador (hidden in readOnly) */}
           {!readOnly && (
-            <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid #0d9488', borderTop: '4px solid #0d9488', borderRadius: '8px', padding: '12px' }}>
-              <div className="organizador-title" style={{ color: '#0d9488', fontWeight: 800 }}>
+            <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 30%, #e2e8f0)', borderTop: '4px solid var(--nota-color, var(--primary-500))', borderRadius: '8px', padding: '12px' }}>
+              <div className="organizador-title" style={{ color: 'var(--nota-color, var(--primary-500))', fontWeight: 800 }}>
                 <Users size={14} /> Datos del Organizador
               </div>
               <div className="organizador-grid">
@@ -1244,13 +1243,10 @@ export default function NotaCard({
             </div>
           )}
         </div>
-      </div>
+        {/* Note: the old closing div of nota-layout was removed here to let columns stand as direct siblings */}
 
-
-      {/* ─── Bottom Section (Widgets) ────────────────────── */}
-      <div className="nota-widgets-layout">
-        {/* ─── Columna Izquierda (Calendario) ───────────── */}
-        <div className="nota-widget-left">
+        {/* ─── Columna Derecha (Calendario y Mapa fusionados) ───────────────────── */}
+        <div className="nota-col-widgets">
           {/* Calendario de Actividades */}
           <div className="calendar-section">
             <MiniMonthCalendar
@@ -1267,13 +1263,8 @@ export default function NotaCard({
             />
           </div>
 
-
-        </div>
-
-        {/* ─── Columna Derecha (Mapa) ───────────────────── */}
-        <div className="nota-widget-right">
           {/* Ubicación exacta (Simétrica) */}
-          <div className="map-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="map-panel">
             <div className="map-title">
               <h4><MapPin size={14} /> Ubicación exacta</h4>
               {mapLink && (
@@ -1345,7 +1336,6 @@ export default function NotaCard({
             </div>
           </div>
         </div>
-      </div>
 
       </div> {/* Closing nota-main-content */}
 
