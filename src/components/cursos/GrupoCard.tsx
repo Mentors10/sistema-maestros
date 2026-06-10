@@ -221,30 +221,7 @@ export default function GrupoCard({
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayTime = today.getTime();
-    const oneDayMs = 24 * 60 * 60 * 1000;
-
-    // Helper to get slot/date completion
-    const getTargetDateCompletion = (dateStr: string) => {
-      if (!dateStr) return 0;
-      const cleanStr = dateStr.trim().substring(0, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) return 0;
-      
-      const targetDate = new Date(cleanStr + 'T00:00:00');
-      if (isNaN(targetDate.getTime())) return 0;
-      
-      targetDate.setHours(0, 0, 0, 0);
-      const diffMs = targetDate.getTime() - todayTime;
-      const diffDays = diffMs / oneDayMs;
-
-      if (diffDays <= 0) {
-        return 1.0; // Already passed or today
-      } else if (diffDays > 0 && diffDays <= 7) {
-        // Linear progress as we approach the date (within 7 days)
-        return (7 - diffDays) / 7;
-      }
-      return 0.0;
-    };
+    const tNow = today.getTime();
 
     let totalFraction = 0;
 
@@ -254,25 +231,41 @@ export default function GrupoCard({
         continue;
       }
 
-      if (curso.horarios_tentativos && curso.horarios_tentativos.length > 0) {
-        let cursoSlotsSum = 0;
-        let validSlotsCount = 0;
-        for (const slot of curso.horarios_tentativos) {
-          if (slot.date) {
-            cursoSlotsSum += getTargetDateCompletion(slot.date);
-            validSlotsCount++;
-          }
-        }
-        if (validSlotsCount > 0) {
-          totalFraction += cursoSlotsSum / validSlotsCount;
-        } else {
-          // Fallback to fecha_inicio if slots have no dates
-          if (curso.fecha_inicio) {
-            totalFraction += getTargetDateCompletion(curso.fecha_inicio);
-          }
-        }
-      } else if (curso.fecha_inicio) {
-        totalFraction += getTargetDateCompletion(curso.fecha_inicio);
+      const slots = curso.horarios_tentativos || [];
+      const dates = slots.map(s => s.date).filter(Boolean).sort();
+
+      if (dates.length === 0) {
+        // Exclude fecha_inicio per user request; if no calendar slots are defined, progress is 0%
+        totalFraction += 0.0;
+        continue;
+      }
+
+      const dMinStr = dates[0];
+      const dMaxStr = dates[dates.length - 1];
+
+      const tMin = new Date(dMinStr + 'T00:00:00').getTime();
+      const tMax = new Date(dMaxStr + 'T00:00:00').getTime();
+
+      if (isNaN(tMin) || isNaN(tMax)) {
+        totalFraction += 0.0;
+        continue;
+      }
+
+      if (tNow < tMin) {
+        // Today is before the course starts: 0% completion
+        totalFraction += 0.0;
+      } else if (tNow > tMax) {
+        // Today is after the course ends: 100% completion
+        totalFraction += 1.0;
+      } else if (tMin === tMax) {
+        // Today is exactly the course execution day
+        totalFraction += 1.0;
+      } else {
+        // Today is between start and end of the course execution.
+        // Starts at 5% on the start day and reaches 100% on the end day.
+        const interp = (tNow - tMin) / (tMax - tMin);
+        const fraction = 0.05 + 0.95 * interp;
+        totalFraction += Math.max(0.05, Math.min(1.0, fraction));
       }
     }
 

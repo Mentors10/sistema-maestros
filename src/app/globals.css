@@ -3087,18 +3087,17 @@ h6 {
   position: absolute;
   left: 0;
   bottom: 0;
-  height: 100px;
-  /* Sleek bottom progress track */
+  height: 50%; /* Only occupies the bottom half of the header row to keep titles fully clear */
   background:
     repeating-linear-gradient(-45deg,
-      rgba(255, 255, 255, 0.15) 0,
-      rgba(255, 255, 255, 0.15) 10px,
+      rgba(255, 255, 255, 0.22) 0,
+      rgba(255, 255, 255, 0.22) 10px,
       rgba(255, 255, 255, 0) 10px,
       rgba(255, 255, 255, 0) 20px),
     linear-gradient(90deg,
-      color-mix(in srgb, var(--grupo-color, var(--primary-500)) 35%, transparent) 0%,
-      color-mix(in srgb, var(--grupo-color, var(--primary-500)) 20%, transparent) 100%);
-  /*border-right: 3px solid var(--grupo-color, var(--primary-500));*/
+      color-mix(in srgb, var(--grupo-color, var(--primary-500)) 38%, transparent) 0%,
+      color-mix(in srgb, var(--grupo-color, var(--primary-500)) 22%, transparent) 100%);
+  border-right: 3px solid var(--grupo-color, var(--primary-500));
   box-shadow: 0 0 10px color-mix(in srgb, var(--grupo-color, var(--primary-500)) 30%, transparent);
   z-index: 1;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
