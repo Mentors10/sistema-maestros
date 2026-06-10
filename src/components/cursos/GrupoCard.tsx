@@ -27,7 +27,6 @@ interface GrupoCardProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   readOnly?: boolean;
-  compact?: boolean;
 }
 
 export default function GrupoCard({
@@ -48,7 +47,6 @@ export default function GrupoCard({
   collapsed: controlledCollapsed,
   onToggleCollapse,
   readOnly = false,
-  compact = false,
 }: GrupoCardProps) {
   const [localCollapsed, setLocalCollapsed] = useState(true); // default to collapsed
 
@@ -530,7 +528,6 @@ export default function GrupoCard({
             onManageParticipantes={onManageParticipantes}
             animationDelay={idx * 0.06}
             readOnly={readOnly}
-            compact={compact}
           />
         ))}
       </div>
