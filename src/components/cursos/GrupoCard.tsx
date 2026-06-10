@@ -217,14 +217,66 @@ export default function GrupoCard({
 
   // ─── Progress bar percentage calculation ────────────────
   const progressPercentage = useMemo(() => {
-    const todayStr = formatDateStr(new Date());
-    const slots = grupo.cursos.flatMap(c => c.horarios_tentativos || []);
-    if (slots.length === 0) {
-      const allExecuted = grupo.cursos.every(c => c.estado === 'EJECUTADO');
-      return allExecuted && grupo.cursos.length > 0 ? 100 : 0;
+    if (!grupo.cursos || grupo.cursos.length === 0) return 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTime = today.getTime();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
+    // Helper to get slot/date completion
+    const getTargetDateCompletion = (dateStr: string) => {
+      if (!dateStr) return 0;
+      const cleanStr = dateStr.trim().substring(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) return 0;
+      
+      const targetDate = new Date(cleanStr + 'T00:00:00');
+      if (isNaN(targetDate.getTime())) return 0;
+      
+      targetDate.setHours(0, 0, 0, 0);
+      const diffMs = targetDate.getTime() - todayTime;
+      const diffDays = diffMs / oneDayMs;
+
+      if (diffDays <= 0) {
+        return 1.0; // Already passed or today
+      } else if (diffDays > 0 && diffDays <= 7) {
+        // Linear progress as we approach the date (within 7 days)
+        return (7 - diffDays) / 7;
+      }
+      return 0.0;
+    };
+
+    let totalFraction = 0;
+
+    for (const curso of grupo.cursos) {
+      if (curso.estado === 'EJECUTADO') {
+        totalFraction += 1.0;
+        continue;
+      }
+
+      if (curso.horarios_tentativos && curso.horarios_tentativos.length > 0) {
+        let cursoSlotsSum = 0;
+        let validSlotsCount = 0;
+        for (const slot of curso.horarios_tentativos) {
+          if (slot.date) {
+            cursoSlotsSum += getTargetDateCompletion(slot.date);
+            validSlotsCount++;
+          }
+        }
+        if (validSlotsCount > 0) {
+          totalFraction += cursoSlotsSum / validSlotsCount;
+        } else {
+          // Fallback to fecha_inicio if slots have no dates
+          if (curso.fecha_inicio) {
+            totalFraction += getTargetDateCompletion(curso.fecha_inicio);
+          }
+        }
+      } else if (curso.fecha_inicio) {
+        totalFraction += getTargetDateCompletion(curso.fecha_inicio);
+      }
     }
-    const completed = slots.filter(s => s.date <= todayStr).length;
-    return Math.round((completed / slots.length) * 100);
+
+    return Math.round((totalFraction / grupo.cursos.length) * 100);
   }, [grupo.cursos]);
 
   // ─── Marquee news ticker detection ──────────────────────

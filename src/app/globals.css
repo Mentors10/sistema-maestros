@@ -545,6 +545,14 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom: 1px solid color-mix(in srgb, var(--grupo-color, var(--primary-500)) 18%, #e2e8f0);
   position: relative;
   z-index: 10;
+  overflow: hidden;
+  border-top-left-radius: calc(var(--radius-lg) - 1px);
+  border-top-right-radius: calc(var(--radius-lg) - 1px);
+}
+
+.grupo-card.collapsed .grupo-header-bar {
+  border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+  border-bottom-right-radius: calc(var(--radius-lg) - 1px);
 }
 
 .grupo-header-bar:hover {
@@ -2951,9 +2959,13 @@ h1, h2, h3, h4, h5, h6 {
   top: 0;
   left: 0;
   bottom: 0;
-  background-color: color-mix(in srgb, var(--grupo-color, var(--primary-500)) 14%, #cbd5e1);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--grupo-color, var(--primary-500)) 18%, transparent) 0%,
+    color-mix(in srgb, var(--grupo-color, var(--primary-500)) 8%, transparent) 100%
+  );
   z-index: 1;
-  transition: width 0.4s ease-in-out;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
 
