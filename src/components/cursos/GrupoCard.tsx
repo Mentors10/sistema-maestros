@@ -319,7 +319,10 @@ export default function GrupoCard({
         {/* Progress Bar Background */}
         <div 
           className="grupo-header-progress-bar" 
-          style={{ width: `${progressPercentage}%` }} 
+          style={{ 
+            width: `${progressPercentage}%`,
+            borderRightColor: progressPercentage === 0 ? 'transparent' : undefined
+          }} 
         />
 
         <div className="grupo-header-left">
