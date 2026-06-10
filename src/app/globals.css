@@ -3157,3 +3157,24 @@ h6 {
     transform: translateX(calc(-1 * var(--scroll-dist, 0px)));
   }
 }
+
+/* Compact Card Styling */
+.nota-compact-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 16px;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 0 0 12px 12px;
+}
+
+.nota-card.compact-card {
+  min-height: auto !important;
+}
+
+@media (max-width: 768px) {
+  .nota-compact-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

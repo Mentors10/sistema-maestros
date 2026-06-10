@@ -1179,6 +1179,7 @@ function HomePage() {
                 collapsed={expandedGrupo !== `area-${grupo.nombre}`}
                 onToggleCollapse={() => setExpandedGrupo(expandedGrupo === `area-${grupo.nombre}` ? null : `area-${grupo.nombre}`)}
                 readOnly={readOnly}
+                compact={true}
               />
             ))
           ) : (
@@ -1201,6 +1202,7 @@ function HomePage() {
                 collapsed={expandedGrupo !== `estado-${grupo.nombre}`}
                 onToggleCollapse={() => setExpandedGrupo(expandedGrupo === `estado-${grupo.nombre}` ? null : `estado-${grupo.nombre}`)}
                 readOnly={readOnly}
+                compact={true}
               />
             ))
           )}

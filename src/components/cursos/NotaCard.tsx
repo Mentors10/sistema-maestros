@@ -67,6 +67,7 @@ interface NotaCardProps {
   onManageParticipantes: (curso: Curso) => void;
   animationDelay?: number;
   readOnly?: boolean;
+  compact?: boolean;
 }
 
 export default function NotaCard({
@@ -81,6 +82,7 @@ export default function NotaCard({
   onManageParticipantes,
   animationDelay = 0,
   readOnly = false,
+  compact = false,
 }: NotaCardProps) {
   const [orgNombre, setOrgNombre] = useState(curso.organizador_nombre || '');
   const [orgTelefono, setOrgTelefono] = useState(curso.organizador_telefono || '');
@@ -336,6 +338,118 @@ export default function NotaCard({
   const handleToggleCheck = (field: 'planificacion_recibida' | 'evaluacion_realizada' | 'informe_final_recibido') => {
     onUpdate({ [field]: !curso[field] });
   };
+
+  if (compact) {
+    return (
+      <div
+        className={`nota-card compact-card ${readOnly ? 'read-only-card' : ''}`}
+        style={{
+          '--nota-color': noteColor,
+          animationDelay: `${animationDelay}s`,
+        } as React.CSSProperties}
+      >
+        {/* Head */}
+        <div className="nota-head" style={{ background: noteColor, padding: '8px 12px' }}>
+          <div className="nota-head-left">
+            <h3 style={{ fontSize: '0.88rem' }}>{curso.grupo_nombre || 'Sin grupo'}</h3>
+          </div>
+          <div className="nota-head-right">
+            <div className="nota-count-wrapper" onClick={(e) => { e.stopPropagation(); onManageParticipantes(curso); }} style={{ cursor: 'pointer' }}>
+              <div className="nota-count-value" style={{ fontSize: '0.95rem' }}>{count}</div>
+              <div className="nota-count-label" style={{ fontSize: '0.55rem' }}>INSCRITOS</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Compact Content Grid */}
+        <div className="nota-compact-grid">
+          {/* Left Side Info */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--gray-500)', display: 'block', marginBottom: '2px' }}>
+                  Ciclo Formativo
+                </label>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--primary-900)', lineHeight: '1.3' }}>
+                  {curso.ciclo_nombre || '—'}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--gray-500)', display: 'block', marginBottom: '2px' }}>
+                  Facilitador
+                </label>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--gray-800)' }}>
+                  👤 {curso.facilitador_nombre || 'POR CONFIRMAR'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                <span className={`nota-confirm-badge ${isConfirmado ? 'confirmado' : 'proyectado'}`} style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  border: '1px solid',
+                  backgroundColor: isConfirmado ? '#ecfdf5' : '#fff7ed',
+                  color: isConfirmado ? '#047857' : '#c2410c',
+                  borderColor: isConfirmado ? '#a7f3d0' : '#ffedd5',
+                }}>
+                  {isConfirmado ? '✓ Confirmado' : '⚡ Proyectado'}
+                </span>
+                <span className={`nota-state-chip ${curso.estado === 'EJECUTADO' ? 'ejecutado' : 'por-ejecutar'}`} style={{
+                  fontSize: '0.65rem',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}>
+                  {curso.estado}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Actions (only Participant List is relevant in compact view) */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-xs"
+                style={{ flex: 1, padding: '6px 8px', fontSize: '0.72rem' }}
+                onClick={() => onManageParticipantes(curso)}
+              >
+                📋 Lista de Participantes
+              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-xs"
+                  style={{ padding: '6px', minWidth: '28px' }}
+                  onClick={onEdit}
+                  title="Editar Curso Completo"
+                >
+                  ✏️
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right Side Calendar (Mini View) */}
+          <div className="calendar-section" style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', minHeight: '220px' }}>
+            <MiniMonthCalendar
+              slots={slots}
+              onSaveSlots={handleSaveSlots}
+              noteColor={noteColor}
+              initialDate={firstSlot ? new Date(firstSlot.date) : undefined}
+              compliance={compliance}
+              planificacionRecibida={curso.planificacion_recibida}
+              evaluacionRealizada={curso.evaluacion_realizada}
+              informeFinalRecibido={curso.informe_final_recibido}
+              onToggleCheck={handleToggleCheck}
+              readOnly={readOnly}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ─── Print Ficha de Inscripción 2-up Letter (Blank template with official logos) ───
   const handlePrintFichaInscripcion = () => {
