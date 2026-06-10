@@ -1051,7 +1051,7 @@ export default function NotaCard({
         {/* ─── Columna Central (Costo y Organizador) ─────────────────────────── */}
         <div className="nota-col-costo">
           {/* Ubicación y Costo */}
-          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 30%, #e2e8f0)', borderTop: '4px solid var(--nota-color, var(--primary-500))', borderRadius: '8px', padding: '12px' }}>
+          <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
             <div className="organizador-title" style={{ color: 'var(--nota-color, var(--primary-500))', fontWeight: 800 }}>
               <MapPin size={14} /> Ubicación y Costo
             </div>
@@ -1139,7 +1139,7 @@ export default function NotaCard({
 
           {/* Organizador (hidden in readOnly) */}
           {!readOnly && (
-            <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, border: '1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 30%, #e2e8f0)', borderTop: '4px solid var(--nota-color, var(--primary-500))', borderRadius: '8px', padding: '12px' }}>
+            <div className="organizador-section" style={{ display: 'flex', flexDirection: 'column', flex: 1, borderTop: '1px dashed #e2e8f0', paddingTop: '16px', marginTop: '8px' }}>
               <div className="organizador-title" style={{ color: 'var(--nota-color, var(--primary-500))', fontWeight: 800 }}>
                 <Users size={14} /> Datos del Organizador
               </div>

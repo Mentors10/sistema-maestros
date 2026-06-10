@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Curso, Grupo, AppFilters, DEFAULT_FILTERS, Tecnico, Facilitador, CicloFormativo, AgendaContacto } from '@/types';
 import { getNoteCompliance, getReviewCount } from '@/lib/utils/compliance';
 import { supabase } from '@/lib/supabase/client';
-import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye } from 'lucide-react';
+import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye, Hash, User } from 'lucide-react';
 import GrupoCard from '@/components/cursos/GrupoCard';
 import CursoForm from '@/components/cursos/CursoForm';
 import AgendaCard from '@/components/agenda/AgendaCard';
@@ -91,6 +91,14 @@ function HomePage() {
   const [activeCursoParticipantes, setActiveCursoParticipantes] = useState<Curso | null>(null);
   const [customGrupoOrder, setCustomGrupoOrder] = useState<string[]>([]);
   const [expandedGrupo, setExpandedGrupo] = useState<string | null>(null);
+  const [expandedArea, setExpandedArea] = useState<string | null>(null);
+  const [expandedStatus, setExpandedStatus] = useState<string | null>(null);
+  const [expandedCycleId, setExpandedCycleId] = useState<string | null>(null);
+
+  // Collapse inner cycle when view, active area, or active status changes
+  useEffect(() => {
+    setExpandedCycleId(null);
+  }, [selectedView, expandedArea, expandedStatus]);
 
   // Collapse all groups when grouping or technician filter changes
   useEffect(() => {
@@ -1160,49 +1168,141 @@ function HomePage() {
               ))
             )
           ) : selectedView === 'area' ? (
-            areaGroups.map((grupo, idx) => (
-              <GrupoCard
-                key={grupo.nombre}
-                grupo={grupo}
-                activeGroup={filters.grupo}
-                tecnicos={tecnicos}
-                facilitadores={facilitadores}
-                ciclos={ciclos}
-                grupoNames={grupoNames}
-                onEditCurso={handleEditCurso}
-                onDeleteCurso={handleDeleteCurso}
-                onUpdateCurso={handleUpdateCurso}
-                onRenameGrupo={handleRenameGrupo}
-                isFirst={idx === 0}
-                isLast={idx === areaGroups.length - 1}
-                onManageParticipantes={setActiveCursoParticipantes}
-                collapsed={expandedGrupo !== `area-${grupo.nombre}`}
-                onToggleCollapse={() => setExpandedGrupo(expandedGrupo === `area-${grupo.nombre}` ? null : `area-${grupo.nombre}`)}
-                readOnly={readOnly}
-              />
-            ))
+            areaGroups.map((grupo) => {
+              const isAreaExpanded = expandedArea === grupo.nombre;
+              const uniqueTecnicosInArea = Array.from(new Set(grupo.cursos.map((c) => c.tecnico_nombre).filter(Boolean)));
+              return (
+                <div 
+                  key={grupo.nombre} 
+                  className={`accordion-group-card ${isAreaExpanded ? 'active' : 'collapsed'}`}
+                  style={{ '--accordion-color': grupo.color } as React.CSSProperties}
+                >
+                  <div 
+                    className="accordion-header-bar" 
+                    onClick={() => setExpandedArea(isAreaExpanded ? null : grupo.nombre)}
+                  >
+                    <div className="accordion-header-left">
+                      <h2 className="accordion-title">
+                        <LayoutGrid size={20} style={{ flexShrink: 0, color: grupo.color }} />
+                        <span className="accordion-title-text" title={grupo.nombre}>
+                          {grupo.nombre}
+                        </span>
+                      </h2>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span className="accordion-count-badge">
+                          <Hash size={12} />
+                          {grupo.cursos.length} grupo{grupo.cursos.length !== 1 ? 's' : ''}
+                        </span>
+                        {uniqueTecnicosInArea.map((name) => (
+                          <span key={name} className="accordion-tecnico-badge">
+                            <User size={12} />
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <ChevronDown size={18} className="accordion-toggle-arrow" />
+                  </div>
+
+                  {isAreaExpanded && (
+                    <div className="accordion-body-grid">
+                      {grupo.cursos.map((curso, idx) => {
+                        const cycleGrupo = { nombre: curso.grupo_nombre, color: curso.grupo_color || '#bfa05e', cursos: [curso] };
+                        return (
+                          <GrupoCard
+                            key={curso.id}
+                            grupo={cycleGrupo}
+                            activeGroup={filters.grupo}
+                            tecnicos={tecnicos}
+                            facilitadores={facilitadores}
+                            ciclos={ciclos}
+                            grupoNames={grupoNames}
+                            onEditCurso={handleEditCurso}
+                            onDeleteCurso={handleDeleteCurso}
+                            onUpdateCurso={handleUpdateCurso}
+                            onRenameGrupo={handleRenameGrupo}
+                            isFirst={idx === 0}
+                            isLast={idx === grupo.cursos.length - 1}
+                            onManageParticipantes={setActiveCursoParticipantes}
+                            collapsed={expandedCycleId !== curso.id}
+                            onToggleCollapse={() => setExpandedCycleId(expandedCycleId === curso.id ? null : curso.id)}
+                            readOnly={readOnly}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           ) : (
-            estadoGroups.map((grupo, idx) => (
-              <GrupoCard
-                key={grupo.nombre}
-                grupo={grupo}
-                activeGroup={filters.grupo}
-                tecnicos={tecnicos}
-                facilitadores={facilitadores}
-                ciclos={ciclos}
-                grupoNames={grupoNames}
-                onEditCurso={handleEditCurso}
-                onDeleteCurso={handleDeleteCurso}
-                onUpdateCurso={handleUpdateCurso}
-                onRenameGrupo={handleRenameGrupo}
-                isFirst={idx === 0}
-                isLast={idx === estadoGroups.length - 1}
-                onManageParticipantes={setActiveCursoParticipantes}
-                collapsed={expandedGrupo !== `estado-${grupo.nombre}`}
-                onToggleCollapse={() => setExpandedGrupo(expandedGrupo === `estado-${grupo.nombre}` ? null : `estado-${grupo.nombre}`)}
-                readOnly={readOnly}
-              />
-            ))
+            estadoGroups.map((grupo) => {
+              const isStatusExpanded = expandedStatus === grupo.nombre;
+              const uniqueTecnicosInStatus = Array.from(new Set(grupo.cursos.map((c) => c.tecnico_nombre).filter(Boolean)));
+              return (
+                <div 
+                  key={grupo.nombre} 
+                  className={`accordion-group-card ${isStatusExpanded ? 'active' : 'collapsed'}`}
+                  style={{ '--accordion-color': grupo.color } as React.CSSProperties}
+                >
+                  <div 
+                    className="accordion-header-bar" 
+                    onClick={() => setExpandedStatus(isStatusExpanded ? null : grupo.nombre)}
+                  >
+                    <div className="accordion-header-left">
+                      <h2 className="accordion-title">
+                        <LayoutGrid size={20} style={{ flexShrink: 0, color: grupo.color }} />
+                        <span className="accordion-title-text" title={grupo.nombre}>
+                          {grupo.nombre}
+                        </span>
+                      </h2>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span className="accordion-count-badge">
+                          <Hash size={12} />
+                          {grupo.cursos.length} grupo{grupo.cursos.length !== 1 ? 's' : ''}
+                        </span>
+                        {uniqueTecnicosInStatus.map((name) => (
+                          <span key={name} className="accordion-tecnico-badge">
+                            <User size={12} />
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <ChevronDown size={18} className="accordion-toggle-arrow" />
+                  </div>
+
+                  {isStatusExpanded && (
+                    <div className="accordion-body-grid">
+                      {grupo.cursos.map((curso, idx) => {
+                        const cycleGrupo = { nombre: curso.grupo_nombre, color: curso.grupo_color || '#bfa05e', cursos: [curso] };
+                        return (
+                          <GrupoCard
+                            key={curso.id}
+                            grupo={cycleGrupo}
+                            activeGroup={filters.grupo}
+                            tecnicos={tecnicos}
+                            facilitadores={facilitadores}
+                            ciclos={ciclos}
+                            grupoNames={grupoNames}
+                            onEditCurso={handleEditCurso}
+                            onDeleteCurso={handleDeleteCurso}
+                            onUpdateCurso={handleUpdateCurso}
+                            onRenameGrupo={handleRenameGrupo}
+                            isFirst={idx === 0}
+                            isLast={idx === grupo.cursos.length - 1}
+                            onManageParticipantes={setActiveCursoParticipantes}
+                            collapsed={expandedCycleId !== curso.id}
+                            onToggleCollapse={() => setExpandedCycleId(expandedCycleId === curso.id ? null : curso.id)}
+                            readOnly={readOnly}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </>
       ) : (
