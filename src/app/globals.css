@@ -3087,7 +3087,8 @@ h6 {
   position: absolute;
   left: 0;
   bottom: 0;
-  height: 50%; /* Only occupies the bottom half of the header row to keep titles fully clear */
+  height: 45%;
+  /* Only occupies the bottom half of the header row to keep titles fully clear */
   background:
     repeating-linear-gradient(-45deg,
       rgba(255, 255, 255, 0.22) 0,
