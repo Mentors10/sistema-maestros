@@ -2084,6 +2084,7 @@ h6 {
   gap: 4px;
   align-items: center;
   margin-left: 16px;
+  flex-shrink: 0;
 }
 
 .week-day-cell {

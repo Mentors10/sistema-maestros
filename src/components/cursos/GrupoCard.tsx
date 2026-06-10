@@ -321,9 +321,9 @@ export default function GrupoCard({
         <div className="grupo-header-left">
           {/* Info column grouped and styled with stacked layouts for title and badges */}
           <div className="grupo-header-info-col" style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1, alignItems: 'flex-start' }}>
-            <h2 className="grupo-title" style={{ minWidth: 0, flex: '0 1 auto', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <LayoutGrid size={20} className="grupo-icon" style={{ flexShrink: 0 }} />
-              <span className="grupo-title-text" title={grupo.nombre} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <h2 className="grupo-title" style={{ minWidth: 0, flex: '0 1 auto', margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <LayoutGrid size={20} className="grupo-icon" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span className="grupo-title-text" title={grupo.nombre} style={{ fontSize: '0.95rem', fontWeight: 800, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>
                 {grupo.nombre}
               </span>
             </h2>

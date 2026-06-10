@@ -293,7 +293,38 @@ function HomePage() {
       map.get(key)!.cursos.push(c);
     });
 
-    return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    const getAreaPriority = (areaName: string): number => {
+      const normalized = areaName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .trim()
+        .replace(/\s+/g, ' ');
+
+      const priorityOrder = [
+        "PARA TODOS LOS ACTORES DEL SEP",
+        "EDUCACION REGULAR",
+        "EDUCACION INICIAL EN FAMILIA COMUNITARIA",
+        "EDUCACION PRIMARIA COMUNITARIA VOCACIONAL",
+        "EDUCACION SECUNDARIA COMUNITARIA PRODUCTIVA",
+        "EDUCACION ALTERNATIVA Y ESPECIAL",
+        "EDUCACION ALTERNATIVA",
+        "EDUCACION ESPECIAL",
+        "EDUCACION SUPERIOR DE FORMACION PROFESIONAL",
+        "DOCENTES DE INSTITUTOS TECNICOS TECNOLOGICOS",
+        "TACFI"
+      ];
+
+      const idx = priorityOrder.indexOf(normalized);
+      return idx !== -1 ? idx : 999;
+    };
+
+    return Array.from(map.values()).sort((a, b) => {
+      const pA = getAreaPriority(a.nombre);
+      const pB = getAreaPriority(b.nombre);
+      if (pA !== pB) return pA - pB;
+      return a.nombre.localeCompare(b.nombre);
+    });
   }, [filteredCursos, selectedView]);
 
   const estadoGroups = useMemo<Grupo[]>(() => {
@@ -1207,7 +1238,7 @@ function HomePage() {
                   {isAreaExpanded && (
                     <div className="accordion-body-grid">
                       {grupo.cursos.map((curso, idx) => {
-                        const cycleGrupo = { nombre: curso.grupo_nombre, color: curso.grupo_color || '#bfa05e', cursos: [curso] };
+                        const cycleGrupo = { nombre: curso.ciclo_nombre || curso.grupo_nombre || 'Sin ciclo', color: curso.grupo_color || '#bfa05e', cursos: [curso] };
                         return (
                           <GrupoCard
                             key={curso.id}
@@ -1275,7 +1306,7 @@ function HomePage() {
                   {isStatusExpanded && (
                     <div className="accordion-body-grid">
                       {grupo.cursos.map((curso, idx) => {
-                        const cycleGrupo = { nombre: curso.grupo_nombre, color: curso.grupo_color || '#bfa05e', cursos: [curso] };
+                        const cycleGrupo = { nombre: curso.ciclo_nombre || curso.grupo_nombre || 'Sin ciclo', color: curso.grupo_color || '#bfa05e', cursos: [curso] };
                         return (
                           <GrupoCard
                             key={curso.id}
