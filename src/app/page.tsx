@@ -1258,6 +1258,7 @@ function HomePage() {
                             collapsed={expandedCycleId !== curso.id}
                             onToggleCollapse={() => setExpandedCycleId(expandedCycleId === curso.id ? null : curso.id)}
                             readOnly={readOnly}
+                            showInscritosInsteadOfNews={true}
                           />
                         );
                       })}
@@ -1326,6 +1327,7 @@ function HomePage() {
                             collapsed={expandedCycleId !== curso.id}
                             onToggleCollapse={() => setExpandedCycleId(expandedCycleId === curso.id ? null : curso.id)}
                             readOnly={readOnly}
+                            showInscritosInsteadOfNews={true}
                           />
                         );
                       })}

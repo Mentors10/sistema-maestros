@@ -27,6 +27,7 @@ interface GrupoCardProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   readOnly?: boolean;
+  showInscritosInsteadOfNews?: boolean;
 }
 
 export default function GrupoCard({
@@ -47,6 +48,7 @@ export default function GrupoCard({
   collapsed: controlledCollapsed,
   onToggleCollapse,
   readOnly = false,
+  showInscritosInsteadOfNews = false,
 }: GrupoCardProps) {
   const [localCollapsed, setLocalCollapsed] = useState(true); // default to collapsed
 
@@ -272,6 +274,10 @@ export default function GrupoCard({
     return Math.round((totalFraction / grupo.cursos.length) * 100);
   }, [grupo.cursos]);
 
+  const totalInscritos = useMemo(() => {
+    return grupo.cursos.reduce((sum, c) => sum + (c.inscritos_formulario || 0), 0);
+  }, [grupo.cursos]);
+
   // ─── Marquee news ticker detection ──────────────────────
   const textRef = useRef<HTMLSpanElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -454,20 +460,27 @@ export default function GrupoCard({
             })}
           </div>
 
-          {/* ─── News Ticker ──────────────────────────── */}
-          <div className="news-ticker-container" ref={containerRef} onClick={(e) => e.stopPropagation()}>
-            <div className="news-ticker-dot" />
-            <div className="news-ticker-scroll-wrapper" style={{ overflow: 'hidden', flex: 1, display: 'flex', alignItems: 'center', minWidth: 0 }}>
-              <span 
-                className={`news-ticker-text ${shouldScroll ? 'scrolling' : ''}`} 
-                ref={textRef} 
-                key={newsIndex}
-                style={marqueeStyle}
-              >
-                {announcements[newsIndex % announcements.length]}
-              </span>
+          {/* ─── News Ticker or Enrolled Badge ────────── */}
+          {showInscritosInsteadOfNews ? (
+            <div className="nota-count-wrapper" onClick={(e) => e.stopPropagation()} style={{ marginLeft: '16px', flexShrink: 0, '--nota-color': grupo.color } as React.CSSProperties}>
+              <div className="nota-count-value">{totalInscritos}</div>
+              <div className="nota-count-label">Inscritos</div>
             </div>
-          </div>
+          ) : (
+            <div className="news-ticker-container" ref={containerRef} onClick={(e) => e.stopPropagation()}>
+              <div className="news-ticker-dot" />
+              <div className="news-ticker-scroll-wrapper" style={{ overflow: 'hidden', flex: 1, display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                <span 
+                  className={`news-ticker-text ${shouldScroll ? 'scrolling' : ''}`} 
+                  ref={textRef} 
+                  key={newsIndex}
+                  style={marqueeStyle}
+                >
+                  {announcements[newsIndex % announcements.length]}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grupo-header-right">
