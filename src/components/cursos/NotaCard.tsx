@@ -756,15 +756,7 @@ export default function NotaCard({
           ${fichaHtml}
           
           <!-- Visual line dividing the page when cutting -->
-          .divider-line {
-            border-top: 1.5px dashed #777;
-            width: 100%;
-            text-align: center;
-            padding: 6px 0;
-            font-size: 8pt;
-            color: #555;
-            box-sizing: border-box;
-          }
+          <div class="divider-line">---------------------- CORTE POR AQUÍ PARA ENTREGAR AL MAESTRO / UNEFCO ----------------------</div>
           
           <!-- Duplicate Copy 2 (PARTICIPANT COPY) -->
           ${fichaHtml}
