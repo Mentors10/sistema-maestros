@@ -4,7 +4,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Curso, Grupo, AppFilters, DEFAULT_FILTERS, Tecnico, Facilitador, CicloFormativo, AgendaContacto } from '@/types';
 import { getNoteCompliance, getReviewCount } from '@/lib/utils/compliance';
 import { supabase } from '@/lib/supabase/client';
-import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye, Hash, User } from 'lucide-react';
+import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye, Hash, User, Download } from 'lucide-react';
+import { exportAreaView } from '@/lib/utils/excelExport';
 import GrupoCard from '@/components/cursos/GrupoCard';
 import CursoForm from '@/components/cursos/CursoForm';
 import AgendaCard from '@/components/agenda/AgendaCard';
@@ -1050,7 +1051,33 @@ function HomePage() {
           )}
         </div>
 
-        <div className="toolbar-right">
+        <div className="toolbar-right" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {viewMode === 'cursos' && selectedView === 'area' && (
+            <button
+              className="btn"
+              style={{
+                background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                padding: '8px 14px',
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(16,185,129,0.3)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onClick={() => {
+                exportAreaView(areaGroups, ciclos);
+              }}
+              title="Descargar reporte Excel de la vista por áreas"
+            >
+              <Download size={14} /> Exportar Excel
+            </button>
+          )}
           {viewMode === 'cursos' ? (
             !readOnly && (
               <button
