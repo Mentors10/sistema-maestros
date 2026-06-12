@@ -457,6 +457,9 @@ function HomePage() {
       } else if (filters.agruparPor === 'tecnico') {
         key = c.tecnico_nombre || 'Sin técnico';
         color = c.grupo_color || '#1a4a73';
+      } else if (filters.agruparPor === 'facilitador') {
+        key = c.facilitador_nombre || 'Sin facilitador';
+        color = '#8b5cf6';
       } else if (filters.agruparPor === 'distrito') {
         key = c.distrito || 'Sin distrito';
         color = '#2e9f5e';
@@ -990,6 +993,7 @@ function HomePage() {
             >
               <option value="grupo">Grupo de color</option>
               <option value="tecnico">Técnico</option>
+              <option value="facilitador">Facilitador</option>
               <option value="distrito">Distrito</option>
               <option value="ninguno">Sin agrupar</option>
             </select>
