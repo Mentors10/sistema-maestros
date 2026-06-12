@@ -92,18 +92,7 @@ export default function MiniMonthCalendar({
     else setMonth(month + 1);
   };
 
-  // ─── Wheel scroll by weeks ─────────────────────────────────
-  useEffect(() => {
-    const el = calRef.current;
-    if (!el) return;
-    const handler = (e: WheelEvent) => {
-      e.preventDefault();
-      if (e.deltaY > 0) nextMonth();
-      else prevMonth();
-    };
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
-  });
+  // Wheel scroll disabled to change month only via arrow buttons
 
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -458,60 +447,85 @@ export default function MiniMonthCalendar({
                     {day.dayNumber} {MONTH_NAMES[month]}
                   </h4>
 
-                  {/* Existing slots */}
-                  {popoverSlots.length > 0 && (
-                    <div className="day-popover-slots">
-                      {popoverSlots.map((s, idx) => (
-                        <div key={idx} className="day-slot-row" style={{ borderLeftColor: getCourseColor(s.course) }}>
-                          <div>
-                            <strong style={{ color: getCourseColor(s.course) }}>{getCourseLabel(s.course)}</strong>
-                            {' '}{s.startTime}-{s.endTime}
-                          </div>
-                          {isInteractive && (
-                            <button className="btn btn-danger btn-xs" style={{ padding: '2px 4px' }} onClick={() => handleDeleteSlot(idx)}>
-                              <Trash2 size={10} />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
                   {isInteractive ? (
                     <>
-                      {/* Add form */}
-                      <div className="day-popover-form">
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                          <div style={{ flex: 1 }}>
-                            <label>Act.</label>
-                            <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '3px 4px' }}>
-                              <option value="1">C1</option>
-                              <option value="2">C2</option>
-                              <option value="3">C3</option>
-                              <option value="4">C4</option>
-                              <option value="soc">SOC</option>
-                              <option value="eval">EVAL</option>
-                            </select>
-                          </div>
-                          <div style={{ width: '80px' }}>
-                            <label>De</label>
-                            <input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '3px 4px' }} />
-                          </div>
-                          <div style={{ width: '80px' }}>
-                            <label>A</label>
-                            <input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '3px 4px' }} />
+                      {/* Add form - Highlighted with border, custom background and title "Programación" */}
+                      <div style={{
+                        border: '1.5px solid #3b82f6', // Distinct stand-out blue border
+                        borderRadius: '8px',
+                        padding: '10px',
+                        background: '#f0f9ff', // Light distinguished blue background
+                        marginBottom: '8px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                      }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                          Programación
+                        </div>
+                        <div className="day-popover-form" style={{ background: 'transparent', padding: 0, border: 'none' }}>
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>Act.</label>
+                              <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.78rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                                <option value="1">C1</option>
+                                <option value="2">C2</option>
+                                <option value="3">C3</option>
+                                <option value="4">C4</option>
+                                <option value="soc">SOC</option>
+                                <option value="eval">EVAL</option>
+                              </select>
+                            </div>
+                            <div style={{ width: '68px' }}>
+                              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>De</label>
+                              <input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.78rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                            </div>
+                            <div style={{ width: '68px' }}>
+                              <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>A</label>
+                              <input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.78rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="day-popover-actions">
-                        <button className="btn btn-success" onClick={handleAddSlot}>
+                      {/* Day Popover Actions */}
+                      <div className="day-popover-actions" style={{ marginBottom: '8px' }}>
+                        <button className="btn btn-success" onClick={handleAddSlot} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontWeight: 700 }}>
                           <Plus size={11} /> Agregar
                         </button>
-                        <button className="btn btn-secondary" onClick={() => { setPopoverDate(null); setIsInteractive(false); }}>
+                        <button className="btn btn-secondary" onClick={() => { setPopoverDate(null); setIsInteractive(false); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontWeight: 700 }}>
                           <X size={11} /> Cerrar
                         </button>
                       </div>
+
+                      {/* Existing slots (Programaciones Registradas) - Rendered BELOW actions button */}
+                      {popoverSlots.length > 0 && (
+                        <div style={{
+                          border: '1.5px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '10px',
+                          background: '#f8fafc',
+                          marginBottom: '8px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                        }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
+                            Programaciones
+                          </div>
+                          <div className="day-popover-slots" style={{ maxHeight: 'none', overflowY: 'visible' }}>
+                            {popoverSlots.map((s, idx) => (
+                              <div key={idx} className="day-slot-row" style={{ borderLeftColor: getCourseColor(s.course), borderLeftWidth: '3.5px', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px', borderRadius: '4px', marginBottom: '4px', boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }}>
+                                <div style={{ fontSize: '0.76rem', color: '#1e293b' }}>
+                                  <strong style={{ color: getCourseColor(s.course) }}>{getCourseLabel(s.course)}</strong>
+                                  {' '}{s.startTime} - {s.endTime}
+                                </div>
+                                {isInteractive && (
+                                  <button className="btn btn-danger btn-xs" style={{ padding: '2px 4px', fontSize: '0.68rem', borderRadius: '3px' }} onClick={() => handleDeleteSlot(idx)}>
+                                    <Trash2 size={10} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Compliance Toggles inside Popover */}
                       <div className="day-popover-compliance" style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '8px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '5px' }}>

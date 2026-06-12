@@ -705,7 +705,7 @@ h6 {
   border-radius: var(--radius-lg);
   border: 3px solid var(--nota-color, var(--primary-500));
   box-shadow: var(--shadow-md);
-  overflow: hidden;
+  overflow: visible;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: slideUp 0.35s ease both;
   display: flex;
@@ -727,6 +727,8 @@ h6 {
   color: var(--white);
   flex-wrap: wrap;
   background: var(--nota-color, var(--primary-500));
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
 }
 
 .nota-head-left {
@@ -827,6 +829,8 @@ h6 {
   display: flex;
   flex-direction: column;
   background: #ffffff;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
 }
 
 .nota-col-info,
@@ -1039,6 +1043,7 @@ h6 {
   border: 1px solid color-mix(in srgb, var(--nota-color, var(--primary-500)) 15%, #e2e8f0);
   border-radius: 12px;
   position: relative;
+  z-index: 10;
   box-shadow: var(--shadow-sm);
   flex: 1;
   display: flex;
@@ -1820,8 +1825,8 @@ h6 {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 100px;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
 }
 
 .day-slot-row {
