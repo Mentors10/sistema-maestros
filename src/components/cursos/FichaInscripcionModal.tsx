@@ -52,7 +52,20 @@ export default function FichaInscripcionModal({ curso, onClose }: FichaInscripci
           .eq('curso_id', curso.id);
 
         if (error) throw error;
-        setInscripciones((data || []) as unknown as InscripcionRow[]);
+        const sortedData = ((data || []) as unknown as InscripcionRow[]).sort((a, b) => {
+          if (!a.participantes && !b.participantes) return 0;
+          if (!a.participantes) return 1;
+          if (!b.participantes) return -1;
+          const lastNameA = a.participantes.apellidos.trim().toLowerCase();
+          const lastNameB = b.participantes.apellidos.trim().toLowerCase();
+          if (lastNameA !== lastNameB) {
+            return lastNameA.localeCompare(lastNameB, 'es', { sensitivity: 'base' });
+          }
+          const firstNameA = a.participantes.nombres.trim().toLowerCase();
+          const firstNameB = b.participantes.nombres.trim().toLowerCase();
+          return firstNameA.localeCompare(firstNameB, 'es', { sensitivity: 'base' });
+        });
+        setInscripciones(sortedData);
       } catch (err) {
         console.error('Error fetching enrolled for Ficha:', err);
         Swal.fire('Error', 'No se pudieron cargar los participantes inscritos', 'error');

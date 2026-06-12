@@ -17,9 +17,9 @@ function countCuadernos(curso: Curso): number {
   return n || 1;
 }
 
-/** Calculate total Bs: inscritos × costo × cuadernos */
+/** Calculate total Bs: inscritos × costo */
 function calcTotalBs(curso: Curso): number {
-  return (curso.inscritos_formulario || 0) * (curso.costo || 0) * countCuadernos(curso);
+  return (curso.inscritos_formulario || 0) * (curso.costo || 0);
 }
 
 /** Determine estado: Confirmado / Proyectado */

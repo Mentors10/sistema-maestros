@@ -178,7 +178,20 @@ export default function ParticipantesModal({
       console.log('fetchParticipantes: Response error =', error);
 
       if (error) throw error;
-      setInscripciones((data || []) as unknown as Inscripcion[]);
+      const sortedData = ((data || []) as unknown as Inscripcion[]).sort((a, b) => {
+        if (!a.participantes && !b.participantes) return 0;
+        if (!a.participantes) return 1;
+        if (!b.participantes) return -1;
+        const lastNameA = a.participantes.apellidos.trim().toLowerCase();
+        const lastNameB = b.participantes.apellidos.trim().toLowerCase();
+        if (lastNameA !== lastNameB) {
+          return lastNameA.localeCompare(lastNameB, 'es', { sensitivity: 'base' });
+        }
+        const firstNameA = a.participantes.nombres.trim().toLowerCase();
+        const firstNameB = b.participantes.nombres.trim().toLowerCase();
+        return firstNameA.localeCompare(firstNameB, 'es', { sensitivity: 'base' });
+      });
+      setInscripciones(sortedData);
     } catch (err) {
       console.error('Error fetching enrolled participants:', err);
       Swal.fire('Error', 'No se pudieron cargar los participantes', 'error');
@@ -1453,8 +1466,8 @@ export default function ParticipantesModal({
 
   return (
     <>
-      <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(11,21,32,0.6)', backdropFilter: 'blur(8px)', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
-      <div className="modal-container" style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '1280px', maxHeight: '90vh', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease', overflow: 'hidden' }}>
+      <div className="modal-overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(11,21,32,0.6)', backdropFilter: 'blur(8px)', zIndex: 1000, padding: '10px', overflowY: 'auto' }}>
+      <div className="modal-container" style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', width: '98%', maxWidth: '98vw', height: '96vh', maxHeight: '96vh', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease', overflow: 'hidden' }}>
 
         {/* Modal Header */}
         <div className="modal-header" style={{ padding: '20px 24px', background: 'var(--primary-900)', color: 'var(--white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2025,20 +2038,20 @@ export default function ParticipantesModal({
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ background: 'var(--primary-900)', color: 'var(--white)' }}>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '50px', textAlign: 'center' }}>Nro</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '110px' }}>C.I.</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '100px' }}>RDA</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase' }}>Apellidos y Nombres</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '90px' }}>Celular</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '180px' }}>SIE / Unidad Educativa</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '140px', textAlign: 'center' }}>Validación SIE</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '130px' }}>Estado Pago</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '160px' }}>Obs. Internas / Validación</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.78rem', textTransform: 'uppercase', width: '130px', textAlign: 'center' }}>Acciones</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '50px', textAlign: 'center' }}>Nro</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '130px' }}>C.I.</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '110px' }}>RDA</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase' }}>Apellidos y Nombres</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '90px' }}>Celular</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '180px' }}>SIE / Unidad Educativa</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '140px', textAlign: 'center' }}>Validación SIE</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '130px' }}>Estado Pago</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '160px' }}>Obs. Internas / Validación</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '130px', textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInscripciones.map((ins) => {
+                  {filteredInscripciones.map((ins, index) => {
                     const p = ins.participantes;
                     if (!p) return null;
 
@@ -2047,12 +2060,15 @@ export default function ParticipantesModal({
                         key={ins.id}
                         ins={ins}
                         p={p}
+                        visualIndex={index + 1}
+                        cursoId={curso.id}
                         onSave={handleUpdateEnrollment}
                         onDelete={handleDeleteEnrollment}
                         onEditCore={setEditingPart}
                         onValidate={handleValidateParticipant}
                         validating={validatingPartId === ins.id}
                         sieConnected={!!sieSession}
+                        onRefresh={fetchParticipantes}
                       />
                     );
                   })}
@@ -2266,26 +2282,34 @@ export default function ParticipantesModal({
 interface RowComponentProps {
   ins: Inscripcion;
   p: Participante;
+  visualIndex: number;
+  cursoId: string;
   onSave: (id: number, pagos: string, observaciones: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onEditCore: (p: Participante) => void;
   onValidate: (ins: Inscripcion) => Promise<void>;
   validating: boolean;
   sieConnected: boolean;
+  onRefresh: () => void;
 }
 
 function RowComponent({
   ins,
   p,
+  visualIndex,
+  cursoId,
   onSave,
   onDelete,
   onEditCore,
   onValidate,
   validating,
-  sieConnected
+  sieConnected,
+  onRefresh
 }: RowComponentProps) {
   const [pagos, setPagos] = useState(ins.pagos || 'Pendiente');
   const [observaciones, setObservaciones] = useState(ins.observaciones || '');
+  const [ci, setCi] = useState(p.ci || '');
+  const [rda, setRda] = useState(p.rda || '');
   const [saving, setSaving] = useState(false);
 
   // Synchronize internal state with changes to props from parent
@@ -2296,6 +2320,14 @@ function RowComponent({
   useEffect(() => {
     setObservaciones(ins.observaciones || '');
   }, [ins.observaciones]);
+
+  useEffect(() => {
+    setCi(p.ci || '');
+  }, [p.ci]);
+
+  useEffect(() => {
+    setRda(p.rda || '');
+  }, [p.rda]);
 
   // Auto-save handlers
   const handlePagosChange = async (newVal: string) => {
@@ -2331,26 +2363,210 @@ function RowComponent({
     }
   };
 
+  const handleCiKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
+  };
+
+  const handleRdaKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
+  };
+
+  const handleRdaBlur = async () => {
+    const trimmedVal = rda.trim();
+    const originalVal = p.rda || '';
+    if (trimmedVal !== originalVal) {
+      setSaving(true);
+      try {
+        const { error } = await supabase
+          .from('participantes')
+          .update({ rda: trimmedVal || null })
+          .eq('ci', p.ci);
+
+        if (error) throw error;
+        p.rda = trimmedVal || null;
+
+        Swal.fire({
+          icon: 'success',
+          title: 'RDA Actualizado',
+          text: `RDA cambiado a ${trimmedVal || 'vacío'}`,
+          timer: 1500,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end'
+        });
+      } catch (err: any) {
+        console.error('Error updating RDA:', err);
+        Swal.fire('Error', err.message || 'No se pudo actualizar el RDA', 'error');
+        setRda(originalVal);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleCiBlur = async () => {
+    const trimmedCi = ci.trim();
+    const originalCi = p.ci.trim();
+    
+    if (!trimmedCi) {
+      Swal.fire('Error', 'El Carnet de Identidad (C.I.) no puede estar vacío.', 'warning');
+      setCi(originalCi);
+      return;
+    }
+
+    if (trimmedCi !== originalCi) {
+      setSaving(true);
+      try {
+        const { data: existingPart, error: checkErr } = await supabase
+          .from('participantes')
+          .select('*')
+          .eq('ci', trimmedCi)
+          .maybeSingle();
+
+        if (checkErr) throw checkErr;
+
+        if (existingPart) {
+          const { data: existingEnroll, error: enrollErr } = await supabase
+            .from('inscripcion_ciclo')
+            .select('*')
+            .eq('curso_id', cursoId)
+            .eq('participante_ci', trimmedCi)
+            .maybeSingle();
+
+          if (enrollErr) throw enrollErr;
+
+          if (existingEnroll) {
+            Swal.fire('Ya registrado', `El participante con C.I. ${trimmedCi} ya está inscrito en este ciclo.`, 'warning');
+            setCi(originalCi);
+            setSaving(false);
+            return;
+          }
+
+          const confirmResult = await Swal.fire({
+            title: 'Participante existente',
+            text: `El C.I. ${trimmedCi} ya existe en el sistema a nombre de ${existingPart.apellidos} ${existingPart.nombres}. ¿Deseas vincular esta inscripción a ese participante?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, vincular',
+            cancelButtonText: 'Cancelar'
+          });
+
+          if (!confirmResult.isConfirmed) {
+            setCi(originalCi);
+            setSaving(false);
+            return;
+          }
+
+          const { error: updateEnrollErr } = await supabase
+            .from('inscripcion_ciclo')
+            .update({ participante_ci: trimmedCi })
+            .eq('id', ins.id);
+
+          if (updateEnrollErr) throw updateEnrollErr;
+        } else {
+          const { error: insertErr } = await supabase
+            .from('participantes')
+            .insert({
+              ci: trimmedCi,
+              nombres: p.nombres,
+              apellidos: p.apellidos,
+              rda: p.rda,
+              celular: p.celular,
+              sie: p.sie,
+              unidad_educativa: p.unidad_educativa,
+              validado: p.validado,
+              observaciones_sie: p.observaciones_sie
+            });
+
+          if (insertErr) throw insertErr;
+
+          const { error: updateEnrollErr } = await supabase
+            .from('inscripcion_ciclo')
+            .update({ participante_ci: trimmedCi })
+            .eq('id', ins.id);
+
+          if (updateEnrollErr) {
+            await supabase.from('participantes').delete().eq('ci', trimmedCi);
+            throw updateEnrollErr;
+          }
+        }
+
+        const { count, error: countErr } = await supabase
+          .from('inscripcion_ciclo')
+          .select('*', { count: 'exact', head: true })
+          .eq('participante_ci', originalCi);
+
+        if (countErr) throw countErr;
+
+        if (count === 0) {
+          await supabase
+            .from('participantes')
+            .delete()
+            .eq('ci', originalCi);
+        }
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Carnet Actualizado',
+          text: `C.I. cambiado de ${originalCi} a ${trimmedCi}`,
+          timer: 1500,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end'
+        });
+
+        onRefresh();
+      } catch (err: any) {
+        console.error('Error updating C.I.:', err);
+        Swal.fire('Error', err.message || 'No se pudo actualizar el Carnet de Identidad', 'error');
+        setCi(originalCi);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
   return (
     <tr style={{ borderBottom: '1px solid var(--gray-100)', transition: 'background var(--transition-fast)' }} className="hover-row">
 
       {/* Nro */}
-      <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-600)', fontWeight: 600, textAlign: 'center' }}>
-        {ins.nro}
+      <td style={{ padding: '12px 16px', fontSize: '0.9rem', color: 'var(--gray-600)', fontWeight: 600, textAlign: 'center' }}>
+        {visualIndex}
       </td>
 
       {/* CI */}
-      <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-900)', fontWeight: 600 }}>
-        {p.ci}
+      <td style={{ padding: '8px 12px', width: '130px' }}>
+        <input
+          type="text"
+          value={ci}
+          onChange={(e) => setCi(e.target.value)}
+          onBlur={handleCiBlur}
+          onKeyDown={handleCiKeyDown}
+          disabled={saving}
+          style={{ width: '100%', padding: '6px 8px', fontSize: '0.9rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', fontWeight: 600, background: 'var(--white)' }}
+        />
       </td>
 
       {/* RDA */}
-      <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-600)' }}>
-        {p.rda || '—'}
+      <td style={{ padding: '8px 12px', width: '110px' }}>
+        <input
+          type="text"
+          value={rda}
+          onChange={(e) => setRda(e.target.value)}
+          onBlur={handleRdaBlur}
+          onKeyDown={handleRdaKeyDown}
+          disabled={saving}
+          placeholder="RDA"
+          style={{ width: '100%', padding: '6px 8px', fontSize: '0.9rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
+        />
       </td>
 
       {/* Apellidos y Nombres */}
-      <td style={{ padding: '12px 16px', fontSize: '0.82rem', color: 'var(--gray-900)' }}>
+      <td style={{ padding: '12px 16px', fontSize: '0.95rem', color: 'var(--gray-900)' }}>
         <div>
           <b>{p.apellidos}</b><br />
           <span>{p.nombres}</span>
@@ -2358,7 +2574,7 @@ function RowComponent({
       </td>
 
       {/* Celular */}
-      <td style={{ padding: '12px 16px', fontSize: '0.82rem' }}>
+      <td style={{ padding: '12px 16px', fontSize: '0.9rem' }}>
         {p.celular ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>{p.celular}</span>
@@ -2378,7 +2594,7 @@ function RowComponent({
       </td>
 
       {/* SIE / UE */}
-      <td style={{ padding: '12px 16px', fontSize: '0.78rem', color: 'var(--gray-600)', lineHeight: 1.3 }}>
+      <td style={{ padding: '12px 16px', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: 1.3 }}>
         {p.unidad_educativa ? (
           <div>
             <b>{p.unidad_educativa}</b><br />
@@ -2392,12 +2608,12 @@ function RowComponent({
       {/* Validación SIE */}
       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
         {p.validado ? (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--green-100)', color: 'var(--green-600)', padding: '4px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', fontWeight: 800 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--green-100)', color: 'var(--green-600)', padding: '4px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', fontWeight: 800 }}>
             <Check size={11} /> VALIDADO
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-            <span style={{ background: p.observaciones_sie ? 'var(--red-100)' : 'var(--gray-100)', color: p.observaciones_sie ? 'var(--red-600)' : 'var(--gray-500)', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontSize: '0.7rem', fontWeight: 800 }}>
+            <span style={{ background: p.observaciones_sie ? 'var(--red-100)' : 'var(--gray-100)', color: p.observaciones_sie ? 'var(--red-600)' : 'var(--gray-500)', padding: '2px 6px', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', fontWeight: 800 }}>
               {p.observaciones_sie ? 'CON DISCREPANCIA' : 'PENDIENTE'}
             </span>
             {sieConnected && (
@@ -2406,7 +2622,7 @@ function RowComponent({
                 className="btn btn-ghost btn-xs"
                 onClick={() => onValidate(ins)}
                 disabled={validating}
-                style={{ padding: '2px 6px', fontSize: '0.7rem', border: '1px solid var(--primary-200)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                style={{ padding: '2px 6px', fontSize: '0.78rem', border: '1px solid var(--primary-200)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
               >
                 {validating ? <Loader2 size={10} className="spin" /> : <RefreshCw size={10} />}
                 Validar
@@ -2422,7 +2638,7 @@ function RowComponent({
           value={pagos}
           onChange={(e) => handlePagosChange(e.target.value)}
           disabled={saving}
-          style={{ width: '100%', padding: '6px 8px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)', cursor: 'pointer' }}
+          style={{ width: '100%', padding: '6px 8px', fontSize: '0.9rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)', cursor: 'pointer' }}
         >
           <option value="Pendiente">Pendiente</option>
           <option value="Pagado">Pagado</option>
@@ -2440,10 +2656,10 @@ function RowComponent({
             onKeyDown={handleObservacionesKeyDown}
             disabled={saving}
             placeholder="Obs. internas..."
-            style={{ width: '100%', padding: '6px 10px', fontSize: '0.82rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
+            style={{ width: '100%', padding: '6px 10px', fontSize: '0.9rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
           />
           {p.observaciones_sie && (
-            <div style={{ fontSize: '0.7rem', color: 'var(--red-600)', background: 'var(--red-100)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 600, border: '1px dashed var(--red-400)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.2 }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--red-600)', background: 'var(--red-100)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 600, border: '1px dashed var(--red-400)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.2 }}>
               <b>SIE:</b> {p.observaciones_sie}
             </div>
           )}

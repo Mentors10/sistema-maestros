@@ -298,14 +298,7 @@ export default function NotaCard({
   // ─── Save curso info ───────────────────────────────────────
   const handleSaveCursoInfo = () => {
     const finalGrupoNombre = editNewGrupoNombre.trim() ? editNewGrupoNombre.trim() : editGrupoNombre;
-    let numCursos = 0;
-    if (curso.tema1 && curso.tema1.trim() !== '') numCursos++;
-    if (curso.tema2 && curso.tema2.trim() !== '') numCursos++;
-    if (curso.tema3 && curso.tema3.trim() !== '') numCursos++;
-    if (curso.tema4 && curso.tema4.trim() !== '') numCursos++;
-    if (numCursos === 0) numCursos = 1;
-
-    const finalTotalBs = curso.inscritos_formulario * editCosto * numCursos;
+    const finalTotalBs = curso.inscritos_formulario * editCosto;
 
     onUpdate({
       tecnico_carnet: editTecnico || null,
@@ -1018,14 +1011,7 @@ export default function NotaCard({
 
             <div className="nota-total-bar" style={{ marginTop: '8px' }}>
               <small>TOTAL ESTIMADO</small>
-              <span>{curso.inscritos_formulario * editCosto * (() => {
-                let numCursos = 0;
-                if (curso.tema1 && curso.tema1.trim() !== '') numCursos++;
-                if (curso.tema2 && curso.tema2.trim() !== '') numCursos++;
-                if (curso.tema3 && curso.tema3.trim() !== '') numCursos++;
-                if (curso.tema4 && curso.tema4.trim() !== '') numCursos++;
-                return numCursos || 1;
-              })()} Bs</span>
+              <span>{curso.inscritos_formulario * editCosto} Bs</span>
             </div>
           </div>
 

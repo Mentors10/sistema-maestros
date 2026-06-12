@@ -138,16 +138,7 @@ export default function CursoForm({
   const useNewGrupo = newGrupoName.trim().length > 0;
 
   const currentCiclo = ciclos.find((c) => c.id === form.ciclo_id);
-  let numCursos = 0;
-  if (currentCiclo) {
-    if (currentCiclo.tema1 && currentCiclo.tema1.trim() !== '') numCursos++;
-    if (currentCiclo.tema2 && currentCiclo.tema2.trim() !== '') numCursos++;
-    if (currentCiclo.tema3 && currentCiclo.tema3.trim() !== '') numCursos++;
-    if (currentCiclo.tema4 && currentCiclo.tema4.trim() !== '') numCursos++;
-  }
-  if (numCursos === 0) numCursos = 1;
-
-  const totalBs = form.inscritos * form.costo * numCursos;
+  const totalBs = form.inscritos * form.costo;
 
   const handleAreaFormativaChange = (newArea: string) => {
     setAreaFormativa(newArea);
