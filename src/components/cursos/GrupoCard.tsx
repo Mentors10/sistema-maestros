@@ -28,6 +28,7 @@ interface GrupoCardProps {
   onToggleCollapse?: () => void;
   readOnly?: boolean;
   showInscritosInsteadOfNews?: boolean;
+  matchedParticipants?: { [cursoId: string]: string[] };
 }
 
 export default function GrupoCard({
@@ -49,6 +50,7 @@ export default function GrupoCard({
   onToggleCollapse,
   readOnly = false,
   showInscritosInsteadOfNews = false,
+  matchedParticipants,
 }: GrupoCardProps) {
   const [localCollapsed, setLocalCollapsed] = useState(true); // default to collapsed
 
@@ -539,6 +541,7 @@ export default function GrupoCard({
             onManageParticipantes={onManageParticipantes}
             animationDelay={idx * 0.06}
             readOnly={readOnly}
+            matchedParticipants={matchedParticipants?.[curso.id]}
           />
         ))}
       </div>

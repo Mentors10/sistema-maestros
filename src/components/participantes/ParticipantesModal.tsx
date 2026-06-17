@@ -2724,7 +2724,7 @@ function RowComponent({
   };
 
   return (
-    <tr style={{ borderBottom: '1px solid var(--gray-100)', transition: 'background var(--transition-fast)' }} className="hover-row">
+    <tr style={{ borderBottom: '1px solid #000000', transition: 'background var(--transition-fast)' }} className="hover-row">
 
       {/* Nro */}
       <td style={{ padding: '12px 16px', fontSize: '0.9rem', color: 'var(--gray-600)', fontWeight: 600, textAlign: 'center' }}>

@@ -67,6 +67,7 @@ interface NotaCardProps {
   onManageParticipantes: (curso: Curso) => void;
   animationDelay?: number;
   readOnly?: boolean;
+  matchedParticipants?: string[];
 }
 
 export default function NotaCard({
@@ -81,6 +82,7 @@ export default function NotaCard({
   onManageParticipantes,
   animationDelay = 0,
   readOnly = false,
+  matchedParticipants,
 }: NotaCardProps) {
   const [orgNombre, setOrgNombre] = useState(curso.organizador_nombre || '');
   const [orgTelefono, setOrgTelefono] = useState(curso.organizador_telefono || '');
@@ -809,6 +811,29 @@ export default function NotaCard({
         <span><Calendar size={13} /> Calendario y control del grupo</span>
         <span>{dateRangeLabel}</span>
       </div>
+
+      {matchedParticipants && matchedParticipants.length > 0 && (
+        <div style={{
+          background: '#f0fdf4',
+          borderLeft: '4px solid #22c55e',
+          borderBottom: '1px solid #bbf7d0',
+          padding: '8px 12px',
+          fontSize: '0.82rem',
+          color: '#166534',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px'
+        }}>
+          <span style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Users size={12} /> Coincidencia de participante:
+          </span>
+          <ul style={{ margin: 0, paddingLeft: '16px', listStyleType: 'disc' }}>
+            {matchedParticipants.map((name, i) => (
+              <li key={i}>{name}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="nota-main-content">
         {/* ─── Columna Izquierda (Información) ─────────────────────────── */}

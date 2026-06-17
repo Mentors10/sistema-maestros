@@ -54,10 +54,112 @@ function HomePage() {
   const [facilitadores, setFacilitadores] = useState<Facilitador[]>([]);
   const [ciclos, setCiclos] = useState<CicloFormativo[]>([]);
   const [agenda, setAgenda] = useState<AgendaContacto[]>([]);
+  const [matchingCursoIds, setMatchingCursoIds] = useState<Set<string>>(new Set());
+  const [matchedParticipantsMap, setMatchedParticipantsMap] = useState<{[cursoId: string]: string[]}>({});
+  const [searchLoading, setSearchLoading] = useState(false);
   const [filters, setFilters] = useState<AppFilters>(DEFAULT_FILTERS);
   const [viewMode, setViewMode] = useState<'cursos' | 'agenda'>('cursos');
   const [loading, setLoading] = useState(true);
   const [selectedView, setSelectedView] = useState<'grupal' | 'area' | 'estados'>('grupal');
+
+  // --- Dynamic Participant Search ---
+  useEffect(() => {
+    let active = true;
+    
+    const doSearch = async () => {
+      const q = (filters.busqueda || '').trim().toLowerCase();
+      if (!q || q.length < 2) {
+        setMatchingCursoIds(new Set());
+        setMatchedParticipantsMap({});
+        return;
+      }
+
+      setSearchLoading(true);
+      try {
+        const words = q.split(/\s+/).filter(w => w.length >= 2);
+        if (words.length === 0) {
+          words.push(q);
+        }
+
+        const firstWord = words[0];
+        const { data: parts, error: partErr } = await supabase
+          .from('participantes')
+          .select('ci, nombres, apellidos, rda')
+          .or(`nombres.ilike.%${firstWord}%,apellidos.ilike.%${firstWord}%,ci.ilike.%${firstWord}%,rda.ilike.%${firstWord}%`)
+          .limit(300);
+
+        if (partErr) throw partErr;
+        if (!parts || parts.length === 0) {
+          if (active) {
+            setMatchingCursoIds(new Set());
+            setMatchedParticipantsMap({});
+          }
+          return;
+        }
+
+        const matchedParts = parts.filter(p => {
+          const fullName = `${p.nombres || ''} ${p.apellidos || ''}`.toLowerCase();
+          const ci = (p.ci || '').toLowerCase();
+          const rda = (p.rda || '').toLowerCase();
+          return words.every(word => fullName.includes(word) || ci.includes(word) || rda.includes(word));
+        });
+
+        if (matchedParts.length === 0) {
+          if (active) {
+            setMatchingCursoIds(new Set());
+            setMatchedParticipantsMap({});
+          }
+          return;
+        }
+
+        const matchedCis = matchedParts.map(p => p.ci);
+        const { data: enrolls, error: enrollErr } = await supabase
+          .from('inscripcion_ciclo')
+          .select('curso_id, participante_ci, participantes(nombres, apellidos, rda)')
+          .in('participante_ci', matchedCis);
+
+        if (enrollErr) throw enrollErr;
+
+        if (active) {
+          const ids = new Set<string>();
+          const pMap: {[cursoId: string]: string[]} = {};
+
+          (enrolls || []).forEach((e: any) => {
+            if (!e.participantes) return;
+            ids.add(e.curso_id);
+            
+            const fullName = `${e.participantes.nombres} ${e.participantes.apellidos}`.trim();
+            const ci = e.participante_ci || '';
+            const rda = e.participantes.rda || '';
+            
+            if (!pMap[e.curso_id]) {
+              pMap[e.curso_id] = [];
+            }
+            pMap[e.curso_id].push(`${fullName} (C.I. ${ci}${rda ? `, RDA ${rda}` : ''})`);
+          });
+
+          setMatchingCursoIds(ids);
+          setMatchedParticipantsMap(pMap);
+        }
+      } catch (err) {
+        console.error('Error during participant search:', err);
+      } finally {
+        if (active) {
+          setSearchLoading(false);
+        }
+      }
+    };
+
+    const timer = setTimeout(() => {
+      doSearch();
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [filters.busqueda]);
+
 
   const [fontSize, setFontSize] = useState<number>(13);
 
@@ -167,6 +269,7 @@ function HomePage() {
     // Búsqueda
     if (filters.busqueda) {
       const q = filters.busqueda.toLowerCase();
+
       result = result.filter((c) =>
         c.id.toLowerCase().includes(q) ||
         (c.grupo_nombre || '').toLowerCase().includes(q) ||
@@ -176,7 +279,8 @@ function HomePage() {
         (c.tecnico_nombre || '').toLowerCase().includes(q) ||
         (c.ciclo_nombre || '').toLowerCase().includes(q) ||
         (c.prev || '').toLowerCase().includes(q) ||
-        (c.organizador_nombre || '').toLowerCase().includes(q)
+        (c.organizador_nombre || '').toLowerCase().includes(q) ||
+        matchingCursoIds.has(c.id)
       );
     }
 
@@ -226,11 +330,13 @@ function HomePage() {
     }
 
     return result;
-  }, [cursos, filters]);
+  }, [cursos, filters, matchingCursoIds]);
 
   const selectedTecnicoObj = useMemo(() => {
     return tecnicos.find((t) => t.carnet === filters.tecnico);
   }, [tecnicos, filters.tecnico]);
+
+
 
   interface TecnicoGroup {
     tecnicoNombre: string;
@@ -1253,6 +1359,7 @@ function HomePage() {
                           setExpandedGrupo(expandedGrupo === key ? null : key);
                         }}
                         readOnly={readOnly}
+                        matchedParticipants={matchedParticipantsMap}
                       />
                     ))}
                   </div>
@@ -1279,6 +1386,7 @@ function HomePage() {
                   collapsed={expandedGrupo !== grupo.nombre}
                   onToggleCollapse={() => setExpandedGrupo(expandedGrupo === grupo.nombre ? null : grupo.nombre)}
                   readOnly={readOnly}
+                  matchedParticipants={matchedParticipantsMap}
                 />
               ))
             )
@@ -1343,6 +1451,7 @@ function HomePage() {
                             onToggleCollapse={() => setExpandedCycleId(expandedCycleId === curso.id ? null : curso.id)}
                             readOnly={readOnly}
                             showInscritosInsteadOfNews={true}
+                            matchedParticipants={matchedParticipantsMap}
                           />
                         );
                       })}
@@ -1412,6 +1521,7 @@ function HomePage() {
                             onToggleCollapse={() => setExpandedCycleId(expandedCycleId === curso.id ? null : curso.id)}
                             readOnly={readOnly}
                             showInscritosInsteadOfNews={true}
+                            matchedParticipants={matchedParticipantsMap}
                           />
                         );
                       })}
