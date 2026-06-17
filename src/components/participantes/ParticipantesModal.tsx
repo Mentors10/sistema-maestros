@@ -1390,6 +1390,196 @@ export default function ParticipantesModal({
     printWindow.document.close();
   };
 
+  // Export to PDF via browser printing styled as Letter portrait Planilla: Control de Asistencia y Entrega de Material
+  const handlePrintPlanilla = () => {
+    if (inscripciones.length === 0) {
+      Swal.fire('Sin datos', 'No hay participantes para imprimir', 'warning');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      Swal.fire('Bloqueador de ventanas', 'Por favor habilita las ventanas flotantes para imprimir.', 'warning');
+      return;
+    }
+
+    const rowsHtml = inscripciones.map((ins, idx) => {
+      const p = ins.participantes;
+      const fullName = p ? `${p.apellidos || ''} ${p.nombres || ''}`.trim().toUpperCase() : '';
+      return `
+        <tr style="height: 38px;">
+          <td style="text-align: center; border: 1px solid #777; padding: 4px; font-size: 8.5pt;">${idx + 1}</td>
+          <td style="border: 1px solid #777; padding: 4px 8px; font-size: 8.5pt; text-transform: uppercase;">${fullName}</td>
+          <td style="text-align: center; border: 1px solid #777; padding: 4px; font-size: 8.5pt;">${p?.ci || ''}</td>
+          <td style="text-align: center; border: 1px solid #777; padding: 4px; font-size: 8.5pt;">${p?.celular || ''}</td>
+          <td style="border: 1px solid #777; padding: 4px;"></td>
+          <td style="border: 1px solid #777; padding: 4px;"></td>
+        </tr>
+      `;
+    }).join('');
+
+    const logoMinedu = `${window.location.origin}/logo-minedu.jpg`;
+    const logoUnefco = `${window.location.origin}/logo-unefco.jpg`;
+
+    const formattedFecha = curso.fecha_inicio 
+      ? new Date(curso.fecha_inicio.replace(' ', 'T')).toLocaleDateString('es-ES') 
+      : '';
+
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>Planilla de Asistencia y Material - ID ${curso.id}</title>
+        <style>
+          @page {
+            size: letter portrait;
+            margin: 0.3in 0.4in 0.4in 0.4in;
+          }
+          body {
+            font-family: Arial, sans-serif;
+            color: #000;
+            margin: 0;
+            padding: 0;
+            font-size: 9pt;
+            line-height: 1.2;
+          }
+          .header-logos {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+          }
+          .logo-img {
+            height: 55px;
+            object-fit: contain;
+          }
+          .title-container {
+            text-align: center;
+            margin: 10px 0 15px 0;
+          }
+          .title-container h1 {
+            margin: 0;
+            font-size: 13pt;
+            font-weight: bold;
+            color: #000;
+            text-transform: uppercase;
+          }
+          .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+          }
+          .metadata-table td {
+            border: 1px solid #777;
+            padding: 5px 8px;
+            font-size: 8.5pt;
+            vertical-align: middle;
+          }
+          .metadata-table td strong {
+            font-weight: bold;
+          }
+          .participants-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+          }
+          .participants-table th {
+            background-color: #08323e;
+            color: #fff;
+            font-weight: bold;
+            font-size: 8.5pt;
+            border: 1px solid #777;
+            padding: 6px 4px;
+            text-transform: uppercase;
+            text-align: center;
+          }
+          .participants-table td {
+            border: 1px solid #777;
+            padding: 5px 6px;
+            font-size: 8.5pt;
+          }
+          .footer-signatures {
+            margin-top: 50px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            text-align: center;
+            font-size: 7.5pt;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+          }
+          .signature-box {
+            padding-top: 50px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-logos">
+          <img src="${logoMinedu}" class="logo-img" alt="Ministerio de Educacion" />
+          <img src="${logoUnefco}" class="logo-img" alt="UNEFCO" />
+        </div>
+
+        <div class="title-container">
+          <h1>PLANILLA: CONTROL DE ASISTENCIA Y ENTREGA DE MATERIAL</h1>
+        </div>
+
+        <table class="metadata-table">
+          <tr>
+            <td colspan="2"><strong>CICLO:</strong> ${curso.ciclo_grupo || curso.area_formativa || ''}</td>
+          </tr>
+          <tr>
+            <td colspan="2"><strong>CURSO:</strong> ${curso.ciclo_nombre || ''}</td>
+          </tr>
+          <tr>
+            <td colspan="2"><strong>FACILITADORA(O):</strong> ${curso.facilitador_nombre || ''}</td>
+          </tr>
+          <tr>
+            <td style="width: 65%;"><strong>Departamento:</strong> UNEFCO - Santa Cruz</td>
+            <td style="width: 35%;"><strong>Modalidad:</strong> SEMIPRESENCIAL</td>
+          </tr>
+          <tr>
+            <td><strong>Fecha del curso:</strong> ${formattedFecha}</td>
+            <td><strong>Distrito:</strong> ${curso.distrito || ''}</td>
+          </tr>
+          <tr>
+            <td><strong>Responsable Departamental a.i.:</strong> Alfonso Coronel Mamani</td>
+            <td><strong>Sede:</strong> ${curso.lugar || ''}</td>
+          </tr>
+        </table>
+
+        <table class="participants-table">
+          <thead>
+            <tr>
+              <th style="width: 4%;">#</th>
+              <th style="width: 50%;">Apellidos(s) Nombres(s)</th>
+              <th style="width: 14%;">C.I.</th>
+              <th style="width: 12%;">Celular</th>
+              <th style="width: 10%;">Firma</th>
+              <th style="width: 10%;">Firma</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="footer-signatures">
+          <div class="signature-box">FIRMA FACILITADORA(O)</div>
+          <div class="signature-box">V.B. RESPONSABLE DEPARTAMENTAL</div>
+          <div class="signature-box">TECNICO(A) DEPARTAMENTAL</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   // Delete ALL enrollments (mass delete)
   const handleDeleteAllEnrollments = async () => {
     if (inscripciones.length === 0) {
@@ -1586,6 +1776,9 @@ export default function ParticipantesModal({
                   </button>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPDF} title="Imprimir / Exportar PDF">
                     <Printer size={14} /> PDF
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPlanilla} title="Imprimir Planilla de Asistencia y Material">
+                    <Printer size={14} /> Planilla
                   </button>
                   <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteAllEnrollments} title="Eliminar todas las inscripciones">
                     <Trash2 size={14} /> Eliminar Todos
