@@ -1639,6 +1639,49 @@ export default function ParticipantesModal({
     }
   };
 
+  // Bulk update payment status for all enrollments
+  const handleBulkPaymentUpdate = async (newStatus: 'Pagado' | 'Pendiente') => {
+    if (inscripciones.length === 0) {
+      Swal.fire('Sin participantes', 'No hay participantes inscritos para actualizar.', 'info');
+      return;
+    }
+
+    const isPagado = newStatus === 'Pagado';
+    const result = await Swal.fire({
+      title: isPagado ? '💰 Marcar Todos como Pagados' : '⏳ Marcar Todos como Pendientes',
+      html: `<p>Se actualizará el estado de pago de <b>${inscripciones.length}</b> participante${inscripciones.length !== 1 ? 's' : ''} a <b style="color: ${isPagado ? '#059669' : '#d97706'}">${newStatus}</b>.</p>`,
+      icon: isPagado ? 'question' : 'warning',
+      showCancelButton: true,
+      confirmButtonColor: isPagado ? '#059669' : '#d97706',
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: isPagado ? 'Sí, marcar todos pagados' : 'Sí, marcar todos pendientes'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('inscripcion_ciclo')
+        .update({ pagos: newStatus })
+        .eq('curso_id', curso.id);
+
+      if (error) throw error;
+
+      Swal.fire({
+        icon: 'success',
+        title: '¡Actualizado!',
+        text: `Se marcaron ${inscripciones.length} participante${inscripciones.length !== 1 ? 's' : ''} como "${newStatus}".`,
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+      fetchParticipantes();
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'No se pudieron actualizar los estados de pago', 'error');
+    }
+  };
+
   // Filter list
   const filteredInscripciones = inscripciones.filter((ins) => {
     const p = ins.participantes;
@@ -1779,6 +1822,12 @@ export default function ParticipantesModal({
                   </button>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPlanilla} title="Imprimir Planilla de Asistencia y Material">
                     <Printer size={14} /> Planilla
+                  </button>
+                  <button type="button" className="btn btn-sm" onClick={() => handleBulkPaymentUpdate('Pagado')} title="Marcar todos los participantes como Pagados" style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>
+                    <CheckCircle2 size={14} /> Marcar Todos Pagados
+                  </button>
+                  <button type="button" className="btn btn-sm" onClick={() => handleBulkPaymentUpdate('Pendiente')} title="Marcar todos los participantes como Pendientes" style={{ background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>
+                    <AlertTriangle size={14} /> Marcar Todos Pendientes
                   </button>
                   <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteAllEnrollments} title="Eliminar todas las inscripciones">
                     <Trash2 size={14} /> Eliminar Todos

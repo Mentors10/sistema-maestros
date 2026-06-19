@@ -57,6 +57,7 @@ function HomePage() {
   const [matchingCursoIds, setMatchingCursoIds] = useState<Set<string>>(new Set());
   const [matchedParticipantsMap, setMatchedParticipantsMap] = useState<{[cursoId: string]: string[]}>({});
   const [searchLoading, setSearchLoading] = useState(false);
+  const [cursoReviewData, setCursoReviewData] = useState<{[cursoId: string]: { validados: number; pendientesSie: number; pagados: number; pendientesPago: number; total: number }}>({});
   const [filters, setFilters] = useState<AppFilters>(DEFAULT_FILTERS);
   const [viewMode, setViewMode] = useState<'cursos' | 'agenda'>('cursos');
   const [loading, setLoading] = useState(true);
@@ -252,6 +253,37 @@ function HomePage() {
       if (facRes.data) setFacilitadores(facRes.data as Facilitador[]);
       if (cicRes.data) setCiclos(cicRes.data as CicloFormativo[]);
       if (agendaRes.data) setAgenda(agendaRes.data as AgendaContacto[]);
+
+      // Load review data (validation + payment stats per course)
+      try {
+        const { data: reviewRaw, error: reviewErr } = await supabase
+          .from('inscripcion_ciclo')
+          .select('curso_id, pagos, participantes(validado)');
+        if (!reviewErr && reviewRaw) {
+          const reviewMap: {[cursoId: string]: { validados: number; pendientesSie: number; pagados: number; pendientesPago: number; total: number }} = {};
+          (reviewRaw as any[]).forEach((row) => {
+            const cid = row.curso_id;
+            if (!reviewMap[cid]) {
+              reviewMap[cid] = { validados: 0, pendientesSie: 0, pagados: 0, pendientesPago: 0, total: 0 };
+            }
+            reviewMap[cid].total++;
+            const isValidado = row.participantes?.validado === true;
+            if (isValidado) {
+              reviewMap[cid].validados++;
+            } else {
+              reviewMap[cid].pendientesSie++;
+            }
+            if (row.pagos === 'Pagado') {
+              reviewMap[cid].pagados++;
+            } else {
+              reviewMap[cid].pendientesPago++;
+            }
+          });
+          setCursoReviewData(reviewMap);
+        }
+      } catch (reviewLoadErr) {
+        console.error('Error loading review data:', reviewLoadErr);
+      }
     } catch (err) {
       console.error('Error loading data:', err);
       Swal.fire('Error', 'No se pudieron cargar los datos', 'error');
@@ -312,25 +344,36 @@ function HomePage() {
       });
     }
 
-    // Orden
-    switch (filters.orden) {
-      case 'id-asc':
-        result.sort((a, b) => a.id.localeCompare(b.id));
-        break;
-      case 'id-desc':
-        result.sort((a, b) => b.id.localeCompare(a.id));
-        break;
-      case 'antiguos':
-        result.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
-        break;
-      case 'recientes':
-      default:
-        result.sort((a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id));
-        break;
+    // Notas Revisadas filter
+    if (filters.notasRevisadas !== 'todos') {
+      result = result.filter((c) => {
+        const rd = cursoReviewData[c.id];
+        if (!rd || rd.total === 0) {
+          // Courses with no participants: hide for specific filters
+          return false;
+        }
+        switch (filters.notasRevisadas) {
+          case 'sie-validado':
+            return rd.validados > 0;
+          case 'sie-pendiente':
+            return rd.pendientesSie > 0;
+          case 'pago-pendiente':
+            return rd.pendientesPago > 0;
+          case 'pago-pagado':
+            return rd.pagados > 0;
+          case 'validados-pagados':
+            return rd.validados > 0 && rd.pagados > 0 && rd.pendientesSie === 0 && rd.pendientesPago === 0;
+          default:
+            return true;
+        }
+      });
     }
 
+    // Default sort: most recently created first
+    result.sort((a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id));
+
     return result;
-  }, [cursos, filters, matchingCursoIds]);
+  }, [cursos, filters, matchingCursoIds, cursoReviewData]);
 
   const selectedTecnicoObj = useMemo(() => {
     return tecnicos.find((t) => t.carnet === filters.tecnico);
@@ -1075,16 +1118,18 @@ function HomePage() {
 
         {viewMode === 'cursos' && (
           <div className="filter-group">
-            <label className="filter-label">Orden</label>
+            <label className="filter-label"><Filter size={14} /> Notas Revisadas</label>
             <select
               className="filter-select"
-              value={filters.orden}
-              onChange={(e) => setFilters({ ...filters, orden: e.target.value as AppFilters['orden'] })}
+              value={filters.notasRevisadas}
+              onChange={(e) => setFilters({ ...filters, notasRevisadas: e.target.value as AppFilters['notasRevisadas'] })}
             >
-              <option value="recientes">Últimos grupos creados</option>
-              <option value="antiguos">Primeros grupos creados</option>
-              <option value="id-asc">ID ascendente</option>
-              <option value="id-desc">ID descendente</option>
+              <option value="todos">Todos</option>
+              <option value="sie-validado">Validación SIE (Validado)</option>
+              <option value="sie-pendiente">Validación SIE (Pendiente)</option>
+              <option value="pago-pendiente">Estados de Pago (Pendiente)</option>
+              <option value="pago-pagado">Estados de Pago (Pagado)</option>
+              <option value="validados-pagados">Validados y Pagados</option>
             </select>
           </div>
         )}

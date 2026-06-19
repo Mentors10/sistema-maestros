@@ -7,7 +7,7 @@ export interface AppFilters {
   preventivo: string;
   mes: string;
   tecnico: string;
-  orden: 'recientes' | 'antiguos' | 'id-asc' | 'id-desc';
+  notasRevisadas: 'todos' | 'sie-validado' | 'sie-pendiente' | 'pago-pendiente' | 'pago-pagado' | 'validados-pagados';
   agruparPor: 'grupo' | 'color' | 'tecnico' | 'distrito' | 'ninguno' | 'facilitador';
   grupo: string;          // "todos" | nombre del grupo
   alerta: string;         // "todas" | tipo de alerta
@@ -19,7 +19,7 @@ export const DEFAULT_FILTERS: AppFilters = {
   preventivo: '',
   mes: '',
   tecnico: '',
-  orden: 'recientes',
+  notasRevisadas: 'todos',
   agruparPor: 'grupo',
   grupo: 'todos',
   alerta: 'todas',
