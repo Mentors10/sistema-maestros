@@ -1817,8 +1817,33 @@ export default function ParticipantesModal({
 
             {/* General Actions: Search, Exports, Add Manual */}
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ position: 'relative', width: '240px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={handleExportExcel} title="Exportar a Excel">
+                  <Download size={14} /> Excel
+                </button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPDF} title="Imprimir / Exportar PDF">
+                  <Printer size={14} /> PDF
+                </button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPlanilla} title="Imprimir Planilla de Asistencia y Material">
+                  <Printer size={14} /> Planilla
+                </button>
+                <button type="button" className="btn btn-sm" onClick={() => handleBulkPaymentUpdate('Pagado')} title="Marcar todos los participantes como Pagados" style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>
+                  <CheckCircle2 size={14} /> Marcar Todos Pagados
+                </button>
+                <button type="button" className="btn btn-sm" onClick={() => handleBulkPaymentUpdate('Pendiente')} title="Marcar todos los participantes como Pendientes" style={{ background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>
+                  <AlertTriangle size={14} /> Marcar Todos Pendientes
+                </button>
+                <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteAllEnrollments} title="Eliminar todas las inscripciones">
+                  <Trash2 size={14} /> Eliminar Todos
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--gray-500)', fontWeight: 600 }}>
+                  Total en Lista: <b>{filteredInscripciones.length} de {inscripciones.length}</b>
+                </span>
+
+                <div style={{ position: 'relative', flex: 1, maxWidth: '350px', minWidth: '180px' }}>
                   <input
                     type="text"
                     value={searchQuery}
@@ -1828,33 +1853,6 @@ export default function ParticipantesModal({
                   />
                   <Search size={14} style={{ position: 'absolute', left: '10px', top: '9px', color: 'var(--gray-400)' }} />
                 </div>
-
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleExportExcel} title="Exportar a Excel">
-                    <Download size={14} /> Excel
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPDF} title="Imprimir / Exportar PDF">
-                    <Printer size={14} /> PDF
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrintPlanilla} title="Imprimir Planilla de Asistencia y Material">
-                    <Printer size={14} /> Planilla
-                  </button>
-                  <button type="button" className="btn btn-sm" onClick={() => handleBulkPaymentUpdate('Pagado')} title="Marcar todos los participantes como Pagados" style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(16,185,129,0.25)' }}>
-                    <CheckCircle2 size={14} /> Marcar Todos Pagados
-                  </button>
-                  <button type="button" className="btn btn-sm" onClick={() => handleBulkPaymentUpdate('Pendiente')} title="Marcar todos los participantes como Pendientes" style={{ background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>
-                    <AlertTriangle size={14} /> Marcar Todos Pendientes
-                  </button>
-                  <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteAllEnrollments} title="Eliminar todas las inscripciones">
-                    <Trash2 size={14} /> Eliminar Todos
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--gray-500)', fontWeight: 600 }}>
-                  Total en Lista: <b>{filteredInscripciones.length} de {inscripciones.length}</b>
-                </span>
 
                 <button
                   type="button"
