@@ -885,7 +885,23 @@ export default function ParticipantesModal({
           .eq('ci', p.ci);
         return { success: true, status: 'not_found' };
       } else if (resData.status === 'found') {
-        const sieData = resData.data[0];
+        // Select the candidate that matches best based on name similarity
+        let sieData = resData.data[0];
+        if (resData.data.length > 1) {
+          const dbNombresForMatch = p.nombres.trim().toUpperCase();
+          const dbApellidosForMatch = p.apellidos.trim().toUpperCase();
+          const localFullNameForMatch = `${dbNombresForMatch} ${dbApellidosForMatch}`;
+          
+          let bestDiff = Infinity;
+          for (const candidate of resData.data) {
+            const candidateFullName = `${(candidate.nombres || '').trim().toUpperCase()} ${(candidate.apellidos || '').trim().toUpperCase()}`;
+            const diff = calculateDifferenceRatio(localFullNameForMatch, candidateFullName);
+            if (diff < bestDiff) {
+              bestDiff = diff;
+              sieData = candidate;
+            }
+          }
+        }
 
         const dbNombres = p.nombres.trim().toUpperCase();
         const sieNombres = sieData.nombres.trim().toUpperCase();
