@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Curso, Grupo, AppFilters, DEFAULT_FILTERS, Tecnico, Facilitador, CicloFormativo, AgendaContacto } from '@/types';
+import { Curso, Grupo, AppFilters, DEFAULT_FILTERS, MESES, Tecnico, Facilitador, CicloFormativo, AgendaContacto } from '@/types';
 import { getNoteCompliance, getReviewCount } from '@/lib/utils/compliance';
 import { supabase } from '@/lib/supabase/client';
-import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye, Hash, User, Download } from 'lucide-react';
+import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye, Hash, User, Download, X } from 'lucide-react';
 import { exportAreaView } from '@/lib/utils/excelExport';
 import GrupoCard from '@/components/cursos/GrupoCard';
 import CursoForm from '@/components/cursos/CursoForm';
@@ -176,6 +176,25 @@ function HomePage() {
         }
       }
     }
+  }, []);
+
+  // Establecer el mes actual como filtro por defecto al ingresar
+  useEffect(() => {
+    const currentMonthIdx = new Date().getMonth();
+    const currentMonthName = MESES[currentMonthIdx] || '';
+    setFilters(prev => ({
+      ...prev,
+      mes: currentMonthName
+    }));
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    const currentMonthIdx = new Date().getMonth();
+    const currentMonthName = MESES[currentMonthIdx] || '';
+    setFilters({
+      ...DEFAULT_FILTERS,
+      mes: currentMonthName
+    });
   }, []);
 
   const handleFontSizeChange = (newSize: number) => {
@@ -1150,6 +1169,43 @@ function HomePage() {
             </select>
           </div>
         )}
+
+        <div className="filter-group" style={{ alignSelf: 'end' }}>
+          <button
+            type="button"
+            className="filter-clear-btn"
+            style={{
+              height: '42px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              color: '#d93025',
+              borderColor: 'rgba(217, 48, 37, 0.2)',
+              background: 'rgba(217, 48, 37, 0.06)',
+              border: '1.5px solid rgba(217, 48, 37, 0.2)',
+              borderRadius: 'var(--radius-sm)',
+              cursor: 'pointer',
+              transition: 'all var(--transition-fast)',
+              width: '100%'
+            }}
+            onClick={handleClearFilters}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(217, 48, 37, 0.12)';
+              e.currentTarget.style.borderColor = '#d93025';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(217, 48, 37, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(217, 48, 37, 0.06)';
+              e.currentTarget.style.borderColor = 'rgba(217, 48, 37, 0.2)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <X size={15} /> Borrar Filtros
+          </button>
+        </div>
       </div>
 
       {/* Toolbar */}
