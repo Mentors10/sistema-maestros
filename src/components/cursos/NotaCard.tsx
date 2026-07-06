@@ -12,7 +12,7 @@ import { distritosData } from '@/lib/utils/distritos';
 import {
   Edit3, Trash2, Users, Wrench, Globe, FileText, BookOpen,
   ClipboardEdit, ToggleLeft, Link2, MapPin, ExternalLink,
-  Phone, MessageCircle, Share2, Eye, CheckCircle2,
+  Phone, Eye, CheckCircle2,
   Calendar, Clock, Save, User
 } from 'lucide-react';
 import InscripcionOnlineModal from '@/components/cursos/InscripcionOnlineModal';
@@ -859,10 +859,6 @@ export default function NotaCard({
                 {curso.tecnico_nombre}
               </span>
             )}
-            <span className={`nota-state-chip ${curso.estado === 'EJECUTADO' ? 'ejecutado' : 'por-ejecutar'}`}>
-              {curso.estado === 'EJECUTADO' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-              {curso.estado}
-            </span>
             <span className={`nota-confirm-badge ${isConfirmado ? 'confirmado' : 'proyectado'}`} style={{
               fontSize: '0.72rem',
               fontWeight: 700,
@@ -1266,7 +1262,7 @@ export default function NotaCard({
         </div>
         {/* Note: the old closing div of nota-layout was removed here to let columns stand as direct siblings */}
 
-        {/* ─── Columna Derecha (Calendario y Mapa fusionados) ───────────────────── */}
+        {/* ─── Columna Derecha (Calendario) ───────────────────── */}
         <div className="nota-col-widgets">
           {/* Calendario de Actividades */}
           <div className="calendar-section">
@@ -1284,131 +1280,53 @@ export default function NotaCard({
             />
           </div>
 
-          {/* Ubicación exacta (Simétrica) */}
-          <div className="map-panel">
-            <div className="map-title">
-              <h4><MapPin size={14} /> Ubicación exacta</h4>
-              {mapLink && (
-                <a href={mapLink} target="_blank" rel="noopener noreferrer">
-                  Ver en Google <ExternalLink size={11} />
-                </a>
-              )}
+          {/* Botones de acciones — integrados dentro de la columna */}
+          {!readOnly && (
+            <div className="nota-actions-grid-4x2">
+              <button className="btn btn-danger btn-sm" onClick={onDelete}>
+                <Trash2 size={12} /> Eliminar
+              </button>
+              <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
+                <Users size={12} /> Participantes
+              </button>
+              <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
+                <Globe size={12} /> Insc. online
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  const link = `${window.location.origin}/participantes/${curso.id}`;
+                  navigator.clipboard.writeText(link);
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Enlace copiado',
+                    text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
+                    timer: 2500,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                  });
+                }}
+              >
+                <Link2 size={12} /> Link público
+              </button>
+              <button className="btn btn-purple btn-sm col-span-2" onClick={handlePrintFichaInscripcion}>
+                <FileText size={12} /> Ficha inscripción
+              </button>
+              <button className="btn btn-orange btn-sm">
+                <BookOpen size={12} /> Registro Pedg
+              </button>
+              <button
+                className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
+                onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
+              >
+                <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
+              </button>
             </div>
-            <div className="map-preview">
-              {resolvedMapSrc ? (
-                <iframe
-                  src={resolvedMapSrc}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen
-                />
-              ) : (
-                <div className="map-empty">
-                  <div>
-                    <MapPin size={28} style={{ opacity: 0.4 }} />
-                    <p>Sin ubicación registrada</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Share / Comm Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-              {!readOnly && orgTelefono && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                  <a
-                    href={`https://wa.me/${orgTelefono.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-whatsapp btn-sm"
-                    style={{ width: '100%', textDecoration: 'none' }}
-                  >
-                    <MessageCircle size={12} /> WhatsApp
-                  </a>
-                  <a
-                    href={`tel:${orgTelefono}`}
-                    className="btn btn-primary btn-sm"
-                    style={{ width: '100%', textDecoration: 'none' }}
-                  >
-                    <Phone size={12} /> Llamar
-                  </a>
-                </div>
-              )}
-              {mapLink && (
-                <button
-                  className="btn btn-map btn-sm"
-                  style={{ width: '100%', backgroundColor: '#ea4335', color: '#fff' }}
-                  onClick={() => {
-                    navigator.clipboard?.writeText(mapLink);
-                    Swal.fire({
-                      icon: 'success',
-                      title: 'Copiado',
-                      text: 'Enlace de ubicación copiado al portapapeles.',
-                      timer: 2000,
-                      showConfirmButton: false,
-                      toast: true,
-                      position: 'top-end'
-                    });
-                  }}
-                >
-                  <Share2 size={12} /> Compartir ubicación
-                </button>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
       </div> {/* Closing nota-main-content */}
-
-      {/* ─── Middle Section (Unified Actions) — hidden in readOnly ────── */}
-      {!readOnly && (
-        <div className="nota-actions-section">
-          <div className="nota-actions-grid-4x2">
-            {/* Row 1 */}
-            <button className="btn btn-danger btn-sm" onClick={onDelete}>
-              <Trash2 size={12} /> Eliminar
-            </button>
-            <button className="btn btn-teal btn-sm" onClick={() => onManageParticipantes(curso)}>
-              <Users size={12} /> Participantes
-            </button>
-            <button className="btn btn-whatsapp btn-sm" onClick={() => setShowInscripcionModal(true)}>
-              <Globe size={12} /> Insc. online
-            </button>
-            <button 
-              className="btn btn-primary btn-sm"
-              onClick={() => {
-                const link = `${window.location.origin}/participantes/${curso.id}`;
-                navigator.clipboard.writeText(link);
-                Swal.fire({
-                  icon: 'success',
-                  title: 'Enlace copiado',
-                  text: 'El enlace de inscripción para los participantes fue copiado al portapapeles.',
-                  timer: 2500,
-                  showConfirmButton: false,
-                  toast: true,
-                  position: 'top-end'
-                });
-              }}
-            >
-              <Link2 size={12} /> Link público
-            </button>
-
-            {/* Row 2 */}
-            <button className="btn btn-purple btn-sm col-span-2" onClick={handlePrintFichaInscripcion}>
-              <FileText size={12} /> Ficha inscripción
-            </button>
-            <button className="btn btn-orange btn-sm">
-              <BookOpen size={12} /> Registro Pedg
-            </button>
-            <button 
-              className={`btn ${curso.form_habilitado !== false ? 'btn-dark' : 'btn-secondary'} btn-sm`}
-              onClick={() => onUpdate({ form_habilitado: !(curso.form_habilitado !== false) })}
-            >
-              <ToggleLeft size={12} style={{ transform: curso.form_habilitado !== false ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} /> On/Off Form: {curso.form_habilitado !== false ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {showInscripcionModal && (
         <InscripcionOnlineModal

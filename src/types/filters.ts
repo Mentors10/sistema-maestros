@@ -20,7 +20,7 @@ export const DEFAULT_FILTERS: AppFilters = {
   mes: '',
   tecnico: '',
   notasRevisadas: 'todos',
-  agruparPor: 'grupo',
+  agruparPor: 'facilitador',
   grupo: 'todos',
   alerta: 'todas',
   conteoMode: 'FORM',

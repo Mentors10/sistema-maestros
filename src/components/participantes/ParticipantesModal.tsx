@@ -1193,8 +1193,7 @@ export default function ParticipantesModal({
               <th>Unidad Educativa</th>
               <th>Estado Pago</th>
               <th>Validado SIE</th>
-              <th>Observaciones Validación SIE</th>
-              <th>Observaciones Internas</th>
+              <th>Observaciones SIE</th>
             </tr>
           </thead>
           <tbody>
@@ -1719,13 +1718,13 @@ export default function ParticipantesModal({
       <div className="modal-container" style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', width: '98%', maxWidth: '98vw', height: '96vh', maxHeight: '96vh', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease', overflow: 'hidden' }}>
 
         {/* Modal Header */}
-        <div className="modal-header" style={{ padding: '20px 24px', background: 'var(--primary-900)', color: 'var(--white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="modal-header" style={{ padding: '14px 20px', background: 'var(--primary-900)', color: 'var(--white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>
-              Administración de Participantes — ID {curso.id}
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>
+              Participantes — ID {curso.id}
             </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', opacity: 0.8 }}>
-              Ciclo: {curso.ciclo_nombre || 'Sin Ciclo'} | Facilitador: {curso.facilitador_nombre || 'Sin Facilitador'} | Lugar: {curso.lugar}
+            <p style={{ margin: '2px 0 0 0', fontSize: '0.72rem', opacity: 0.8 }}>
+              {curso.ciclo_nombre || 'Sin Ciclo'} | {curso.facilitador_nombre || 'Sin Facilitador'} | {curso.lugar}
             </p>
           </div>
           <button
@@ -2298,11 +2297,10 @@ export default function ParticipantesModal({
                     <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '130px' }}>C.I.</th>
                     <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '110px' }}>RDA</th>
                     <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase' }}>Apellidos y Nombres</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '90px' }}>Celular</th>
+                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '140px' }}>Celular</th>
                     <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '180px' }}>SIE / Unidad Educativa</th>
                     <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '140px', textAlign: 'center' }}>Validación SIE</th>
                     <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '130px' }}>Estado Pago</th>
-                    <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '160px' }}>Obs. Internas / Validación</th>
                     <th style={{ padding: '12px 16px', fontSize: '0.9rem', textTransform: 'uppercase', width: '130px', textAlign: 'center' }}>Acciones</th>
                   </tr>
                 </thead>
@@ -2566,6 +2564,7 @@ function RowComponent({
   const [observaciones, setObservaciones] = useState(ins.observaciones || '');
   const [ci, setCi] = useState(p.ci || '');
   const [rda, setRda] = useState(p.rda || '');
+  const [celular, setCelular] = useState(p.celular || '');
   const [saving, setSaving] = useState(false);
 
   // Synchronize internal state with changes to props from parent
@@ -2584,6 +2583,10 @@ function RowComponent({
   useEffect(() => {
     setRda(p.rda || '');
   }, [p.rda]);
+
+  useEffect(() => {
+    setCelular(p.celular || '');
+  }, [p.celular]);
 
   // Auto-save handlers
   const handlePagosChange = async (newVal: string) => {
@@ -2658,6 +2661,28 @@ function RowComponent({
         console.error('Error updating RDA:', err);
         Swal.fire('Error', err.message || 'No se pudo actualizar el RDA', 'error');
         setRda(originalVal);
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
+  const handleCelularBlur = async () => {
+    const trimmedVal = celular.trim();
+    const originalVal = p.celular || '';
+    if (trimmedVal !== originalVal) {
+      setSaving(true);
+      try {
+        const { error } = await supabase
+          .from('participantes')
+          .update({ celular: trimmedVal || null })
+          .eq('ci', p.ci);
+
+        if (error) throw error;
+        p.celular = trimmedVal || null;
+      } catch (err: any) {
+        console.error('Error updating celular:', err);
+        setCelular(originalVal);
       } finally {
         setSaving(false);
       }
@@ -2829,24 +2854,31 @@ function RowComponent({
         </div>
       </td>
 
-      {/* Celular */}
-      <td style={{ padding: '12px 16px', fontSize: '0.9rem' }}>
-        {p.celular ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>{p.celular}</span>
+      {/* Celular - editable inline */}
+      <td style={{ padding: '8px 12px', width: '140px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <input
+            type="text"
+            value={celular}
+            onChange={(e) => setCelular(e.target.value)}
+            onBlur={handleCelularBlur}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            disabled={saving}
+            placeholder="Celular"
+            style={{ width: '100%', padding: '4px 6px', fontSize: '0.85rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', background: 'var(--white)' }}
+          />
+          {celular && (
             <a
-              href={`https://wa.me/${p.celular.replace(/\D/g, '')}`}
+              href={`https://wa.me/${celular.replace(/\D/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: '#25d366', display: 'inline-flex' }}
+              style={{ color: '#25d366', display: 'inline-flex', flexShrink: 0 }}
               title="Escribir por WhatsApp"
             >
               <Phone size={13} />
             </a>
-          </div>
-        ) : (
-          <span style={{ color: 'var(--gray-400)' }}>—</span>
-        )}
+          )}
+        </div>
       </td>
 
       {/* SIE / UE */}
@@ -2899,27 +2931,6 @@ function RowComponent({
           <option value="Pendiente">Pendiente</option>
           <option value="Pagado">Pagado</option>
         </select>
-      </td>
-
-      {/* Obs. Internas / Validación (Auto-save) */}
-      <td style={{ padding: '12px 16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <input
-            type="text"
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            onBlur={handleObservacionesBlur}
-            onKeyDown={handleObservacionesKeyDown}
-            disabled={saving}
-            placeholder="Obs. internas..."
-            style={{ width: '100%', padding: '6px 10px', fontSize: '0.9rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)' }}
-          />
-          {p.observaciones_sie && (
-            <div style={{ fontSize: '0.78rem', color: 'var(--red-600)', background: 'var(--red-100)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 600, border: '1px dashed var(--red-400)', whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.2 }}>
-              <b>SIE:</b> {p.observaciones_sie}
-            </div>
-          )}
-        </div>
       </td>
 
       {/* Acciones */}

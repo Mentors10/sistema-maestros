@@ -49,6 +49,8 @@ function AuthGate() {
 }
 
 function HomePage() {
+  const { user, isSupervisor, logout } = useAuth();
+  const readOnly = isSupervisor;
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [facilitadores, setFacilitadores] = useState<Facilitador[]>([]);
@@ -312,6 +314,16 @@ function HomePage() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // ─── Set técnico filter for técnico users ────────────────
+  useEffect(() => {
+    if (user && user.rol === 'tecnico' && tecnicos.length > 0 && filters.tecnico === '') {
+      const match = tecnicos.find((t) => t.carnet === user.username);
+      if (match) {
+        setFilters((prev) => ({ ...prev, tecnico: match.carnet }));
+      }
+    }
+  }, [user, tecnicos]);
 
   // ─── Filter Logic ───────────────────────────────────────────
   const filteredCursos = useMemo(() => {
@@ -913,10 +925,6 @@ function HomePage() {
     setShowAgendaForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  // ─── Auth ───────────────────────────────────────────────────
-  const { user, isSupervisor, logout } = useAuth();
-  const readOnly = isSupervisor;
 
   // ─── Render ─────────────────────────────────────────────────
   return (

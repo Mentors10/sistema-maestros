@@ -75,6 +75,46 @@ export function getMonthDays(year: number, month: number) {
   return days;
 }
 
+/**
+ * Obtiene SOLO los días del mes actual (sin relleno de meses anteriores/siguientes).
+ * Útil para vista de calendario apilado donde los meses están uno debajo del otro.
+ */
+export function getCurrentMonthDays(year: number, month: number) {
+  const lastDay = new Date(year, month + 1, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const startDow = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+
+  const days: {
+    date: Date;
+    dateStr: string;
+    dayNumber: number;
+    isCurrentMonth: boolean;
+    isToday: boolean;
+    emptyCells: number;
+  }[] = [];
+
+  // First day's position in the week (Mon=0 .. Sun=6)
+  // We store emptyCells so the grid can start at the right column
+  let firstEmptyCells = startDow;
+
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    const d = new Date(year, month, i);
+    days.push({
+      date: d,
+      dateStr: formatDateStr(d),
+      dayNumber: i,
+      isCurrentMonth: true,
+      isToday: d.getTime() === today.getTime(),
+      emptyCells: i === 1 ? firstEmptyCells : 0,
+    });
+  }
+
+  return days;
+}
+
 /** Formatea Date a "YYYY-MM-DD" */
 export function formatDateStr(d: Date): string {
   const y = d.getFullYear();
