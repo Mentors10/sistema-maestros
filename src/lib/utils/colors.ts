@@ -58,16 +58,7 @@ export function getCourseKey(course: number | string): string {
 
 export function getCourseLabel(course: number | string): string {
   const key = getCourseKey(course);
-  const fullLabels: Record<string, string> = {
-    '1': 'Curso 1',
-    '2': 'Curso 2',
-    '3': 'Curso 3',
-    '4': 'Curso 4',
-    'soc': 'Socialización',
-    'eval': 'Evaluación',
-  };
-  const baseType = key.replace(/\d+$/, '') || key;
-  return fullLabels[baseType] || COURSE_COLORS[key]?.label || key.toUpperCase();
+  return COURSE_COLORS[key]?.label || key.toUpperCase();
 }
 
 export function getCourseColor(course: number | string): string {

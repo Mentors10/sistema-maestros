@@ -6,7 +6,7 @@ import {
   getCurrentMonthDays, DAY_NAMES_SHORT, MONTH_NAMES,
   getSlotsForDate, autoAssignSocNumber, getCourseRanges, getReportRanges
 } from '@/lib/utils/calendar';
-import { CALENDAR_DAY_COLORS, RANGE_COLORS, getCourseColor } from '@/lib/utils/colors';
+import { CALENDAR_DAY_COLORS, RANGE_COLORS, getCourseColor, getCourseLabel } from '@/lib/utils/colors';
 import { Plus, Trash2, X, Calendar, ChevronRight } from 'lucide-react';
 import { ComplianceAlert } from '@/lib/utils/compliance';
 
@@ -66,6 +66,7 @@ export default function MiniMonthCalendar({
   const [newCourse, setNewCourse] = useState('1');
   const [newStart, setNewStart] = useState('08:00');
   const [newEnd, setNewEnd] = useState('12:00');
+  const [newDate, setNewDate] = useState('');
   const [visibleMonth, setVisibleMonth] = useState<{ year: number; month: number }>({ year, month });
   const scrollRef = useRef<HTMLDivElement>(null);
   const monthBlockRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -203,20 +204,21 @@ export default function MiniMonthCalendar({
 
   // ─── Add slot ──────────────────────────────────────────────
   const handleAddSlot = () => {
-    if (!popoverDate) return;
+    const targetDate = popoverDate || newDate;
+    if (!targetDate) return;
     let courseValue: number | string = newCourse;
     if (['1', '2', '3', '4'].includes(newCourse)) {
       courseValue = parseInt(newCourse);
     } else if (newCourse === 'soc') {
-      courseValue = autoAssignSocNumber(slots, popoverDate, 'soc');
+      courseValue = autoAssignSocNumber(slots, targetDate, 'soc');
     } else if (newCourse === 'eval') {
-      courseValue = autoAssignSocNumber(slots, popoverDate, 'eval');
+      courseValue = autoAssignSocNumber(slots, targetDate, 'eval');
     }
     const [sh, sm] = newStart.split(':').map(Number);
     const [eh, em] = newEnd.split(':').map(Number);
     const hours = Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
     const newSlot: HorarioSlot = {
-      date: popoverDate,
+      date: targetDate,
       startTime: newStart,
       endTime: newEnd,
       hours: Math.max(hours, 0),
@@ -379,7 +381,14 @@ export default function MiniMonthCalendar({
           <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
             Nueva Programación
           </div>
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ width: '110px' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>Día</label>
+              <input type="date" value={popoverDate || newDate} onChange={(e) => {
+                setNewDate(e.target.value);
+                if (!popoverDate) setPopoverDate(e.target.value);
+              }} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+            </div>
             <div style={{ flex: 1.2 }}>
               <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>Actividad</label>
               <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
@@ -533,7 +542,7 @@ export default function MiniMonthCalendar({
                   <div className="mini-day-badges">
                     {daySlots.map((s, j) => (
                       <span key={j} className="mini-day-dot" style={{ color: getCourseColor(s.course) }}>
-                        {ACT_LABELS[String(s.course).replace(/\d+$/, '') || String(s.course)]?.substring(0, 3) || getCourseColor(s.course)}
+                        {getCourseLabel(s.course)}
                       </span>
                     ))}
                   </div>
