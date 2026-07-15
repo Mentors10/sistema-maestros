@@ -381,7 +381,7 @@ export default function MiniMonthCalendar({
           </button>
         </div>
 
-        {/* All sessions as table */}
+        {/* All sessions as table — filtered by selected activity */}
         {sortedDates.length > 0 && (
           <div style={{ marginBottom: '12px', maxHeight: '35vh', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -389,7 +389,6 @@ export default function MiniMonthCalendar({
                 <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
                   <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Fecha</th>
                   <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>S</th>
-                  <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Actividad</th>
                   <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>De</th>
                   <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>A</th>
                   <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>H</th>
@@ -400,7 +399,14 @@ export default function MiniMonthCalendar({
                 {sortedDates.map((date) => {
                   const dateObj = new Date(date + 'T12:00:00');
                   const isCurrentDate = date === newDate;
-                  const daySlots = allSlotsByDate.get(date) || [];
+                  const daySlots = (allSlotsByDate.get(date) || []).filter((s) => {
+                    const ck = String(s.course);
+                    const bt = ck.replace(/\d+$/, '') || ck;
+                    if (newCourse === 'soc') return bt === 'soc';
+                    if (newCourse === 'eval') return bt === 'eval';
+                    return ck === newCourse || bt === newCourse;
+                  });
+                  if (daySlots.length === 0) return null;
                   return daySlots.map((s, idx) => {
                     const courseKey = String(s.course);
                     const baseType = courseKey.replace(/\d+$/, '') || courseKey;
@@ -427,7 +433,6 @@ export default function MiniMonthCalendar({
                             fontWeight: 900,
                           }}>S{sessionNum}</span>
                         </td>
-                        <td style={{ padding: '4px 6px', fontWeight: 700, color }}>{fullLabel}</td>
                         <td style={{ padding: '4px 6px', textAlign: 'center', color: '#475569' }}>{s.startTime}</td>
                         <td style={{ padding: '4px 6px', textAlign: 'center', color: '#475569' }}>{s.endTime}</td>
                         <td style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 700, color: '#059669' }}>{s.hours}h</td>
