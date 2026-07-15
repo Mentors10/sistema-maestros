@@ -155,7 +155,12 @@ export default function MiniMonthCalendar({
 
   // ─── Day click → toggle popover panel ────────────────────
   const handleDayClick = (dateStr: string) => {
-    setPopoverDate(popoverDate === dateStr ? null : dateStr);
+    if (popoverDate === dateStr) {
+      setPopoverDate(null);
+    } else {
+      setPopoverDate(dateStr);
+      setNewDate(dateStr);
+    }
   };
 
   // ─── Calculate hours from start/end time ─────────────────
@@ -204,8 +209,8 @@ export default function MiniMonthCalendar({
 
   // ─── Add slot ──────────────────────────────────────────────
   const handleAddSlot = () => {
-    const targetDate = popoverDate || newDate;
-    if (!targetDate) return;
+    if (!newDate) return;
+    const targetDate = newDate;
     let courseValue: number | string = newCourse;
     if (['1', '2', '3', '4'].includes(newCourse)) {
       courseValue = parseInt(newCourse);
@@ -233,7 +238,7 @@ export default function MiniMonthCalendar({
 
   // ─── Delete slot ───────────────────────────────────────────
   const handleDeleteSlot = (index: number) => {
-    const dateSlots = getSlotsForDate(slots, popoverDate!);
+    const dateSlots = getSlotsForDate(slots, newDate);
     const slotToRemove = dateSlots[index];
     const newSlots = slots.filter((s) => s !== slotToRemove);
     onSaveSlots(newSlots);
@@ -285,7 +290,7 @@ export default function MiniMonthCalendar({
     return {};
   };
 
-  const popoverSlots = popoverDate ? getSlotsForDate(slots, popoverDate) : [];
+  const popoverSlots = newDate ? getSlotsForDate(slots, newDate) : [];
 
   const getDayComplianceStatus = (dateStr: string) => {
     const daySlots = getSlotsForDate(slots, dateStr);
@@ -301,20 +306,20 @@ export default function MiniMonthCalendar({
   };
 
   // ─── Popover panel content ────────────────────────────────
-  const popoverDayDate = popoverDate ? new Date(popoverDate + 'T12:00:00') : null;
+  const popoverDayDate = newDate ? new Date(newDate + 'T12:00:00') : null;
 
   // Compute stats for current popover date
-  const dayCourseStats = popoverDate ? ACT_OPTIONS.filter(a => a === '1' || a === '2' || a === '3' || a === '4').map(act => ({
+  const dayCourseStats = newDate ? ACT_OPTIONS.filter(a => a === '1' || a === '2' || a === '3' || a === '4').map(act => ({
     act,
     label: ACT_LABELS[act],
     color: ACT_COLORS[act],
     ...getCourseStats(act, popoverSlots),
   })) : [];
 
-  const nextRecommended = popoverDate ? getRecommendedCourse(popoverSlots) : '1';
+  const nextRecommended = newDate ? getRecommendedCourse(popoverSlots) : '1';
 
   const renderPopoverPanel = () => {
-    if (!popoverDate || !popoverDayDate) return null;
+    if (!newDate || !popoverDayDate) return null;
 
     return (
       <div className="cal-popover-panel" onClick={(e) => e.stopPropagation()} style={{
@@ -410,10 +415,7 @@ export default function MiniMonthCalendar({
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ width: '130px' }}>
               <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Día</label>
-              <input type="date" value={popoverDate || newDate} onChange={(e) => {
-                setNewDate(e.target.value);
-                if (!popoverDate) setPopoverDate(e.target.value);
-              }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
             </div>
             <div style={{ flex: 1.2 }}>
               <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Actividad</label>
