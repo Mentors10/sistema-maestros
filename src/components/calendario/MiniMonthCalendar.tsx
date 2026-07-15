@@ -241,7 +241,9 @@ export default function MiniMonthCalendar({
 
   // ─── Duplicate slot (same course, different day) ──────────
   const handleDuplicateSlot = (slot: HorarioSlot) => {
-    setNewCourse(String(slot.course).replace(/\d+$/, '') || String(slot.course));
+    const courseKey = String(slot.course);
+    const baseType = courseKey.replace(/\d+$/, '') || courseKey;
+    setNewCourse(baseType === 'soc' || baseType === 'eval' ? baseType : String(parseInt(courseKey)));
     setNewStart(slot.startTime);
     setNewEnd(slot.endTime);
   };
@@ -320,8 +322,8 @@ export default function MiniMonthCalendar({
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        padding: '14px',
-        width: '460px',
+        padding: '18px',
+        width: '520px',
         maxHeight: '85vh',
         overflowY: 'auto',
         background: '#ffffff',
@@ -332,66 +334,66 @@ export default function MiniMonthCalendar({
         animation: 'popoverFadeIn 0.15s ease-out',
       }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: `2px solid ${noteColor}30` }}>
-          <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Calendar size={15} style={{ color: noteColor }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: `2px solid ${noteColor}30` }}>
+          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Calendar size={18} style={{ color: noteColor }} />
             {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
             {popoverSlots.length > 0 && (
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, background: noteColor, color: '#fff', padding: '1px 6px', borderRadius: '8px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, background: noteColor, color: '#fff', padding: '2px 8px', borderRadius: '8px' }}>
                 {popoverSlots.length} prog.
               </span>
             )}
           </h4>
-          <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}>
-            <X size={14} />
+          <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
+            <X size={18} />
           </button>
         </div>
 
         {/* Progress bars for each course */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '12px' }}>
           {dayCourseStats.map(({ act, label, color, sessionCount, totalH }) => {
             const pct = Math.min((totalH / TARGET_HOURS) * 100, 100);
             const isComplete = sessionCount >= MAX_SESSIONS || totalH >= TARGET_HOURS;
             const isActive = nextRecommended === act;
             return (
               <div key={act} style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '3px 6px', borderRadius: '6px',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '4px 8px', borderRadius: '6px',
                 background: isActive ? `${color}12` : 'transparent',
                 border: isActive ? `1.5px solid ${color}40` : '1.5px solid transparent',
               }}>
                 <span style={{
-                  fontSize: '0.6rem', fontWeight: 900, color: isComplete ? '#059669' : color,
-                  minWidth: '52px', textTransform: 'uppercase',
+                  fontSize: '0.72rem', fontWeight: 900, color: isComplete ? '#059669' : color,
+                  minWidth: '60px', textTransform: 'uppercase',
                 }}>{label}</span>
-                <div style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${pct}%`, background: isComplete ? '#059669' : color, borderRadius: '3px', transition: 'width 0.3s' }} />
+                <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: isComplete ? '#059669' : color, borderRadius: '4px', transition: 'width 0.3s' }} />
                 </div>
-                <span style={{ fontSize: '0.58rem', fontWeight: 700, color: '#64748b', minWidth: '55px', textAlign: 'right' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', minWidth: '70px', textAlign: 'right' }}>
                   {sessionCount}/{MAX_SESSIONS} · {totalH}h/{TARGET_HOURS}h
                 </span>
-                {isActive && <ChevronRight size={10} color={color} />}
+                {isActive && <ChevronRight size={12} color={color} />}
               </div>
             );
           })}
         </div>
 
         {/* Add form */}
-        <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '8px', background: '#f0f9ff', marginBottom: '8px' }}>
-          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
+        <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff', marginBottom: '10px' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
             Nueva Programación
           </div>
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ width: '110px' }}>
-              <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>Día</label>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ width: '130px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Día</label>
               <input type="date" value={popoverDate || newDate} onChange={(e) => {
                 setNewDate(e.target.value);
                 if (!popoverDate) setPopoverDate(e.target.value);
-              }} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
             </div>
             <div style={{ flex: 1.2 }}>
-              <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>Actividad</label>
-              <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Actividad</label>
+              <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
                 {ACT_OPTIONS.map(act => {
                   const stats = getCourseStats(act, popoverSlots);
                   const isFull = act !== 'soc' && act !== 'eval' && (stats.sessionCount >= MAX_SESSIONS || stats.totalH >= TARGET_HOURS);
@@ -403,24 +405,24 @@ export default function MiniMonthCalendar({
                 })}
               </select>
             </div>
-            <div style={{ width: '85px' }}>
-              <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>De</label>
-              <select value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+            <div style={{ width: '95px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>De</label>
+              <select value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
                 {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <div style={{ width: '85px' }}>
-              <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>A</label>
-              <select value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+            <div style={{ width: '95px' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>A</label>
+              <select value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
                 {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '14px' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 900, color: calcHours(newStart, newEnd) > 0 ? '#059669' : '#dc2626' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 900, color: calcHours(newStart, newEnd) > 0 ? '#059669' : '#dc2626' }}>
                 {calcHours(newStart, newEnd)}h
               </span>
-              <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700, fontSize: '0.72rem' }}>
-                <Plus size={11} />
+              <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.82rem' }}>
+                <Plus size={13} /> Agregar
               </button>
             </div>
           </div>
@@ -429,10 +431,10 @@ export default function MiniMonthCalendar({
         {/* Existing slots */}
         {popoverSlots.length > 0 && (
           <div>
-            <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
               Programaciones del día
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {popoverSlots.map((s, idx) => {
                 const courseKey = String(s.course);
                 const baseType = courseKey.replace(/\d+$/, '') || courseKey;
@@ -448,37 +450,37 @@ export default function MiniMonthCalendar({
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '6px 10px',
+                    padding: '8px 12px',
                     borderRadius: '8px',
                     boxShadow: isRecommended ? `0 2px 8px ${color}25` : `0 1px 4px ${color}10`,
                     border: isRecommended ? `1px solid ${color}40` : '1px solid transparent',
                   }}>
-                    <div style={{ fontSize: '0.78rem', color: '#1e293b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{
                         background: color,
                         color: '#ffffff',
-                        padding: '2px 6px',
+                        padding: '3px 8px',
                         borderRadius: '5px',
-                        fontSize: '0.6rem',
+                        fontSize: '0.7rem',
                         fontWeight: 900,
                         letterSpacing: '0.03em',
                         whiteSpace: 'nowrap',
                       }}>S{sessionNum}</span>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 800 }}>{fullLabel}</span>
-                      <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800 }}>{fullLabel}</span>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
                         {s.startTime} - {s.endTime}
                       </span>
-                      <span style={{ fontSize: '0.62rem', color: '#059669', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
                         {s.hours}h
                       </span>
                     </div>
                     {!readOnly && (
-                      <div style={{ display: 'flex', gap: '2px' }}>
-                        <button className="btn btn-xs" style={{ padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1' }} onClick={() => handleDuplicateSlot(s)} title="Duplicar a otro día">
-                          <Plus size={10} />
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button className="btn btn-xs" style={{ padding: '3px 6px', fontSize: '0.72rem', borderRadius: '4px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700 }} onClick={() => handleDuplicateSlot(s)} title="Duplicar: copia actividad y horarios, solo cambia el día">
+                          <Plus size={12} /> Duplicar
                         </button>
-                        <button className="btn btn-danger btn-xs" style={{ padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px' }} onClick={() => handleDeleteSlot(idx)}>
-                          <Trash2 size={10} />
+                        <button className="btn btn-danger btn-xs" style={{ padding: '3px 6px', fontSize: '0.72rem', borderRadius: '4px' }} onClick={() => handleDeleteSlot(idx)}>
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     )}
