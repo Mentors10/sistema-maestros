@@ -6,8 +6,8 @@ import {
   getCurrentMonthDays, DAY_NAMES_SHORT, MONTH_NAMES,
   getSlotsForDate, autoAssignSocNumber, getCourseRanges, getReportRanges
 } from '@/lib/utils/calendar';
-import { CALENDAR_DAY_COLORS, RANGE_COLORS, getCourseLabel, getCourseColor } from '@/lib/utils/colors';
-import { Plus, Trash2, X, Calendar } from 'lucide-react';
+import { CALENDAR_DAY_COLORS, RANGE_COLORS, getCourseColor } from '@/lib/utils/colors';
+import { Plus, Trash2, X, Calendar, ChevronRight } from 'lucide-react';
 import { ComplianceAlert } from '@/lib/utils/compliance';
 
 interface MiniMonthCalendarProps {
@@ -22,6 +22,30 @@ interface MiniMonthCalendarProps {
   onToggleCheck: (field: 'planificacion_recibida' | 'evaluacion_realizada' | 'informe_final_recibido') => void;
   readOnly?: boolean;
 }
+
+// Full labels for display
+const ACT_LABELS: Record<string, string> = {
+  '1': 'Curso 1',
+  '2': 'Curso 2',
+  '3': 'Curso 3',
+  '4': 'Curso 4',
+  'soc': 'Socialización',
+  'eval': 'Evaluación',
+};
+
+const ACT_COLORS: Record<string, string> = {
+  '1': '#1D4ED8',
+  '2': '#047857',
+  '3': '#B45309',
+  '4': '#6D28D9',
+  'soc': '#0F172A',
+  'eval': '#B91C1C',
+};
+
+const ACT_OPTIONS = ['1', '2', '3', '4', 'soc', 'eval'];
+
+const MAX_SESSIONS = 3;
+const TARGET_HOURS = 12;
 
 export default function MiniMonthCalendar({
   slots,
@@ -133,11 +157,55 @@ export default function MiniMonthCalendar({
     setPopoverDate(popoverDate === dateStr ? null : dateStr);
   };
 
+  // ─── Calculate hours from start/end time ─────────────────
+  const calcHours = (start: string, end: string): number => {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    return Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
+  };
+
+  // ─── Count sessions and total hours for a course type ────
+  const getCourseStats = (courseType: string, dateSlots: HorarioSlot[]) => {
+    const sameType = dateSlots.filter(s => String(s.course) === courseType || String(s.course).startsWith(courseType));
+    const sessionCount = sameType.length;
+    const totalH = sameType.reduce((sum, s) => sum + (s.hours || 0), 0);
+    return { sessionCount, totalH };
+  };
+
+  // ─── Get next session number for a course type ───────────
+  const getNextSessionNum = (courseType: string, dateSlots: HorarioSlot[]): number => {
+    const sameType = dateSlots.filter(s => String(s.course) === courseType || String(s.course).startsWith(courseType));
+    return sameType.length + 1;
+  };
+
+  // ─── Check if course type can accept more sessions ───────
+  const canAddSession = (courseType: string, dateSlots: HorarioSlot[]): boolean => {
+    if (courseType === 'soc' || courseType === 'eval') return true;
+    const stats = getCourseStats(courseType, dateSlots);
+    if (stats.sessionCount >= MAX_SESSIONS) return false;
+    if (stats.totalH >= TARGET_HOURS) return false;
+    return true;
+  };
+
+  // ─── Auto-suggest next course type ───────────────────────
+  const getRecommendedCourse = (dateSlots: HorarioSlot[]): string => {
+    for (const act of ['1', '2', '3', '4']) {
+      const stats = getCourseStats(act, dateSlots);
+      if (stats.sessionCount < MAX_SESSIONS && stats.totalH < TARGET_HOURS) return act;
+    }
+    // Check SOC/EVAL
+    const hasSoc = dateSlots.some(s => String(s.course).startsWith('soc'));
+    if (!hasSoc) return 'soc';
+    const hasEval = dateSlots.some(s => String(s.course).startsWith('eval'));
+    if (!hasEval) return 'eval';
+    return '1';
+  };
+
   // ─── Add slot ──────────────────────────────────────────────
   const handleAddSlot = () => {
     if (!popoverDate) return;
     let courseValue: number | string = newCourse;
-    if (['1','2','3','4'].includes(newCourse)) {
+    if (['1', '2', '3', '4'].includes(newCourse)) {
       courseValue = parseInt(newCourse);
     } else if (newCourse === 'soc') {
       courseValue = autoAssignSocNumber(slots, popoverDate, 'soc');
@@ -167,6 +235,13 @@ export default function MiniMonthCalendar({
     const slotToRemove = dateSlots[index];
     const newSlots = slots.filter((s) => s !== slotToRemove);
     onSaveSlots(newSlots);
+  };
+
+  // ─── Duplicate slot (same course, different day) ──────────
+  const handleDuplicateSlot = (slot: HorarioSlot) => {
+    setNewCourse(String(slot.course).replace(/\d+$/, '') || String(slot.course));
+    setNewStart(slot.startTime);
+    setNewEnd(slot.endTime);
   };
 
   // ─── Cell styles ──────────────────────────────────────────
@@ -224,8 +299,19 @@ export default function MiniMonthCalendar({
   // ─── Popover panel content ────────────────────────────────
   const popoverDayDate = popoverDate ? new Date(popoverDate + 'T12:00:00') : null;
 
+  // Compute stats for current popover date
+  const dayCourseStats = popoverDate ? ACT_OPTIONS.filter(a => a === '1' || a === '2' || a === '3' || a === '4').map(act => ({
+    act,
+    label: ACT_LABELS[act],
+    color: ACT_COLORS[act],
+    ...getCourseStats(act, popoverSlots),
+  })) : [];
+
+  const nextRecommended = popoverDate ? getRecommendedCourse(popoverSlots) : '1';
+
   const renderPopoverPanel = () => {
     if (!popoverDate || !popoverDayDate) return null;
+
     return (
       <div className="cal-popover-panel" onClick={(e) => e.stopPropagation()} style={{
         position: 'fixed',
@@ -233,7 +319,9 @@ export default function MiniMonthCalendar({
         left: '50%',
         transform: 'translate(-50%, -50%)',
         padding: '14px',
-        width: '420px',
+        width: '460px',
+        maxHeight: '85vh',
+        overflowY: 'auto',
         background: '#ffffff',
         border: `2.5px solid ${noteColor}`,
         borderRadius: '14px',
@@ -241,88 +329,149 @@ export default function MiniMonthCalendar({
         zIndex: 9000,
         animation: 'popoverFadeIn 0.15s ease-out',
       }}>
+        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: `2px solid ${noteColor}30` }}>
           <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Calendar size={15} style={{ color: noteColor }} />
             {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
+            {popoverSlots.length > 0 && (
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, background: noteColor, color: '#fff', padding: '1px 6px', borderRadius: '8px' }}>
+                {popoverSlots.length} prog.
+              </span>
+            )}
           </h4>
           <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}>
             <X size={14} />
           </button>
         </div>
 
+        {/* Progress bars for each course */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
+          {dayCourseStats.map(({ act, label, color, sessionCount, totalH }) => {
+            const pct = Math.min((totalH / TARGET_HOURS) * 100, 100);
+            const isComplete = sessionCount >= MAX_SESSIONS || totalH >= TARGET_HOURS;
+            const isActive = nextRecommended === act;
+            return (
+              <div key={act} style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '3px 6px', borderRadius: '6px',
+                background: isActive ? `${color}12` : 'transparent',
+                border: isActive ? `1.5px solid ${color}40` : '1.5px solid transparent',
+              }}>
+                <span style={{
+                  fontSize: '0.6rem', fontWeight: 900, color: isComplete ? '#059669' : color,
+                  minWidth: '52px', textTransform: 'uppercase',
+                }}>{label}</span>
+                <div style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: isComplete ? '#059669' : color, borderRadius: '3px', transition: 'width 0.3s' }} />
+                </div>
+                <span style={{ fontSize: '0.58rem', fontWeight: 700, color: '#64748b', minWidth: '55px', textAlign: 'right' }}>
+                  {sessionCount}/{MAX_SESSIONS} · {totalH}h/{TARGET_HOURS}h
+                </span>
+                {isActive && <ChevronRight size={10} color={color} />}
+              </div>
+            );
+          })}
+        </div>
+
         {/* Add form */}
         <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '8px', background: '#f0f9ff', marginBottom: '8px' }}>
           <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
-            Programación
+            Nueva Programación
           </div>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>Act.</label>
+            <div style={{ flex: 1.2 }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>Actividad</label>
               <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                <option value="1">C1</option>
-                <option value="2">C2</option>
-                <option value="3">C3</option>
-                <option value="4">C4</option>
-                <option value="soc">SOC</option>
-                <option value="eval">EVAL</option>
+                {ACT_OPTIONS.map(act => {
+                  const stats = getCourseStats(act, popoverSlots);
+                  const isFull = act !== 'soc' && act !== 'eval' && (stats.sessionCount >= MAX_SESSIONS || stats.totalH >= TARGET_HOURS);
+                  return (
+                    <option key={act} value={act} disabled={isFull}>
+                      {ACT_LABELS[act]} {isFull ? '✓' : `(S${stats.sessionCount + 1} · ${stats.totalH}h)`}
+                    </option>
+                  );
+                })}
               </select>
             </div>
-            <div style={{ width: '90px' }}>
+            <div style={{ width: '85px' }}>
               <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>De</label>
               <select value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
                 {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <div style={{ width: '90px' }}>
+            <div style={{ width: '85px' }}>
               <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>A</label>
               <select value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
                 {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <button className="btn btn-success" onClick={handleAddSlot} style={{ marginTop: '14px', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700, fontSize: '0.72rem' }}>
-              <Plus size={11} /> Agregar
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '14px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 900, color: calcHours(newStart, newEnd) > 0 ? '#059669' : '#dc2626' }}>
+                {calcHours(newStart, newEnd)}h
+              </span>
+              <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700, fontSize: '0.72rem' }}>
+                <Plus size={11} />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Existing slots */}
         {popoverSlots.length > 0 && (
-          <div style={{ marginBottom: '8px' }}>
+          <div>
             <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>
-              Programaciones
+              Programaciones del día
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {popoverSlots.map((s, idx) => {
-                    const slotColor = getCourseColor(s.course);
-                    return (
-                      <div key={idx} style={{
-                        borderLeft: `5px solid ${slotColor}`,
-                        background: `linear-gradient(90deg, ${slotColor}18, ${slotColor}06)`,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '6px 10px',
-                        borderRadius: '8px',
-                        boxShadow: `0 2px 6px ${slotColor}15`,
-                      }}>
-                        <div style={{ fontSize: '0.78rem', color: '#1e293b', fontWeight: 700 }}>
-                          <span style={{
-                            background: slotColor,
-                            color: '#ffffff',
-                            padding: '2px 8px',
-                            borderRadius: '5px',
-                            fontSize: '0.7rem',
-                            fontWeight: 900,
-                            marginRight: '8px',
-                            letterSpacing: '0.03em',
-                          }}>{getCourseLabel(s.course)}</span>
-                          {s.startTime} - {s.endTime}
+              {popoverSlots.map((s, idx) => {
+                const courseKey = String(s.course);
+                const baseType = courseKey.replace(/\d+$/, '') || courseKey;
+                const color = ACT_COLORS[baseType] || getCourseColor(s.course);
+                const sessionNum = popoverSlots.filter((ss, i) => i <= idx && (String(ss.course) === courseKey || String(ss.course).replace(/\d+$/, '') === baseType)).length;
+                const fullLabel = ACT_LABELS[baseType] || courseKey.toUpperCase();
+                const isRecommended = nextRecommended === baseType;
+
+                return (
+                  <div key={idx} style={{
+                    borderLeft: `5px solid ${color}`,
+                    background: isRecommended ? `linear-gradient(90deg, ${color}20, ${color}08)` : `linear-gradient(90deg, ${color}12, ${color}04)`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    boxShadow: isRecommended ? `0 2px 8px ${color}25` : `0 1px 4px ${color}10`,
+                    border: isRecommended ? `1px solid ${color}40` : '1px solid transparent',
+                  }}>
+                    <div style={{ fontSize: '0.78rem', color: '#1e293b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{
+                        background: color,
+                        color: '#ffffff',
+                        padding: '2px 6px',
+                        borderRadius: '5px',
+                        fontSize: '0.6rem',
+                        fontWeight: 900,
+                        letterSpacing: '0.03em',
+                        whiteSpace: 'nowrap',
+                      }}>S{sessionNum}</span>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 800 }}>{fullLabel}</span>
+                      <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 600 }}>
+                        {s.startTime} - {s.endTime}
+                      </span>
+                      <span style={{ fontSize: '0.62rem', color: '#059669', fontWeight: 700 }}>
+                        {s.hours}h
+                      </span>
                     </div>
                     {!readOnly && (
-                      <button className="btn btn-danger btn-xs" style={{ padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px' }} onClick={() => handleDeleteSlot(idx)}>
-                        <Trash2 size={10} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '2px' }}>
+                        <button className="btn btn-xs" style={{ padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1' }} onClick={() => handleDuplicateSlot(s)} title="Duplicar a otro día">
+                          <Plus size={10} />
+                        </button>
+                        <button className="btn btn-danger btn-xs" style={{ padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px' }} onClick={() => handleDeleteSlot(idx)}>
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
@@ -360,7 +509,6 @@ export default function MiniMonthCalendar({
           {MONTH_NAMES[m.month].substring(0, 3).toUpperCase()} {m.year}
         </div>
         <div className="cal-month-grid">
-          {/* Empty cells to position the first day correctly */}
           {Array.from({ length: firstDayEmptyCells }, (_, i) => (
             <div key={`empty-${i}`} className="mini-month-day" style={{ visibility: 'hidden' }} />
           ))}
@@ -385,7 +533,7 @@ export default function MiniMonthCalendar({
                   <div className="mini-day-badges">
                     {daySlots.map((s, j) => (
                       <span key={j} className="mini-day-dot" style={{ color: getCourseColor(s.course) }}>
-                        {getCourseLabel(s.course)}
+                        {ACT_LABELS[String(s.course).replace(/\d+$/, '') || String(s.course)]?.substring(0, 3) || getCourseColor(s.course)}
                       </span>
                     ))}
                   </div>
@@ -434,7 +582,6 @@ export default function MiniMonthCalendar({
 
       {/* Vertical scroll container with months */}
       <div ref={scrollRef} className="calendar-scroll-wrapper">
-        {/* Single day-of-week header */}
         <div className="cal-month-grid" style={{ position: 'sticky', top: 0, zIndex: 10, background: 'linear-gradient(180deg, var(--nota-color, #2563EB), color-mix(in srgb, var(--nota-color, #2563EB) 80%, #000))', margin: 0, padding: '5px 8px' }}>
           {DAY_NAMES_SHORT.map((d, i) => (
             <div key={i} className="mini-month-head" style={{ color: '#ffffff' }}>{d}</div>
@@ -444,7 +591,7 @@ export default function MiniMonthCalendar({
         {months.map((m) => renderMonthBlock(m))}
       </div>
 
-      {/* Popover — fixed overlay, centered on screen */}
+      {/* Popover */}
       {popoverDate && (
         <>
           <div onClick={() => { setPopoverDate(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.15)', zIndex: 8999 }} />
