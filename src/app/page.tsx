@@ -753,6 +753,65 @@ function HomePage() {
     }
   };
 
+  const handleDuplicateCurso = async (curso: Curso) => {
+    try {
+      const { data: lastCurso } = await supabase
+        .from('cursos')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+
+      let nextNum = 1;
+      if (lastCurso?.id) {
+        const match = lastCurso.id.match(/(\d+)$/);
+        if (match) nextNum = parseInt(match[1], 10) + 1;
+      }
+      const newId = `CURSO-${String(nextNum).padStart(4, '0')}`;
+
+      const duplicateData = {
+        id: newId,
+        grupo_nombre: curso.grupo_nombre,
+        ciclo_nombre: curso.ciclo_nombre,
+        ciclo_id: curso.ciclo_id,
+        segmento: curso.segmento,
+        lugar: curso.lugar,
+        distrito: curso.distrito,
+        fecha_inicio: curso.fecha_inicio,
+        costo: curso.costo,
+        prev: curso.prev,
+        tecnico_carnet: curso.tecnico_carnet,
+        tecnico_nombre: curso.tecnico_nombre,
+        grupo_color: curso.grupo_color,
+        mes: curso.mes,
+        organizador_nombre: curso.organizador_nombre,
+        organizador_telefono: curso.organizador_telefono,
+        organizador_maps: curso.organizador_maps,
+        link_inscripcion_externo: curso.link_inscripcion_externo,
+        area_formativa: curso.area_formativa,
+        facilitador_nombre: curso.facilitador_nombre,
+      };
+
+      const { error } = await supabase.from('cursos').insert(duplicateData);
+      if (error) throw error;
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Curso duplicado',
+        text: `Se creó ${newId} con los mismos datos de ${curso.id}.`,
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#bfa05e',
+        timer: 2500,
+        timerProgressBar: true,
+      });
+      loadData();
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      Swal.fire('Error', errorMsg, 'error');
+    }
+  };
+
   const handleEditCurso = (curso: Curso) => {
     setEditingCurso(curso);
     setShowForm(true);
@@ -1457,6 +1516,7 @@ function HomePage() {
                         grupoNames={grupoNames}
                         onEditCurso={handleEditCurso}
                         onDeleteCurso={handleDeleteCurso}
+                        onDuplicateCurso={handleDuplicateCurso}
                         onUpdateCurso={handleUpdateCurso}
                         onRenameGrupo={handleRenameGrupo}
                         isFirst={idx === 0}
@@ -1486,6 +1546,7 @@ function HomePage() {
                   grupoNames={grupoNames}
                   onEditCurso={handleEditCurso}
                   onDeleteCurso={handleDeleteCurso}
+                  onDuplicateCurso={handleDuplicateCurso}
                   onUpdateCurso={handleUpdateCurso}
                   onRenameGrupo={handleRenameGrupo}
                   onMoveGrupo={filters.agruparPor === 'grupo' ? handleMoveGrupo : undefined}
@@ -1551,6 +1612,7 @@ function HomePage() {
                             grupoNames={grupoNames}
                             onEditCurso={handleEditCurso}
                             onDeleteCurso={handleDeleteCurso}
+                            onDuplicateCurso={handleDuplicateCurso}
                             onUpdateCurso={handleUpdateCurso}
                             onRenameGrupo={handleRenameGrupo}
                             isFirst={idx === 0}
@@ -1574,13 +1636,13 @@ function HomePage() {
               const isStatusExpanded = expandedStatus === grupo.nombre;
               const uniqueTecnicosInStatus = Array.from(new Set(grupo.cursos.map((c) => c.tecnico_nombre).filter(Boolean)));
               return (
-                <div 
-                  key={grupo.nombre} 
+                <div
+                  key={grupo.nombre}
                   className={`accordion-group-card ${isStatusExpanded ? 'active' : 'collapsed'}`}
                   style={{ '--accordion-color': grupo.color } as React.CSSProperties}
                 >
-                  <div 
-                    className="accordion-header-bar" 
+                  <div
+                    className="accordion-header-bar"
                     onClick={() => setExpandedStatus(isStatusExpanded ? null : grupo.nombre)}
                   >
                     <div className="accordion-header-left">
@@ -1621,6 +1683,7 @@ function HomePage() {
                             grupoNames={grupoNames}
                             onEditCurso={handleEditCurso}
                             onDeleteCurso={handleDeleteCurso}
+                            onDuplicateCurso={handleDuplicateCurso}
                             onUpdateCurso={handleUpdateCurso}
                             onRenameGrupo={handleRenameGrupo}
                             isFirst={idx === 0}

@@ -18,6 +18,7 @@ interface GrupoCardProps {
   grupoNames: string[];
   onEditCurso: (curso: Curso) => void;
   onDeleteCurso: (id: string) => void;
+  onDuplicateCurso: (curso: Curso) => void;
   onUpdateCurso: (id: string, data: Partial<Curso>) => void;
   onRenameGrupo: (oldName: string, newName: string) => void;
   onMoveGrupo?: (nombre: string, direction: 'up' | 'down') => void;
@@ -40,6 +41,7 @@ export default function GrupoCard({
   grupoNames,
   onEditCurso,
   onDeleteCurso,
+  onDuplicateCurso,
   onUpdateCurso,
   onRenameGrupo,
   onMoveGrupo,
@@ -537,6 +539,7 @@ export default function GrupoCard({
             grupoNames={grupoNames}
             onEdit={() => onEditCurso(curso)}
             onDelete={() => onDeleteCurso(curso.id)}
+            onDuplicate={() => onDuplicateCurso(curso)}
             onUpdate={(data) => onUpdateCurso(curso.id, data)}
             onManageParticipantes={onManageParticipantes}
             animationDelay={idx * 0.06}

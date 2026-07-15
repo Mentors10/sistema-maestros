@@ -12,7 +12,7 @@ import { distritosData } from '@/lib/utils/distritos';
 import {
   Edit3, Trash2, Users, Wrench, Globe, FileText, BookOpen,
   ClipboardEdit, ToggleLeft, Link2, MapPin, ExternalLink,
-  Phone, Eye, CheckCircle2,
+  Phone, Eye, CheckCircle2, Copy,
   Calendar, Clock, Save, User
 } from 'lucide-react';
 import InscripcionOnlineModal from '@/components/cursos/InscripcionOnlineModal';
@@ -63,6 +63,7 @@ interface NotaCardProps {
   grupoNames: string[];
   onEdit: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   onUpdate: (data: Partial<Curso>) => void;
   onManageParticipantes: (curso: Curso) => void;
   animationDelay?: number;
@@ -78,6 +79,7 @@ export default function NotaCard({
   grupoNames,
   onEdit,
   onDelete,
+  onDuplicate,
   onUpdate,
   onManageParticipantes,
   animationDelay = 0,
@@ -799,8 +801,8 @@ export default function NotaCard({
             <div className="nota-count-label">INSCRITOS</div>
           </div>
           {!readOnly && (
-            <button className="btn btn-sm" onClick={onDelete} title="Eliminar">
-              <Trash2 size={13} />
+            <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} title="Duplicar curso">
+              <Copy size={13} />
             </button>
           )}
         </div>
