@@ -153,6 +153,16 @@ export default function MiniMonthCalendar({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [popoverDate]);
 
+  // ─── Lock body scroll when popover is open ──────────────
+  useEffect(() => {
+    if (popoverDate) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [popoverDate]);
+
   // ─── Day click → toggle popover panel ────────────────────
   const handleDayClick = (dateStr: string) => {
     if (popoverDate === dateStr) {
@@ -362,72 +372,72 @@ export default function MiniMonthCalendar({
           </button>
         </div>
 
-        {/* All sessions grouped by date */}
+        {/* All sessions as table */}
         {sortedDates.length > 0 && (
-          <div style={{ marginBottom: '12px', maxHeight: '30vh', overflowY: 'auto' }}>
-            {sortedDates.map((date) => {
-              const dateObj = new Date(date + 'T12:00:00');
-              const isCurrentDate = date === newDate;
-              const daySlots = allSlotsByDate.get(date) || [];
-              return (
-                <div key={date} style={{ marginBottom: '8px' }}>
-                  <div style={{
-                    fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px',
-                    color: isCurrentDate ? noteColor : '#64748b',
-                    background: isCurrentDate ? `${noteColor}12` : 'transparent',
-                    padding: '3px 6px', borderRadius: '4px',
-                    borderLeft: isCurrentDate ? `3px solid ${noteColor}` : '3px solid transparent',
-                  }}>
-                    {dateObj.getDate()} {MONTH_NAMES[dateObj.getMonth()]} {isCurrentDate ? '(hoy)' : ''}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    {daySlots.map((s, idx) => {
-                      const courseKey = String(s.course);
-                      const baseType = courseKey.replace(/\d+$/, '') || courseKey;
-                      const color = ACT_COLORS[baseType] || getCourseColor(s.course);
-                      const sessionNum = daySlots.filter((ss, i) => i <= idx && (String(ss.course) === courseKey || String(ss.course).replace(/\d+$/, '') === baseType)).length;
-                      const fullLabel = ACT_LABELS[baseType] || courseKey.toUpperCase();
-                      const globalIdx = slots.indexOf(s);
-                      return (
-                        <div key={globalIdx} style={{
-                          borderLeft: `4px solid ${color}`,
-                          background: isCurrentDate ? `linear-gradient(90deg, ${color}15, ${color}05)` : `linear-gradient(90deg, ${color}08, transparent)`,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '5px 8px',
-                          borderRadius: '6px',
-                        }}>
-                          <div style={{ fontSize: '0.78rem', color: '#1e293b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{
-                              background: color,
-                              color: '#ffffff',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontSize: '0.65rem',
-                              fontWeight: 900,
-                            }}>S{sessionNum}</span>
-                            <span style={{ fontWeight: 800 }}>{fullLabel}</span>
-                            <span style={{ color: '#64748b' }}>{s.startTime}-{s.endTime}</span>
-                            <span style={{ color: '#059669', fontWeight: 700 }}>{s.hours}h</span>
-                          </div>
-                          {!readOnly && isCurrentDate && (
-                            <div style={{ display: 'flex', gap: '3px' }}>
-                              <button className="btn btn-xs" style={{ padding: '2px 6px', fontSize: '0.68rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700 }} onClick={() => handleDuplicateSlot(s)} title="Duplicar">
-                                Duplicar
-                              </button>
-                              <button className="btn btn-danger btn-xs" style={{ padding: '2px 6px', fontSize: '0.68rem', borderRadius: '3px' }} onClick={() => handleDeleteSlot(globalIdx)}>
-                                <Trash2 size={10} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+          <div style={{ marginBottom: '12px', maxHeight: '35vh', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Fecha</th>
+                  <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>S</th>
+                  <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Actividad</th>
+                  <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>De</th>
+                  <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>A</th>
+                  <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>H</th>
+                  {!readOnly && <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedDates.map((date) => {
+                  const dateObj = new Date(date + 'T12:00:00');
+                  const isCurrentDate = date === newDate;
+                  const daySlots = allSlotsByDate.get(date) || [];
+                  return daySlots.map((s, idx) => {
+                    const courseKey = String(s.course);
+                    const baseType = courseKey.replace(/\d+$/, '') || courseKey;
+                    const color = ACT_COLORS[baseType] || getCourseColor(s.course);
+                    const sessionNum = daySlots.filter((ss, i) => i <= idx && (String(ss.course) === courseKey || String(ss.course).replace(/\d+$/, '') === baseType)).length;
+                    const fullLabel = ACT_LABELS[baseType] || courseKey.toUpperCase();
+                    const globalIdx = slots.indexOf(s);
+                    const isFirstOfDay = idx === 0;
+                    return (
+                      <tr key={globalIdx} style={{
+                        background: isCurrentDate ? `${color}10` : idx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                        borderBottom: '1px solid #e2e8f0',
+                      }}>
+                        <td style={{ padding: '4px 6px', fontWeight: isCurrentDate ? 800 : 400, color: isCurrentDate ? '#1e293b' : '#64748b', whiteSpace: 'nowrap' }}>
+                          {isFirstOfDay ? `${dateObj.getDate()}/${dateObj.getMonth() + 1}` : ''}
+                        </td>
+                        <td style={{ padding: '4px 6px' }}>
+                          <span style={{
+                            background: color,
+                            color: '#fff',
+                            padding: '1px 5px',
+                            borderRadius: '3px',
+                            fontSize: '0.65rem',
+                            fontWeight: 900,
+                          }}>S{sessionNum}</span>
+                        </td>
+                        <td style={{ padding: '4px 6px', fontWeight: 700, color }}>{fullLabel}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'center', color: '#475569' }}>{s.startTime}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'center', color: '#475569' }}>{s.endTime}</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 700, color: '#059669' }}>{s.hours}h</td>
+                        {!readOnly && (
+                          <td style={{ padding: '4px 6px', textAlign: 'center' }}>
+                            {isCurrentDate && (
+                              <div style={{ display: 'flex', gap: '2px', justifyContent: 'center' }}>
+                                <button style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: 'none', cursor: 'pointer' }} onClick={() => handleDuplicateSlot(s)} title="Duplicar">Dup</button>
+                                <button style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#fee2e2', color: '#dc2626', fontWeight: 700, border: 'none', cursor: 'pointer' }} onClick={() => handleDeleteSlot(globalIdx)} title="Eliminar">X</button>
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  });
+                })}
+              </tbody>
+            </table>
           </div>
         )}
 
