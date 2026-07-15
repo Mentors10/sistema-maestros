@@ -337,49 +337,73 @@ export default function MiniMonthCalendar({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: `2px solid ${noteColor}30` }}>
           <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Calendar size={18} style={{ color: noteColor }} />
-            {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
-            {popoverSlots.length > 0 && (
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, background: noteColor, color: '#fff', padding: '2px 8px', borderRadius: '8px' }}>
-                {popoverSlots.length} prog.
-              </span>
-            )}
+            Programación — {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
           </h4>
           <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
             <X size={18} />
           </button>
         </div>
 
-        {/* Progress bars for each course */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '12px' }}>
-          {dayCourseStats.map(({ act, label, color, sessionCount, totalH }) => {
-            const pct = Math.min((totalH / TARGET_HOURS) * 100, 100);
-            const isComplete = sessionCount >= MAX_SESSIONS || totalH >= TARGET_HOURS;
-            const isActive = nextRecommended === act;
-            return (
-              <div key={act} style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '4px 8px', borderRadius: '6px',
-                background: isActive ? `${color}12` : 'transparent',
-                border: isActive ? `1.5px solid ${color}40` : '1.5px solid transparent',
-              }}>
-                <span style={{
-                  fontSize: '0.72rem', fontWeight: 900, color: isComplete ? '#059669' : color,
-                  minWidth: '60px', textTransform: 'uppercase',
-                }}>{label}</span>
-                <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${pct}%`, background: isComplete ? '#059669' : color, borderRadius: '4px', transition: 'width 0.3s' }} />
-                </div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', minWidth: '70px', textAlign: 'right' }}>
-                  {sessionCount}/{MAX_SESSIONS} · {totalH}h/{TARGET_HOURS}h
-                </span>
-                {isActive && <ChevronRight size={12} color={color} />}
-              </div>
-            );
-          })}
-        </div>
+        {/* Sessions list */}
+        {popoverSlots.length > 0 && (
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {popoverSlots.map((s, idx) => {
+                const courseKey = String(s.course);
+                const baseType = courseKey.replace(/\d+$/, '') || courseKey;
+                const color = ACT_COLORS[baseType] || getCourseColor(s.course);
+                const sessionNum = popoverSlots.filter((ss, i) => i <= idx && (String(ss.course) === courseKey || String(ss.course).replace(/\d+$/, '') === baseType)).length;
+                const fullLabel = ACT_LABELS[baseType] || courseKey.toUpperCase();
+
+                return (
+                  <div key={idx} style={{
+                    borderLeft: `5px solid ${color}`,
+                    background: `linear-gradient(90deg, ${color}12, ${color}04)`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    boxShadow: `0 1px 4px ${color}10`,
+                  }}>
+                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        background: color,
+                        color: '#ffffff',
+                        padding: '3px 8px',
+                        borderRadius: '5px',
+                        fontSize: '0.7rem',
+                        fontWeight: 900,
+                        letterSpacing: '0.03em',
+                        whiteSpace: 'nowrap',
+                      }}>S{sessionNum}</span>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 800 }}>{fullLabel}</span>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
+                        {s.startTime} - {s.endTime}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
+                        {s.hours}h
+                      </span>
+                    </div>
+                    {!readOnly && (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button className="btn btn-xs" style={{ padding: '3px 8px', fontSize: '0.72rem', borderRadius: '4px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700 }} onClick={() => handleDuplicateSlot(s)} title="Duplicar: copia actividad y horarios, solo cambia el día">
+                          Duplicar
+                        </button>
+                        <button className="btn btn-danger btn-xs" style={{ padding: '3px 8px', fontSize: '0.72rem', borderRadius: '4px' }} onClick={() => handleDeleteSlot(idx)} title="Eliminar esta programación">
+                          <Trash2 size={12} /> Eliminar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Add form */}
-        <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff', marginBottom: '10px' }}>
+        <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
             Nueva Programación
           </div>
@@ -417,79 +441,16 @@ export default function MiniMonthCalendar({
                 {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '14px' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 900, color: calcHours(newStart, newEnd) > 0 ? '#059669' : '#dc2626' }}>
                 {calcHours(newStart, newEnd)}h
               </span>
-              <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.82rem' }}>
-                <Plus size={13} /> Agregar
+              <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.82rem' }}>
+                Guardar
               </button>
             </div>
           </div>
         </div>
-
-        {/* Existing slots */}
-        {popoverSlots.length > 0 && (
-          <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
-              Programaciones del día
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              {popoverSlots.map((s, idx) => {
-                const courseKey = String(s.course);
-                const baseType = courseKey.replace(/\d+$/, '') || courseKey;
-                const color = ACT_COLORS[baseType] || getCourseColor(s.course);
-                const sessionNum = popoverSlots.filter((ss, i) => i <= idx && (String(ss.course) === courseKey || String(ss.course).replace(/\d+$/, '') === baseType)).length;
-                const fullLabel = ACT_LABELS[baseType] || courseKey.toUpperCase();
-                const isRecommended = nextRecommended === baseType;
-
-                return (
-                  <div key={idx} style={{
-                    borderLeft: `5px solid ${color}`,
-                    background: isRecommended ? `linear-gradient(90deg, ${color}20, ${color}08)` : `linear-gradient(90deg, ${color}12, ${color}04)`,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    boxShadow: isRecommended ? `0 2px 8px ${color}25` : `0 1px 4px ${color}10`,
-                    border: isRecommended ? `1px solid ${color}40` : '1px solid transparent',
-                  }}>
-                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{
-                        background: color,
-                        color: '#ffffff',
-                        padding: '3px 8px',
-                        borderRadius: '5px',
-                        fontSize: '0.7rem',
-                        fontWeight: 900,
-                        letterSpacing: '0.03em',
-                        whiteSpace: 'nowrap',
-                      }}>S{sessionNum}</span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 800 }}>{fullLabel}</span>
-                      <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
-                        {s.startTime} - {s.endTime}
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
-                        {s.hours}h
-                      </span>
-                    </div>
-                    {!readOnly && (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button className="btn btn-xs" style={{ padding: '3px 6px', fontSize: '0.72rem', borderRadius: '4px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700 }} onClick={() => handleDuplicateSlot(s)} title="Duplicar: copia actividad y horarios, solo cambia el día">
-                          <Plus size={12} /> Duplicar
-                        </button>
-                        <button className="btn btn-danger btn-xs" style={{ padding: '3px 6px', fontSize: '0.72rem', borderRadius: '4px' }} onClick={() => handleDeleteSlot(idx)}>
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
       </div>
     );
