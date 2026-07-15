@@ -755,22 +755,22 @@ function HomePage() {
 
   const handleDuplicateCurso = async (curso: Curso) => {
     try {
-      const { data: lastCurso } = await supabase
+      // Find the next available ID by incrementing the numeric suffix
+      const { data: allCursos } = await supabase
         .from('cursos')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(1)
-        .single();
+        .select('id');
 
-      let nextNum = 1;
-      if (lastCurso?.id) {
-        const match = lastCurso.id.match(/(\d+)$/);
-        if (match) nextNum = parseInt(match[1], 10) + 1;
+      const existingIds = new Set((allCursos || []).map((c) => c.id));
+
+      // Try the original ID first, then append -2, -3, etc.
+      let newId = `${curso.id}-COPIA`;
+      let counter = 2;
+      while (existingIds.has(newId)) {
+        newId = `${curso.id}-COPIA-${counter}`;
+        counter++;
       }
-      const newId = `CURSO-${String(nextNum).padStart(4, '0')}`;
 
-      const duplicateData = {
+      const { error } = await supabase.from('cursos').insert({
         id: newId,
         grupo_nombre: curso.grupo_nombre,
         ciclo_nombre: curso.ciclo_nombre,
@@ -791,9 +791,7 @@ function HomePage() {
         link_inscripcion_externo: curso.link_inscripcion_externo,
         area_formativa: curso.area_formativa,
         facilitador_nombre: curso.facilitador_nombre,
-      };
-
-      const { error } = await supabase.from('cursos').insert(duplicateData);
+      });
       if (error) throw error;
 
       Swal.fire({
