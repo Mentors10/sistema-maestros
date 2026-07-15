@@ -31,7 +31,7 @@ function AuthGate() {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' }}>
+      <div suppressHydrationWarning style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' }}>
         <div className="login-spinner" style={{ width: 40, height: 40 }} />
       </div>
     );

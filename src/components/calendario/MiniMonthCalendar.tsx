@@ -163,6 +163,15 @@ export default function MiniMonthCalendar({
     return () => { document.body.style.overflow = ''; };
   }, [popoverDate]);
 
+  // ─── Scroll to selected date in calendar ────────────────
+  useEffect(() => {
+    if (!newDate || !scrollRef.current) return;
+    const el = scrollRef.current.querySelector(`[data-date="${newDate}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [newDate]);
+
   // ─── Day click → toggle popover panel ────────────────────
   const handleDayClick = (dateStr: string) => {
     if (popoverDate === dateStr) {
@@ -532,7 +541,8 @@ export default function MiniMonthCalendar({
             return (
               <div
                 key={i}
-                className={`mini-month-day ${!m.isCurrent && !day.isCurrentMonth ? 'muted' : ''} ${day.isToday ? 'today' : ''} ${daySlots.length > 0 ? 'has-slot' : ''}`}
+                data-date={day.dateStr}
+                className={`mini-month-day ${!m.isCurrent && !day.isCurrentMonth ? 'muted' : ''} ${day.isToday ? 'today' : ''} ${daySlots.length > 0 ? 'has-slot' : ''} ${isSelected ? 'selected-day' : ''}`}
                 style={{ ...cellStyle, position: 'relative', zIndex: isSelected ? 10 : undefined, cursor: 'pointer' }}
                 onClick={() => !readOnly && handleDayClick(day.dateStr)}
               >
