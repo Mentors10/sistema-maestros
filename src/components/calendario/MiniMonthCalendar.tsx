@@ -46,6 +46,15 @@ export default function MiniMonthCalendar({
   const scrollRef = useRef<HTMLDivElement>(null);
   const monthBlockRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  const TIME_OPTIONS = useMemo(() => {
+    const opts: string[] = [];
+    for (let h = 6; h <= 22; h++) {
+      opts.push(`${String(h).padStart(2, '0')}:00`);
+      opts.push(`${String(h).padStart(2, '0')}:30`);
+    }
+    return opts;
+  }, []);
+
   const ranges = useMemo(() => getCourseRanges(slots), [slots]);
   const reportRanges = useMemo(() => getReportRanges(slots), [slots]);
   const totalHours = useMemo(() => slots.reduce((sum, s) => sum + (s.hours || 0), 0), [slots]);
@@ -224,7 +233,7 @@ export default function MiniMonthCalendar({
         left: '50%',
         transform: 'translate(-50%, -50%)',
         padding: '14px',
-        width: '340px',
+        width: '420px',
         background: '#ffffff',
         border: `2.5px solid ${noteColor}`,
         borderRadius: '14px',
@@ -259,13 +268,17 @@ export default function MiniMonthCalendar({
                 <option value="eval">EVAL</option>
               </select>
             </div>
-            <div style={{ width: '62px' }}>
+            <div style={{ width: '90px' }}>
               <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>De</label>
-              <input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              <select value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
-            <div style={{ width: '62px' }}>
+            <div style={{ width: '90px' }}>
               <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '2px', display: 'block' }}>A</label>
-              <input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              <select value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '3px 4px', fontSize: '0.75rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
             <button className="btn btn-success" onClick={handleAddSlot} style={{ marginTop: '14px', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700, fontSize: '0.72rem' }}>
               <Plus size={11} /> Agregar
@@ -318,30 +331,6 @@ export default function MiniMonthCalendar({
           </div>
         )}
 
-        {/* Compliance toggles */}
-        <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {[
-            { label: 'Planificación', val: localPlani, toggle: handleTogglePlanificacion },
-            { label: 'Evaluación', val: localEval, toggle: handleToggleEvaluacion },
-            { label: 'Informe Final', val: localInfo, toggle: handleToggleInforme },
-          ].map((item) => (
-            <label key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', margin: 0 }}>
-              <input type="checkbox" checked={item.val} onChange={item.toggle} style={{ width: '12px', height: '12px', margin: 0 }} />
-              {item.label}
-              <span style={{
-                marginLeft: 'auto',
-                fontSize: '0.62rem',
-                fontWeight: 800,
-                color: item.val ? '#059669' : '#dc2626',
-                background: item.val ? '#ecfdf5' : '#fee2e2',
-                padding: '1px 5px',
-                borderRadius: '3px',
-              }}>
-                {item.val ? '✓' : '✗'}
-              </span>
-            </label>
-          ))}
-        </div>
       </div>
     );
   };
