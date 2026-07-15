@@ -237,10 +237,8 @@ export default function MiniMonthCalendar({
   };
 
   // ─── Delete slot ───────────────────────────────────────────
-  const handleDeleteSlot = (index: number) => {
-    const dateSlots = getSlotsForDate(slots, newDate);
-    const slotToRemove = dateSlots[index];
-    const newSlots = slots.filter((s) => s !== slotToRemove);
+  const handleDeleteSlot = (globalIndex: number) => {
+    const newSlots = slots.filter((_, i) => i !== globalIndex);
     onSaveSlots(newSlots);
   };
 
@@ -318,11 +316,26 @@ export default function MiniMonthCalendar({
 
   const nextRecommended = newDate ? getRecommendedCourse(popoverSlots) : '1';
 
+  // All slots grouped by date
+  const allSlotsByDate = useMemo(() => {
+    const map = new Map<string, HorarioSlot[]>();
+    slots.forEach(s => {
+      const existing = map.get(s.date) || [];
+      existing.push(s);
+      map.set(s.date, existing);
+    });
+    return map;
+  }, [slots]);
+
+  const sortedDates = useMemo(() => {
+    return Array.from(allSlotsByDate.keys()).sort();
+  }, [allSlotsByDate]);
+
   const renderPopoverPanel = () => {
     if (!newDate || !popoverDayDate) return null;
 
     return (
-      <div className="cal-popover-panel" onClick={(e) => e.stopPropagation()} style={{
+      <div className="cal-popover-panel" onClick={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()} style={{
         position: 'fixed',
         top: '50%',
         left: '50%',
@@ -349,61 +362,72 @@ export default function MiniMonthCalendar({
           </button>
         </div>
 
-        {/* Sessions list */}
-        {popoverSlots.length > 0 && (
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              {popoverSlots.map((s, idx) => {
-                const courseKey = String(s.course);
-                const baseType = courseKey.replace(/\d+$/, '') || courseKey;
-                const color = ACT_COLORS[baseType] || getCourseColor(s.course);
-                const sessionNum = popoverSlots.filter((ss, i) => i <= idx && (String(ss.course) === courseKey || String(ss.course).replace(/\d+$/, '') === baseType)).length;
-                const fullLabel = ACT_LABELS[baseType] || courseKey.toUpperCase();
-
-                return (
-                  <div key={idx} style={{
-                    borderLeft: `5px solid ${color}`,
-                    background: `linear-gradient(90deg, ${color}12, ${color}04)`,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    boxShadow: `0 1px 4px ${color}10`,
+        {/* All sessions grouped by date */}
+        {sortedDates.length > 0 && (
+          <div style={{ marginBottom: '12px', maxHeight: '30vh', overflowY: 'auto' }}>
+            {sortedDates.map((date) => {
+              const dateObj = new Date(date + 'T12:00:00');
+              const isCurrentDate = date === newDate;
+              const daySlots = allSlotsByDate.get(date) || [];
+              return (
+                <div key={date} style={{ marginBottom: '8px' }}>
+                  <div style={{
+                    fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '4px',
+                    color: isCurrentDate ? noteColor : '#64748b',
+                    background: isCurrentDate ? `${noteColor}12` : 'transparent',
+                    padding: '3px 6px', borderRadius: '4px',
+                    borderLeft: isCurrentDate ? `3px solid ${noteColor}` : '3px solid transparent',
                   }}>
-                    <div style={{ fontSize: '0.88rem', color: '#1e293b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{
-                        background: color,
-                        color: '#ffffff',
-                        padding: '3px 8px',
-                        borderRadius: '5px',
-                        fontSize: '0.7rem',
-                        fontWeight: 900,
-                        letterSpacing: '0.03em',
-                        whiteSpace: 'nowrap',
-                      }}>S{sessionNum}</span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 800 }}>{fullLabel}</span>
-                      <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
-                        {s.startTime} - {s.endTime}
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
-                        {s.hours}h
-                      </span>
-                    </div>
-                    {!readOnly && (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button className="btn btn-xs" style={{ padding: '3px 8px', fontSize: '0.72rem', borderRadius: '4px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700 }} onClick={() => handleDuplicateSlot(s)} title="Duplicar: copia actividad y horarios, solo cambia el día">
-                          Duplicar
-                        </button>
-                        <button className="btn btn-danger btn-xs" style={{ padding: '3px 8px', fontSize: '0.72rem', borderRadius: '4px' }} onClick={() => handleDeleteSlot(idx)} title="Eliminar esta programación">
-                          <Trash2 size={12} /> Eliminar
-                        </button>
-                      </div>
-                    )}
+                    {dateObj.getDate()} {MONTH_NAMES[dateObj.getMonth()]} {isCurrentDate ? '(hoy)' : ''}
                   </div>
-                );
-              })}
-            </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    {daySlots.map((s, idx) => {
+                      const courseKey = String(s.course);
+                      const baseType = courseKey.replace(/\d+$/, '') || courseKey;
+                      const color = ACT_COLORS[baseType] || getCourseColor(s.course);
+                      const sessionNum = daySlots.filter((ss, i) => i <= idx && (String(ss.course) === courseKey || String(ss.course).replace(/\d+$/, '') === baseType)).length;
+                      const fullLabel = ACT_LABELS[baseType] || courseKey.toUpperCase();
+                      const globalIdx = slots.indexOf(s);
+                      return (
+                        <div key={globalIdx} style={{
+                          borderLeft: `4px solid ${color}`,
+                          background: isCurrentDate ? `linear-gradient(90deg, ${color}15, ${color}05)` : `linear-gradient(90deg, ${color}08, transparent)`,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '5px 8px',
+                          borderRadius: '6px',
+                        }}>
+                          <div style={{ fontSize: '0.78rem', color: '#1e293b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{
+                              background: color,
+                              color: '#ffffff',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '0.65rem',
+                              fontWeight: 900,
+                            }}>S{sessionNum}</span>
+                            <span style={{ fontWeight: 800 }}>{fullLabel}</span>
+                            <span style={{ color: '#64748b' }}>{s.startTime}-{s.endTime}</span>
+                            <span style={{ color: '#059669', fontWeight: 700 }}>{s.hours}h</span>
+                          </div>
+                          {!readOnly && isCurrentDate && (
+                            <div style={{ display: 'flex', gap: '3px' }}>
+                              <button className="btn btn-xs" style={{ padding: '2px 6px', fontSize: '0.68rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700 }} onClick={() => handleDuplicateSlot(s)} title="Duplicar">
+                                Duplicar
+                              </button>
+                              <button className="btn btn-danger btn-xs" style={{ padding: '2px 6px', fontSize: '0.68rem', borderRadius: '3px' }} onClick={() => handleDeleteSlot(globalIdx)}>
+                                <Trash2 size={10} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -568,7 +592,7 @@ export default function MiniMonthCalendar({
       {/* Popover */}
       {popoverDate && (
         <>
-          <div onClick={() => { setPopoverDate(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.15)', zIndex: 8999 }} />
+          <div onClick={() => { setPopoverDate(null); }} onWheel={(e) => e.preventDefault()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.15)', zIndex: 8999 }} />
           {renderPopoverPanel()}
         </>
       )}
