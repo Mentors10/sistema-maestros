@@ -755,14 +755,12 @@ function HomePage() {
 
   const handleDuplicateCurso = async (curso: Curso) => {
     try {
-      // Find the next available ID by incrementing the numeric suffix
       const { data: allCursos } = await supabase
         .from('cursos')
         .select('id');
 
       const existingIds = new Set((allCursos || []).map((c) => c.id));
 
-      // Try the original ID first, then append -2, -3, etc.
       let newId = `${curso.id}-COPIA`;
       let counter = 2;
       while (existingIds.has(newId)) {
@@ -772,25 +770,29 @@ function HomePage() {
 
       const { error } = await supabase.from('cursos').insert({
         id: newId,
-        grupo_nombre: curso.grupo_nombre,
-        ciclo_nombre: curso.ciclo_nombre,
-        ciclo_id: curso.ciclo_id,
-        segmento: curso.segmento,
-        lugar: curso.lugar,
-        distrito: curso.distrito,
-        fecha_inicio: curso.fecha_inicio,
-        costo: curso.costo,
-        prev: curso.prev,
         tecnico_carnet: curso.tecnico_carnet,
-        tecnico_nombre: curso.tecnico_nombre,
-        grupo_color: curso.grupo_color,
+        ciclo_id: curso.ciclo_id,
+        facilitador_carnet: curso.facilitador_carnet,
+        distrito: curso.distrito,
+        lugar: curso.lugar,
+        area_urbano_rural: curso.area_urbano_rural,
+        segmento: curso.segmento,
+        fecha_inicio: curso.fecha_inicio,
+        estado: curso.estado,
+        observaciones: curso.observaciones,
+        mostrar: curso.mostrar,
+        costo: curso.costo,
+        total_bs: curso.total_bs,
         mes: curso.mes,
-        organizador_nombre: curso.organizador_nombre,
-        organizador_telefono: curso.organizador_telefono,
-        organizador_maps: curso.organizador_maps,
+        prev: curso.prev,
+        grupo_nombre: curso.grupo_nombre,
+        grupo_color: curso.grupo_color,
+        grupo_tipo: curso.grupo_tipo,
         link_inscripcion_externo: curso.link_inscripcion_externo,
-        area_formativa: curso.area_formativa,
-        facilitador_nombre: curso.facilitador_nombre,
+        planificacion_recibida: curso.planificacion_recibida,
+        evaluacion_realizada: curso.evaluacion_realizada,
+        informe_final_recibido: curso.informe_final_recibido,
+        form_habilitado: curso.form_habilitado,
       });
       if (error) throw error;
 
