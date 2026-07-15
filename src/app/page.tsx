@@ -759,14 +759,13 @@ function HomePage() {
         .from('cursos')
         .select('id');
 
-      const existingIds = new Set((allCursos || []).map((c) => c.id));
-
-      let newId = `${curso.id}-COPIA`;
-      let counter = 2;
-      while (existingIds.has(newId)) {
-        newId = `${curso.id}-COPIA-${counter}`;
-        counter++;
-      }
+      // Find the highest numeric ID across all cursos
+      let maxNum = 0;
+      (allCursos || []).forEach((c) => {
+        const n = parseInt(c.id, 10);
+        if (!isNaN(n) && n > maxNum) maxNum = n;
+      });
+      const newId = String(maxNum + 1);
 
       const { error } = await supabase.from('cursos').insert({
         id: newId,
