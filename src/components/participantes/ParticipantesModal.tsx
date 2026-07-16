@@ -107,6 +107,13 @@ export default function ParticipantesModal({
   const [previewList, setPreviewList] = useState<PreviewParticipant[]>([]);
   const [importingBatch, setImportingBatch] = useState(false);
 
+  // Migration states
+  const [showMigrator, setShowMigrator] = useState(false);
+  const [migrSourceId, setMigrSourceId] = useState('');
+  const [migrPreview, setMigrPreview] = useState<Inscripcion[]>([]);
+  const [migrLoading, setMigrLoading] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+
   // Camera / IA uploader states
   const [cameraActive, setCameraActive] = useState(false);
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
@@ -1697,6 +1704,96 @@ export default function ParticipantesModal({
     }
   };
 
+  // ─── Migration handlers ─────────────────────────────────
+  const handleFetchMigrationPreview = async () => {
+    if (!migrSourceId.trim()) {
+      Swal.fire('Campo requerido', 'Ingresa el ID del curso origen', 'warning');
+      return;
+    }
+    if (migrSourceId.trim() === curso.id) {
+      Swal.fire('Error', 'No puedes migrar participantes del mismo curso', 'error');
+      return;
+    }
+    setMigrLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('inscripcion_ciclo')
+        .select(`
+          id,
+          nro,
+          pagos,
+          observaciones,
+          participante_ci,
+          participantes (
+            ci,
+            nombres,
+            apellidos,
+            rda,
+            celular,
+            sie,
+            unidad_educativa,
+            validado,
+            observaciones_sie
+          )
+        `)
+        .eq('curso_id', migrSourceId.trim())
+        .order('nro', { ascending: true });
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        Swal.fire('Sin participantes', `El curso ${migrSourceId} no tiene participantes inscritos`, 'info');
+        setMigrPreview([]);
+        return;
+      }
+      setMigrPreview(data as unknown as Inscripcion[]);
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'No se pudieron cargar los participantes del curso origen', 'error');
+      setMigrPreview([]);
+    } finally {
+      setMigrLoading(false);
+    }
+  };
+
+  const handleConfirmMigration = async () => {
+    if (migrPreview.length === 0) return;
+    setMigrating(true);
+    try {
+      // Get existing CIs in current course to avoid duplicates
+      const existingCis = new Set(inscripciones.map(i => i.participantes?.ci).filter(Boolean));
+      let migrated = 0;
+      let skipped = 0;
+      for (const ins of migrPreview) {
+        const ci = ins.participantes?.ci;
+        if (!ci) { skipped++; continue; }
+        if (existingCis.has(ci)) { skipped++; continue; }
+        const { error } = await supabase.from('inscripcion_ciclo').insert({
+          curso_id: curso.id,
+          participante_ci: ci,
+          pagos: ins.pagos || 'Pendiente',
+          observaciones: ins.observaciones || null,
+        });
+        if (error) { skipped++; continue; }
+        migrated++;
+      }
+      Swal.fire({
+        icon: 'success',
+        title: 'Migración completada',
+        text: `Se migraron ${migrated} participante${migrated !== 1 ? 's' : ''}${skipped > 0 ? `. ${skipped} omitido${skipped !== 1 ? 's' : ''} (duplicados o sin CI)` : ''}.`,
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#bfa05e',
+        timer: 3000,
+        timerProgressBar: true,
+      });
+      setShowMigrator(false);
+      setMigrPreview([]);
+      setMigrSourceId('');
+      fetchParticipantes();
+    } catch (err: any) {
+      Swal.fire('Error', err.message || 'Error durante la migración', 'error');
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   // Filter list
   const filteredInscripciones = inscripciones.filter((ins) => {
     const p = ins.participantes;
@@ -1834,6 +1931,9 @@ export default function ParticipantesModal({
                 </button>
                 <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteAllEnrollments} title="Eliminar todas las inscripciones">
                   <Trash2 size={14} /> Eliminar Todos
+                </button>
+                <button type="button" className={`btn btn-sm ${showMigrator ? 'btn-secondary' : 'btn-primary'}`} onClick={() => { setShowMigrator(!showMigrator); if (showMigrator) { setMigrPreview([]); setMigrSourceId(''); } }} style={{ background: showMigrator ? undefined : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', color: showMigrator ? undefined : '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', boxShadow: showMigrator ? undefined : '0 2px 8px rgba(99,102,241,0.25)' }}>
+                  <ArrowRight size={14} /> {showMigrator ? 'Cerrar Migrador' : 'Migrar Participantes'}
                 </button>
               </div>
 
@@ -2270,6 +2370,101 @@ export default function ParticipantesModal({
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Migration Panel (Collapsible) */}
+          {showMigrator && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#f0f4ff', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid #c7d2fe', animation: 'slideDown 0.2s ease' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ArrowRight size={18} style={{ color: '#6366f1' }} />
+                <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 900, color: '#3730a3' }}>Migrar Participantes de otro Curso</h4>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>
+                Ingresa el ID del curso origen para ver y migrar sus participantes a este curso.
+              </p>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                <div style={{ flex: 1, maxWidth: '250px' }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: '3px' }}>ID Curso Origen</label>
+                  <input
+                    type="text"
+                    value={migrSourceId}
+                    onChange={(e) => setMigrSourceId(e.target.value)}
+                    placeholder="Ej: 10052"
+                    style={{ padding: '6px 10px', fontSize: '0.82rem', width: '100%', border: '1px solid #c7d2fe', borderRadius: 'var(--radius-sm)' }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={handleFetchMigrationPreview}
+                  disabled={migrLoading || !migrSourceId.trim()}
+                  style={{ background: '#6366f1', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 14px' }}
+                >
+                  {migrLoading ? <Loader2 size={14} className="spin" /> : <Search size={14} />}
+                  Buscar
+                </button>
+              </div>
+
+              {/* Preview table */}
+              {migrPreview.length > 0 && (
+                <div style={{ marginTop: '8px' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
+                    Vista previa: <b>{migrPreview.length}</b> participante{migrPreview.length !== 1 ? 's' : ''} del curso <b>{migrSourceId}</b>
+                  </div>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #c7d2fe', borderRadius: '6px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                      <thead>
+                        <tr style={{ background: '#e0e7ff', position: 'sticky', top: 0 }}>
+                          <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 800, color: '#3730a3', fontSize: '0.7rem' }}>C.I.</th>
+                          <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 800, color: '#3730a3', fontSize: '0.7rem' }}>Nombres</th>
+                          <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 800, color: '#3730a3', fontSize: '0.7rem' }}>Apellidos</th>
+                          <th style={{ padding: '5px 8px', textAlign: 'left', fontWeight: 800, color: '#3730a3', fontSize: '0.7rem' }}>Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {migrPreview.map((ins, idx) => {
+                          const p = ins.participantes;
+                          const alreadyExists = inscripciones.some(i => i.participantes?.ci === (ins.participantes?.ci || p?.ci));
+                          return (
+                            <tr key={idx} style={{ background: alreadyExists ? '#fef2f2' : idx % 2 === 0 ? '#ffffff' : '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                              <td style={{ padding: '4px 8px' }}>{p?.ci || '-'}</td>
+                              <td style={{ padding: '4px 8px' }}>{p?.nombres || '-'}</td>
+                              <td style={{ padding: '4px 8px' }}>{p?.apellidos || '-'}</td>
+                              <td style={{ padding: '4px 8px' }}>
+                                {alreadyExists ? (
+                                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '1px 6px', borderRadius: '3px' }}>Ya existe</span>
+                                ) : (
+                                  <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '1px 6px', borderRadius: '3px' }}>Nuevo</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => { setMigrPreview([]); setMigrSourceId(''); }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={handleConfirmMigration}
+                      disabled={migrating}
+                      style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}
+                    >
+                      {migrating ? <Loader2 size={14} className="spin" /> : <ArrowRight size={14} />}
+                      {migrating ? 'Migrando...' : `Migrar ${migrPreview.filter(ins => !inscripciones.some(i => i.participantes?.ci === (ins.participantes?.ci))).length} Participantes`}
+                    </button>
                   </div>
                 </div>
               )}
