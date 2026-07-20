@@ -487,13 +487,6 @@ export default function MiniMonthCalendar({
                   {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              </div>
-                </select>
-                  <option value="maestros">Maestros/as (14 dias)</option>
-                  <option value="estudiantes">Estudiantes (35 dias)</option>
-                <select value={autoAudience} onChange={(e) => {{ setAutoAudience(e.target.value as 'estudiantes' | 'maestros'); setAutoPreview([]); }} }} style={{ padding: ''5px 6px'', fontSize: ''0.82rem'', width: ''100%'', border: ''1px solid #c4b5fd'', borderRadius: ''4px'' }}>
-                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Para</label>
-              <div style={{ width: '110px' }}>
               <div style={{ width: '90px' }}>
                 <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Cursos</label>
                 <select value={autoNumCourses} onChange={(e) => { setAutoNumCourses(Number(e.target.value)); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
