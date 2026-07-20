@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { HorarioSlot } from '@/types';
@@ -485,6 +485,13 @@ export default function MiniMonthCalendar({
                 <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>A</label>
                 <select value={autoEndHour} onChange={(e) => { setAutoEndHour(e.target.value); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
                   {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ width: '100px' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Para</label>
+                <select value={autoAudience} onChange={(e) => { setAutoAudience(e.target.value as 'estudiantes' | 'maestros'); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
+                  <option value="estudiantes">Estudiantes (35 dias)</option>
+                  <option value="maestros">Maestros/as (14 dias)</option>
                 </select>
               </div>
               <div style={{ width: '90px' }}>
