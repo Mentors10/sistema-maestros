@@ -75,6 +75,7 @@ export default function MiniMonthCalendar({
   const [autoEndHour, setAutoEndHour] = useState('12:00');
   const [autoNumCourses, setAutoNumCourses] = useState(3);
   const [autoPreview, setAutoPreview] = useState<HorarioSlot[]>([]);
+  const [autoAudience, setAutoAudience] = useState<'estudiantes' | 'maestros'>('estudiantes');
   const [visibleMonth, setVisibleMonth] = useState<{ year: number; month: number }>({ year, month });
   const scrollRef = useRef<HTMLDivElement>(null);
   const monthBlockRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -289,7 +290,7 @@ export default function MiniMonthCalendar({
     const startDate = new Date(autoStartDate + 'T12:00:00');
     for (let courseNum = 1; courseNum <= autoNumCourses; courseNum++) {
       const courseStart = new Date(startDate);
-      courseStart.setDate(courseStart.getDate() + (courseNum - 1) * 35);
+      courseStart.setDate(courseStart.getDate() + (courseNum - 1) * (autoAudience === 'estudiantes' ? 35 : 14));
       for (let session = 0; session < 3; session++) {
         const sessionDate = new Date(courseStart);
         sessionDate.setDate(sessionDate.getDate() + session * 7);
@@ -297,7 +298,7 @@ export default function MiniMonthCalendar({
         preview.push({ date: dateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
       }
       const socDate = new Date(courseStart);
-      socDate.setDate(socDate.getDate() + 29);
+      socDate.setDate(socDate.getDate() + (autoAudience === 'estudiantes' ? 29 : 14));
       const socDateStr = socDate.toISOString().split('T')[0];
       preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `soc${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
       preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `eval${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
@@ -486,6 +487,13 @@ export default function MiniMonthCalendar({
                   {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
+              </div>
+                </select>
+                  <option value="maestros">Maestros/as (14 dias)</option>
+                  <option value="estudiantes">Estudiantes (35 dias)</option>
+                <select value={autoAudience} onChange={(e) => {{ setAutoAudience(e.target.value as 'estudiantes' | 'maestros'); setAutoPreview([]); }} }} style={{ padding: ''5px 6px'', fontSize: ''0.82rem'', width: ''100%'', border: ''1px solid #c4b5fd'', borderRadius: ''4px'' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Para</label>
+              <div style={{ width: '110px' }}>
               <div style={{ width: '90px' }}>
                 <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Cursos</label>
                 <select value={autoNumCourses} onChange={(e) => { setAutoNumCourses(Number(e.target.value)); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
