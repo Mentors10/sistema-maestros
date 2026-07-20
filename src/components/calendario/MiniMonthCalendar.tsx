@@ -7,7 +7,7 @@ import {
   getSlotsForDate, autoAssignSocNumber, getCourseRanges, getReportRanges
 } from '@/lib/utils/calendar';
 import { CALENDAR_DAY_COLORS, RANGE_COLORS, getCourseColor, getCourseLabel } from '@/lib/utils/colors';
-import { Plus, Trash2, X, Calendar, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, X, Calendar, ChevronRight, Zap } from 'lucide-react';
 import { ComplianceAlert } from '@/lib/utils/compliance';
 
 interface MiniMonthCalendarProps {
@@ -29,8 +29,8 @@ const ACT_LABELS: Record<string, string> = {
   '2': 'Curso 2',
   '3': 'Curso 3',
   '4': 'Curso 4',
-  'soc': 'Socialización',
-  'eval': 'Evaluación',
+  'soc': 'SocializaciÃ³n',
+  'eval': 'EvaluaciÃ³n',
 };
 
 const ACT_COLORS: Record<string, string> = {
@@ -67,6 +67,14 @@ export default function MiniMonthCalendar({
   const [newStart, setNewStart] = useState('08:00');
   const [newEnd, setNewEnd] = useState('12:00');
   const [newDate, setNewDate] = useState('');
+
+  // Automated scheduling states
+  const [showAutoSchedule, setShowAutoSchedule] = useState(false);
+  const [autoStartDate, setAutoStartDate] = useState('');
+  const [autoStartHour, setAutoStartHour] = useState('08:00');
+  const [autoEndHour, setAutoEndHour] = useState('12:00');
+  const [autoNumCourses, setAutoNumCourses] = useState(3);
+  const [autoPreview, setAutoPreview] = useState<HorarioSlot[]>([]);
   const [visibleMonth, setVisibleMonth] = useState<{ year: number; month: number }>({ year, month });
   const scrollRef = useRef<HTMLDivElement>(null);
   const monthBlockRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -96,7 +104,7 @@ export default function MiniMonthCalendar({
   const handleToggleEvaluacion = () => { setLocalEval(!localEval); onToggleCheck('evaluacion_realizada'); };
   const handleToggleInforme = () => { setLocalInfo(!localInfo); onToggleCheck('informe_final_recibido'); };
 
-  // ─── Build months from current to December ───────────────
+  // â”€â”€â”€ Build months from current to December â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const months = useMemo(() => {
     const result: { year: number; month: number; days: ReturnType<typeof getCurrentMonthDays>; isCurrent: boolean }[] = [];
     const endYear = now.getFullYear();
@@ -116,7 +124,7 @@ export default function MiniMonthCalendar({
     return result;
   }, [year, month]);
 
-  // ─── Track visible month via IntersectionObserver ────────
+  // â”€â”€â”€ Track visible month via IntersectionObserver â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const scrollEl = scrollRef.current;
     if (!scrollEl) return;
@@ -140,7 +148,7 @@ export default function MiniMonthCalendar({
     return () => observer.disconnect();
   }, [months]);
 
-  // ─── Close popover on outside click ──────────────────────
+  // â”€â”€â”€ Close popover on outside click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!popoverDate) return;
     const handleClick = (e: MouseEvent) => {
@@ -153,7 +161,7 @@ export default function MiniMonthCalendar({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [popoverDate]);
 
-  // ─── Lock body scroll when popover is open ──────────────
+  // â”€â”€â”€ Lock body scroll when popover is open â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (popoverDate) {
       document.body.style.overflow = 'hidden';
@@ -163,7 +171,7 @@ export default function MiniMonthCalendar({
     return () => { document.body.style.overflow = ''; };
   }, [popoverDate]);
 
-  // ─── Scroll to selected date in calendar ────────────────
+  // â”€â”€â”€ Scroll to selected date in calendar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!newDate || !scrollRef.current) return;
     const el = scrollRef.current.querySelector(`[data-date="${newDate}"]`);
@@ -172,7 +180,7 @@ export default function MiniMonthCalendar({
     }
   }, [newDate]);
 
-  // ─── Day click → toggle popover panel ────────────────────
+  // â”€â”€â”€ Day click â†’ toggle popover panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDayClick = (dateStr: string) => {
     if (popoverDate === dateStr) {
       setPopoverDate(null);
@@ -182,14 +190,14 @@ export default function MiniMonthCalendar({
     }
   };
 
-  // ─── Calculate hours from start/end time ─────────────────
+  // â”€â”€â”€ Calculate hours from start/end time â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const calcHours = (start: string, end: string): number => {
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
     return Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
   };
 
-  // ─── Count sessions and total hours for a course type ────
+  // â”€â”€â”€ Count sessions and total hours for a course type â”€â”€â”€â”€
   const getCourseStats = (courseType: string, dateSlots: HorarioSlot[]) => {
     const sameType = dateSlots.filter(s => String(s.course) === courseType || String(s.course).startsWith(courseType));
     const sessionCount = sameType.length;
@@ -197,13 +205,13 @@ export default function MiniMonthCalendar({
     return { sessionCount, totalH };
   };
 
-  // ─── Get next session number for a course type ───────────
+  // â”€â”€â”€ Get next session number for a course type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const getNextSessionNum = (courseType: string, dateSlots: HorarioSlot[]): number => {
     const sameType = dateSlots.filter(s => String(s.course) === courseType || String(s.course).startsWith(courseType));
     return sameType.length + 1;
   };
 
-  // ─── Check if course type can accept more sessions ───────
+  // â”€â”€â”€ Check if course type can accept more sessions â”€â”€â”€â”€â”€â”€â”€
   const canAddSession = (courseType: string, dateSlots: HorarioSlot[]): boolean => {
     if (courseType === 'soc' || courseType === 'eval') return true;
     const stats = getCourseStats(courseType, dateSlots);
@@ -212,7 +220,7 @@ export default function MiniMonthCalendar({
     return true;
   };
 
-  // ─── Auto-suggest next course type ───────────────────────
+  // â”€â”€â”€ Auto-suggest next course type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const getRecommendedCourse = (dateSlots: HorarioSlot[]): string => {
     for (const act of ['1', '2', '3', '4']) {
       const stats = getCourseStats(act, dateSlots);
@@ -226,7 +234,7 @@ export default function MiniMonthCalendar({
     return '1';
   };
 
-  // ─── Add slot ──────────────────────────────────────────────
+  // â”€â”€â”€ Add slot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleAddSlot = () => {
     if (!newDate) return;
     const targetDate = newDate;
@@ -255,13 +263,13 @@ export default function MiniMonthCalendar({
     onSaveSlots([...slots, newSlot]);
   };
 
-  // ─── Delete slot ───────────────────────────────────────────
+  // â”€â”€â”€ Delete slot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDeleteSlot = (globalIndex: number) => {
     const newSlots = slots.filter((_, i) => i !== globalIndex);
     onSaveSlots(newSlots);
   };
 
-  // ─── Duplicate slot (same course, different day) ──────────
+  // â”€â”€â”€ Duplicate slot (same course, different day) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDuplicateSlot = (slot: HorarioSlot) => {
     const courseKey = String(slot.course);
     const baseType = courseKey.replace(/\d+$/, '') || courseKey;
@@ -270,7 +278,49 @@ export default function MiniMonthCalendar({
     setNewEnd(slot.endTime);
   };
 
-  // ─── Cell styles ──────────────────────────────────────────
+  // ─── Automated Scheduling ────────────────────────────────
+  const generateAutoPreview = () => {
+    if (!autoStartDate) return;
+    const [sh, sm] = autoStartHour.split(':').map(Number);
+    const [eh, em] = autoEndHour.split(':').map(Number);
+    const hours = Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
+    if (hours <= 0) return;
+    const preview: HorarioSlot[] = [];
+    const startDate = new Date(autoStartDate + 'T12:00:00');
+    for (let courseNum = 1; courseNum <= autoNumCourses; courseNum++) {
+      const courseStart = new Date(startDate);
+      courseStart.setDate(courseStart.getDate() + (courseNum - 1) * 35);
+      for (let session = 0; session < 3; session++) {
+        const sessionDate = new Date(courseStart);
+        sessionDate.setDate(sessionDate.getDate() + session * 7);
+        const dateStr = sessionDate.toISOString().split('T')[0];
+        preview.push({ date: dateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
+      }
+      const socDate = new Date(courseStart);
+      socDate.setDate(socDate.getDate() + 29);
+      const socDateStr = socDate.toISOString().split('T')[0];
+      preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: soc, hour: sh, minute: sm, endHour: eh, endMinute: em });
+    }
+    setAutoPreview(preview);
+  };
+  const handleConfirmAutoSchedule = () => {
+    if (autoPreview.length === 0) return;
+    onSaveSlots(autoPreview);
+    setShowAutoSchedule(false);
+    setAutoPreview([]);
+  };
+  const autoPreviewByCourse = useMemo(() => {
+    const map = new Map<string, HorarioSlot[]>();
+    autoPreview.forEach(s => {
+      const key = String(s.course).replace(/\d+$/, '') || String(s.course);
+      const existing = map.get(key) || [];
+      existing.push(s);
+      map.set(key, existing);
+    });
+    return map;
+  }, [autoPreview]);
+
+  // â”€â”€â”€ Cell styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const getDayCellStyle = (dateStr: string): React.CSSProperties => {
     const daySlots = getSlotsForDate(slots, dateStr);
     const hasPlanningDelay = !readOnly && compliance.some((a) => a.type === 'planificacion-atrasada');
@@ -322,7 +372,7 @@ export default function MiniMonthCalendar({
     return { hasBar: false, isOk: false };
   };
 
-  // ─── Popover panel content ────────────────────────────────
+  // â”€â”€â”€ Popover panel content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const popoverDayDate = newDate ? new Date(newDate + 'T12:00:00') : null;
 
   // Compute stats for current popover date
@@ -374,14 +424,132 @@ export default function MiniMonthCalendar({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: `2px solid ${noteColor}30` }}>
           <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Calendar size={18} style={{ color: noteColor }} />
-            Programación — {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
+            ProgramaciÃ³n â€” {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
           </h4>
           <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
             <X size={18} />
           </button>
         </div>
 
-        {/* All sessions as table — filtered by selected activity */}
+        {/* Automated Schedule Button */}
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => { setShowAutoSchedule(!showAutoSchedule); if (showAutoSchedule) { setAutoPreview([]); } }}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              marginBottom: '12px',
+              background: showAutoSchedule ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
+            }}
+          >
+            <Zap size={16} />
+            {showAutoSchedule ? 'Cerrar Automatizado' : 'Programación Automatizada'}
+          </button>
+        )}
+
+        {/* Automated Schedule Panel */}
+        {showAutoSchedule && (
+          <div style={{ border: '1.5px solid #8b5cf6', borderRadius: '8px', padding: '12px', background: '#faf5ff', marginBottom: '12px' }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#6d28d9', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>
+              Configurar Programación Automática
+            </div>
+            <p style={{ margin: '0 0 10px 0', fontSize: '0.72rem', color: '#6b7280' }}>
+              Genera todas las sesiones (C1-C4 + SOC) automáticamente. Reemplaza las programaciones existentes.
+            </p>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ width: '130px' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Fecha Inicio</label>
+                <input type="date" value={autoStartDate} onChange={(e) => { setAutoStartDate(e.target.value); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }} />
+              </div>
+              <div style={{ width: '85px' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>De</label>
+                <select value={autoStartHour} onChange={(e) => { setAutoStartHour(e.target.value); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
+                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ width: '85px' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>A</label>
+                <select value={autoEndHour} onChange={(e) => { setAutoEndHour(e.target.value); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
+                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ width: '90px' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Cursos</label>
+                <select value={autoNumCourses} onChange={(e) => { setAutoNumCourses(Number(e.target.value)); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
+                  <option value={3}>3 Cursos</option>
+                  <option value={4}>4 Cursos</option>
+                </select>
+              </div>
+              <button type="button" onClick={generateAutoPreview} disabled={!autoStartDate} style={{ padding: '6px 12px', background: autoStartDate ? '#8b5cf6' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.78rem', cursor: autoStartDate ? 'pointer' : 'not-allowed' }}>
+                Vista Previa
+              </button>
+            </div>
+            {autoPreview.length > 0 && (
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
+                  Se generarán <b>{autoPreview.length}</b> programaciones:
+                </div>
+                <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #c4b5fd', borderRadius: '6px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+                    <thead>
+                      <tr style={{ background: '#ede9fe', position: 'sticky', top: 0 }}>
+                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Curso</th>
+                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Sesiones</th>
+                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>SOC</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from(autoPreviewByCourse.entries()).map(([baseType, courseSlots]) => {
+                        const sessions = courseSlots.filter(s => !String(s.course).startsWith('soc'));
+                        const soc = courseSlots.filter(s => String(s.course).startsWith('soc'));
+                        const color = ACT_COLORS[baseType] || '#6b7280';
+                        return (
+                          <tr key={baseType} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                            <td style={{ padding: '4px 6px', fontWeight: 700, color }}>{ACT_LABELS[baseType] || baseType}</td>
+                            <td style={{ padding: '4px 6px', color: '#374151' }}>
+                              {sessions.sort((a, b) => a.date.localeCompare(b.date)).map((s, i) => {
+                                const d = new Date(s.date + 'T12:00:00');
+                                return `${d.getDate()}/${d.getMonth() + 1}`;
+                              }).join('')}
+                            </td>
+                            <td style={{ padding: '4px 6px', color: '#374151' }}>
+                              {soc.map(s => {
+                                const d = new Date(s.date + 'T12:00:00');
+                                return `${d.getDate()}/${d.getMonth() + 1}`;
+                              }).join('')}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setAutoPreview([])} style={{ padding: '6px 12px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={handleConfirmAutoSchedule} style={{ padding: '6px 14px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Zap size={14} /> Generar {autoPreview.length} Programaciones
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* All sessions as table â€” filtered by selected activity */}
         {sortedDates.length > 0 && (
           <div style={{ marginBottom: '12px', maxHeight: '35vh', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -458,11 +626,11 @@ export default function MiniMonthCalendar({
         {/* Add form */}
         <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
-            Nueva Programación
+            Nueva ProgramaciÃ³n
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ width: '130px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Día</label>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>DÃ­a</label>
               <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
             </div>
             <div style={{ flex: 1.2 }}>
@@ -473,7 +641,7 @@ export default function MiniMonthCalendar({
                   const isFull = act !== 'soc' && act !== 'eval' && (stats.sessionCount >= MAX_SESSIONS || stats.totalH >= TARGET_HOURS);
                   return (
                     <option key={act} value={act} disabled={isFull}>
-                      {ACT_LABELS[act]} {isFull ? '✓' : `(S${stats.sessionCount + 1} · ${stats.totalH}h)`}
+                      {ACT_LABELS[act]} {isFull ? 'âœ“' : `(S${stats.sessionCount + 1} Â· ${stats.totalH}h)`}
                     </option>
                   );
                 })}
@@ -506,7 +674,7 @@ export default function MiniMonthCalendar({
     );
   };
 
-  // ─── Render a single month block ──────────────────────────
+  // â”€â”€â”€ Render a single month block â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const renderMonthBlock = (m: { year: number; month: number; days: ReturnType<typeof getCurrentMonthDays>; isCurrent: boolean }) => {
     const key = `${m.year}-${m.month}`;
     const firstDayEmptyCells = m.days[0]?.emptyCells || 0;
@@ -624,3 +792,8 @@ export default function MiniMonthCalendar({
     </>
   );
 }
+
+
+
+
+
