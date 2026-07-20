@@ -299,7 +299,7 @@ export default function MiniMonthCalendar({
       const socDate = new Date(courseStart);
       socDate.setDate(socDate.getDate() + 29);
       const socDateStr = socDate.toISOString().split('T')[0];
-      preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: soc, hour: sh, minute: sm, endHour: eh, endMinute: em });
+      preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `soc${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
     }
     setAutoPreview(preview);
   };
