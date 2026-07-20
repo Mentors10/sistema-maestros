@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { HorarioSlot } from '@/types';
@@ -29,8 +29,8 @@ const ACT_LABELS: Record<string, string> = {
   '2': 'Curso 2',
   '3': 'Curso 3',
   '4': 'Curso 4',
-  'soc': 'SocializaciÃ³n',
-  'eval': 'EvaluaciÃ³n',
+  'soc': 'Socialización',
+  'eval': 'Evaluación',
 };
 
 const ACT_COLORS: Record<string, string> = {
@@ -300,6 +300,7 @@ export default function MiniMonthCalendar({
       socDate.setDate(socDate.getDate() + 29);
       const socDateStr = socDate.toISOString().split('T')[0];
       preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `soc${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
+      preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `eval${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
     }
     setAutoPreview(preview);
   };
@@ -507,13 +508,13 @@ export default function MiniMonthCalendar({
                       <tr style={{ background: '#ede9fe', position: 'sticky', top: 0 }}>
                         <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Curso</th>
                         <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Sesiones</th>
-                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>SOC</th>
+                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>SOC + EVAL</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Array.from(autoPreviewByCourse.entries()).map(([baseType, courseSlots]) => {
                         const sessions = courseSlots.filter(s => !String(s.course).startsWith('soc'));
-                        const soc = courseSlots.filter(s => String(s.course).startsWith('soc'));
+                        const soc = courseSlots.filter(s => String(s.course).startsWith('soc') || String(s.course).startsWith('eval'));
                         const color = ACT_COLORS[baseType] || '#6b7280';
                         return (
                           <tr key={baseType} style={{ borderBottom: '1px solid #e2e8f0' }}>
@@ -522,13 +523,13 @@ export default function MiniMonthCalendar({
                               {sessions.sort((a, b) => a.date.localeCompare(b.date)).map((s, i) => {
                                 const d = new Date(s.date + 'T12:00:00');
                                 return `${d.getDate()}/${d.getMonth() + 1}`;
-                              }).join('')}
+                              }).join(', ')}
                             </td>
                             <td style={{ padding: '4px 6px', color: '#374151' }}>
                               {soc.map(s => {
                                 const d = new Date(s.date + 'T12:00:00');
                                 return `${d.getDate()}/${d.getMonth() + 1}`;
-                              }).join('')}
+                              }).join(', ')}
                             </td>
                           </tr>
                         );
