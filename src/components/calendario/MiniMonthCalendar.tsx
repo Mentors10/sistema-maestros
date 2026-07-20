@@ -507,29 +507,29 @@ export default function MiniMonthCalendar({
                     <thead>
                       <tr style={{ background: '#ede9fe', position: 'sticky', top: 0 }}>
                         <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Curso</th>
-                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Sesiones</th>
-                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>SOC + EVAL</th>
+                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Sesiones (3x4h)</th>
+                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>SOC</th>
+                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>EVAL</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Array.from(autoPreviewByCourse.entries()).map(([baseType, courseSlots]) => {
-                        const sessions = courseSlots.filter(s => !String(s.course).startsWith('soc'));
-                        const soc = courseSlots.filter(s => String(s.course).startsWith('soc') || String(s.course).startsWith('eval'));
-                        const color = ACT_COLORS[baseType] || '#6b7280';
+                      {Array.from({ length: autoNumCourses }, (_, i) => i + 1).map(courseNum => {
+                        const courseSlots = autoPreview.filter(s => s.course === courseNum);
+                        const socSlots = autoPreview.filter(s => String(s.course) === 'soc' + courseNum);
+                        const evalSlots = autoPreview.filter(s => String(s.course) === 'eval' + courseNum);
+                        const color = ACT_COLORS[String(courseNum)] || '#6b7280';
+                        const fmtDate = (d: string) => { const dt = new Date(d + 'T12:00:00'); return dt.getDate() + '/' + (dt.getMonth() + 1); };
                         return (
-                          <tr key={baseType} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                            <td style={{ padding: '4px 6px', fontWeight: 700, color }}>{ACT_LABELS[baseType] || baseType}</td>
+                          <tr key={courseNum} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                            <td style={{ padding: '4px 6px', fontWeight: 700, color }}>{ACT_LABELS[String(courseNum)]}</td>
                             <td style={{ padding: '4px 6px', color: '#374151' }}>
-                              {sessions.sort((a, b) => a.date.localeCompare(b.date)).map((s, i) => {
-                                const d = new Date(s.date + 'T12:00:00');
-                                return `${d.getDate()}/${d.getMonth() + 1}`;
-                              }).join(', ')}
+                              {courseSlots.sort((a, b) => a.date.localeCompare(b.date)).map(s => fmtDate(s.date)).join(', ')}
                             </td>
-                            <td style={{ padding: '4px 6px', color: '#374151' }}>
-                              {soc.map(s => {
-                                const d = new Date(s.date + 'T12:00:00');
-                                return `${d.getDate()}/${d.getMonth() + 1}`;
-                              }).join(', ')}
+                            <td style={{ padding: '4px 6px', color: '#0F172A', fontWeight: 600 }}>
+                              {socSlots.map(s => fmtDate(s.date)).join(', ')}
+                            </td>
+                            <td style={{ padding: '4px 6px', color: '#B91C1C', fontWeight: 600 }}>
+                              {evalSlots.map(s => fmtDate(s.date)).join(', ')}
                             </td>
                           </tr>
                         );
