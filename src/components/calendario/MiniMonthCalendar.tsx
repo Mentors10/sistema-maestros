@@ -412,7 +412,7 @@ export default function MiniMonthCalendar({
         left: '50%',
         transform: 'translate(-50%, -50%)',
         padding: '18px',
-        width: '580px',
+        width: '640px',
         maxHeight: '85vh',
         overflowY: 'auto',
         background: '#ffffff',
@@ -650,7 +650,7 @@ export default function MiniMonthCalendar({
                   const isFull = act !== 'soc' && act !== 'eval' && (stats.sessionCount >= MAX_SESSIONS || stats.totalH >= TARGET_HOURS);
                   return (
                     <option key={act} value={act} disabled={isFull}>
-                      {ACT_LABELS[act]} {isFull ? 'âœ“' : `(S${stats.sessionCount + 1} Â· ${stats.totalH}h)`}
+                      {ACT_LABELS[act]}{isFull ? ' (completo)' : ''}
                     </option>
                   );
                 })}
