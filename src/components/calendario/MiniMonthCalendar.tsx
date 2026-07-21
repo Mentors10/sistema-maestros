@@ -412,7 +412,7 @@ export default function MiniMonthCalendar({
         left: '50%',
         transform: 'translate(-50%, -50%)',
         padding: '18px',
-        width: '520px',
+        width: '580px',
         maxHeight: '85vh',
         overflowY: 'auto',
         background: '#ffffff',
@@ -426,7 +426,7 @@ export default function MiniMonthCalendar({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: `2px solid ${noteColor}30` }}>
           <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Calendar size={18} style={{ color: noteColor }} />
-            Programacion â€” {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
+            Programacion - 
           </h4>
           <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
             <X size={18} />
@@ -468,7 +468,7 @@ export default function MiniMonthCalendar({
               Configurar Programación Automática
             </div>
             <p style={{ margin: '0 0 10px 0', fontSize: '0.72rem', color: '#6b7280' }}>
-              Genera todas las sesiones (C1-C4 + SOC) automáticamente. Reemplaza las programaciones existentes.
+              Genera todas las sesiones (C1-C4 + SOC) automáticamente. Reemplaza las Programacion - 
             </p>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ width: '130px' }}>
@@ -508,7 +508,7 @@ export default function MiniMonthCalendar({
             {autoPreview.length > 0 && (
               <div style={{ marginTop: '12px' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
-                  Se generarán <b>{autoPreview.length}</b> programaciones:
+                  Se generarán <b>{autoPreview.length}</b> Programacion - 
                 </div>
                 <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #c4b5fd', borderRadius: '6px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
@@ -550,7 +550,7 @@ export default function MiniMonthCalendar({
                     Cancelar
                   </button>
                   <button type="button" onClick={handleConfirmAutoSchedule} style={{ padding: '6px 14px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Zap size={14} /> Generar {autoPreview.length} Programaciones
+                    <Zap size={14} /> Generar {autoPreview.length} Programacion - 
                   </button>
                 </div>
               </div>
@@ -635,7 +635,7 @@ export default function MiniMonthCalendar({
         {/* Add form */}
         <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
-            Nueva Programacion
+            Nueva Programacion - 
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ width: '130px' }}>
