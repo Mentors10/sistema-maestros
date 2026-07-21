@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { HorarioSlot } from '@/types';
@@ -426,7 +426,7 @@ export default function MiniMonthCalendar({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: `2px solid ${noteColor}30` }}>
           <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Calendar size={18} style={{ color: noteColor }} />
-            ProgramaciÃ³n â€” {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
+            Programacion â€” {popoverDayDate.getDate()} {MONTH_NAMES[popoverDayDate.getMonth()]}
           </h4>
           <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
             <X size={18} />
@@ -526,7 +526,7 @@ export default function MiniMonthCalendar({
                         const socSlots = autoPreview.filter(s => String(s.course) === 'soc' + courseNum);
                         const evalSlots = autoPreview.filter(s => String(s.course) === 'eval' + courseNum);
                         const color = ACT_COLORS[String(courseNum)] || '#6b7280';
-                        const fmtDate = (d: string) => { const dt = new Date(d + 'T12:00:00'); return dt.getDate() + '/' + (dt.getMonth() + 1); };
+                        const fmtDate = (d: string) => { const dt = new Date(d + 'T12:00:00'); const m = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return dt.getDate() + ' ' + m[dt.getMonth()]; };
                         return (
                           <tr key={courseNum} style={{ borderBottom: '1px solid #e2e8f0' }}>
                             <td style={{ padding: '4px 6px', fontWeight: 700, color }}>{ACT_LABELS[String(courseNum)]}</td>
@@ -635,7 +635,7 @@ export default function MiniMonthCalendar({
         {/* Add form */}
         <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
-            Nueva ProgramaciÃ³n
+            Nueva Programacion
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ width: '130px' }}>
