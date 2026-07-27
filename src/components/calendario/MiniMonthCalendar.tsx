@@ -684,7 +684,7 @@ export default function MiniMonthCalendar({
                             borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
                             borderLeft: isCurrentEditing ? '3px solid #ef4444' : undefined,
                           }}>
-                            {isFirstOfDay ? formatLetterDate(date) : ''}
+                            {formatLetterDate(date)}
                           </td>
                           <td style={{ 
                             padding: '4px 6px',
