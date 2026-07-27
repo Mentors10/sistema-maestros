@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { Curso } from '@/types';
-import { Calendar, MapPin, User, FileText, CheckCircle2, Award, ClipboardCheck, ArrowRight, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, CheckCircle2, Award, ClipboardCheck, ArrowRight, Loader2, Users } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const formatOnlyDate = (fechaStr: string | null | undefined): string => {
@@ -272,6 +272,11 @@ export default function ParticipanteRegistroPage() {
               <User size={13} style={{ flexShrink: 0 }} />
               <span style={{ fontWeight: 800 }}>Técnico:</span>
               <span style={{ fontWeight: 600 }}>{curso.tecnico_nombre || 'Sin asignar'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-700)', gridColumn: 'span 2', justifyContent: 'center', background: 'rgba(191, 160, 94, 0.1)', padding: '6px 12px', borderRadius: '6px', border: '1px dashed #bfa05e', marginTop: '4px' }}>
+              <Users size={14} style={{ flexShrink: 0, color: '#bfa05e' }} />
+              <span style={{ fontWeight: 800 }}>Participantes Pre-Inscritos:</span>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--primary-900)' }}>{curso.inscritos_formulario ?? 0}</span>
             </div>
           </div>
         </div>
