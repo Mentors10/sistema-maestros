@@ -709,7 +709,8 @@ export default function MiniMonthCalendar({
                           )}
                         </tr>
                       );
-                })}
+                    });
+                  })}
               </tbody>
             </table>
           </div>
