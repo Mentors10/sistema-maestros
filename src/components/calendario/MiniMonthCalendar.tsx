@@ -363,25 +363,70 @@ export default function MiniMonthCalendar({
     if (hours <= 0) return;
     const preview: HorarioSlot[] = [];
     const startDate = new Date(autoStartDate + 'T12:00:00');
+
+    const addHoursToTime = (timeStr: string, hToAdd: number) => {
+      const [h, m] = timeStr.split(':').map(Number);
+      const newH = (h + hToAdd) % 24;
+      return `${String(newH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    };
+
+    const courseDuration = autoAudience === 'estudiantes' ? 30 : 14;
+
     for (let courseNum = 1; courseNum <= autoNumCourses; courseNum++) {
       const courseStart = new Date(startDate);
-      courseStart.setDate(courseStart.getDate() + (courseNum - 1) * (autoAudience === 'estudiantes' ? 35 : 14));
-      for (let session = 0; session < 3; session++) {
-        const sessionDate = new Date(courseStart);
-        sessionDate.setDate(sessionDate.getDate() + session * 7);
-        const dateStr = sessionDate.toISOString().split('T')[0];
-        preview.push({ date: dateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
+      courseStart.setDate(courseStart.getDate() + (courseNum - 1) * courseDuration);
+
+      const socStart = autoStartHour;
+      const socEnd = addHoursToTime(autoStartHour, 3);
+      const evalStart = socEnd;
+      const evalEnd = addHoursToTime(autoStartHour, 4);
+
+      if (autoAudience === 'estudiantes') {
+        for (let session = 0; session < 3; session++) {
+          const sessionDate = new Date(courseStart);
+          sessionDate.setDate(sessionDate.getDate() + session * 7);
+          const dateStr = sessionDate.toISOString().split('T')[0];
+          preview.push({ date: dateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
+        }
+        const socEvalDate = new Date(courseStart);
+        socEvalDate.setDate(socEvalDate.getDate() + 30);
+        const dateStr = socEvalDate.toISOString().split('T')[0];
+
+        const [socSh, socSm] = socStart.split(':').map(Number);
+        const [socEh, socEm] = socEnd.split(':').map(Number);
+        preview.push({ date: dateStr, startTime: socStart, endTime: socEnd, hours: 3, course: `soc${courseNum}`, hour: socSh, minute: socSm, endHour: socEh, endMinute: socEm });
+
+        const [evSh, evSm] = evalStart.split(':').map(Number);
+        const [evEh, evEm] = evalEnd.split(':').map(Number);
+        preview.push({ date: dateStr, startTime: evalStart, endTime: evalEnd, hours: 1, course: `eval${courseNum}`, hour: evSh, minute: evSm, endHour: evEh, endMinute: evEm });
+
+      } else {
+        const dateStr0 = courseStart.toISOString().split('T')[0];
+        preview.push({ date: dateStr0, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
+
+        const afternoonStart = addHoursToTime(autoStartHour, 6);
+        const afternoonEnd = addHoursToTime(autoEndHour, 6);
+        const [aftSh, aftSm] = afternoonStart.split(':').map(Number);
+        const [aftEh, aftEm] = afternoonEnd.split(':').map(Number);
+        preview.push({ date: dateStr0, startTime: afternoonStart, endTime: afternoonEnd, hours: Math.max(hours, 0), course: courseNum, hour: aftSh, minute: aftSm, endHour: aftEh, endMinute: aftEm });
+
+        const sessionDate7 = new Date(courseStart);
+        sessionDate7.setDate(sessionDate7.getDate() + 7);
+        const dateStr7 = sessionDate7.toISOString().split('T')[0];
+        preview.push({ date: dateStr7, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
+
+        const socEvalDate14 = new Date(courseStart);
+        socEvalDate14.setDate(socEvalDate14.getDate() + 14);
+        const dateStr14 = socEvalDate14.toISOString().split('T')[0];
+
+        const [socSh, socSm] = socStart.split(':').map(Number);
+        const [socEh, socEm] = socEnd.split(':').map(Number);
+        preview.push({ date: dateStr14, startTime: socStart, endTime: socEnd, hours: 3, course: `soc${courseNum}`, hour: socSh, minute: socSm, endHour: socEh, endMinute: socEm });
+
+        const [evSh, evSm] = evalStart.split(':').map(Number);
+        const [evEh, evEm] = evalEnd.split(':').map(Number);
+        preview.push({ date: dateStr14, startTime: evalStart, endTime: evalEnd, hours: 1, course: `eval${courseNum}`, hour: evSh, minute: evSm, endHour: evEh, endMinute: evEm });
       }
-      const socDate = new Date(courseStart);
-      socDate.setDate(socDate.getDate() + (autoAudience === 'estudiantes' ? 29 : 13));
-      const socDateStr = socDate.toISOString().split('T')[0];
-
-      const evalDate = new Date(courseStart);
-      evalDate.setDate(evalDate.getDate() + (autoAudience === 'estudiantes' ? 35 : 14));
-      const evalDateStr = evalDate.toISOString().split('T')[0];
-
-      preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `soc${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
-      preview.push({ date: evalDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `eval${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
     }
     setAutoPreview(preview);
   };
