@@ -275,7 +275,7 @@ export default function ParticipanteRegistroPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem', color: 'var(--primary-700)' }}>
                 {Array.from({ length: 4 }, (_, i) => i + 1).map(num => {
                   const courseSlots = curso.horarios_tentativos.filter(s => Number(s.course) === num);
-                  const courseName = curso[`tema${num}`];
+                  const courseName = (curso as any)[`tema${num}`];
                   if (courseSlots.length === 0 && !courseName) return null;
                   return (
                     <div key={num} style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderLeft: '3px solid var(--primary-300)', paddingLeft: '8px' }}>
