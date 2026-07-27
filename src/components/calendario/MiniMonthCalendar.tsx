@@ -40,6 +40,23 @@ const formatLetterDate = (dateStr: string): string => {
   return `${dayName} ${day}/${MONTH_ABBR[monthIdx] || parts[1]}`;
 };
 
+const getFullActivityLabel = (course: number | string): string => {
+  const key = String(course);
+  if (key === '1') return 'Curso 1';
+  if (key === '2') return 'Curso 2';
+  if (key === '3') return 'Curso 3';
+  if (key === '4') return 'Curso 4';
+  if (key.startsWith('soc')) {
+    const num = key.replace('soc', '');
+    return `Socialización ${num}`.trim();
+  }
+  if (key.startsWith('eval')) {
+    const num = key.replace('eval', '');
+    return `Evaluación ${num}`.trim();
+  }
+  return key.toUpperCase();
+};
+
 // Full labels for display
 const ACT_LABELS: Record<string, string> = {
   '1': 'Curso 1',
@@ -314,12 +331,27 @@ export default function MiniMonthCalendar({
   };
 
   // â”€â”€â”€ Duplicate slot (same course, different day) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— Duplicate slot (same course, different day) ——————————
   const handleDuplicateSlot = (slot: HorarioSlot) => {
-    const courseKey = String(slot.course);
-    const baseType = courseKey.replace(/\d+$/, '') || courseKey;
-    setNewCourse(baseType === 'soc' || baseType === 'eval' ? baseType : String(parseInt(courseKey)));
-    setNewStart(slot.startTime);
-    setNewEnd(slot.endTime);
+    const newSlot = { ...slot };
+    const idx = slots.indexOf(slot);
+    if (idx !== -1) {
+      const updatedSlots = [...slots];
+      updatedSlots.splice(idx + 1, 0, newSlot);
+      onSaveSlots(updatedSlots);
+      
+      // Select the newly duplicated slot immediately for editing
+      setEditingSlotIndex(idx + 1);
+      setNewDate(newSlot.date);
+      setPopoverDate(newSlot.date);
+      const courseKey = String(newSlot.course);
+      const baseType = courseKey.replace(/\d+$/, '') || courseKey;
+      setNewCourse(baseType === 'soc' || baseType === 'eval' ? baseType : String(parseInt(courseKey)));
+      setNewStart(newSlot.startTime);
+      setNewEnd(newSlot.endTime);
+    } else {
+      onSaveSlots([...slots, newSlot]);
+    }
   };
 
   // ─── Automated Scheduling ────────────────────────────────
@@ -667,7 +699,7 @@ export default function MiniMonthCalendar({
                               fontSize: '0.68rem',
                               fontWeight: 900,
                               boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                            }}>{getCourseLabel(s.course)}</span>
+                            }}>{getFullActivityLabel(s.course)}</span>
                           </td>
                           <td style={{ 
                             padding: '4px 6px', 
