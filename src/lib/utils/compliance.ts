@@ -206,6 +206,13 @@ export function getNoteCompliance(curso: Curso): ComplianceAlert[] {
           pulse: true,
         });
       }
+    } else if (courseSlots.length > 0) {
+      alerts.push({
+        type: 'eval-sin-programar',
+        label: 'EVAL sin programar',
+        severity: 'warn',
+        icon: 'ClipboardCheck',
+      });
     }
   } else {
     alerts.push({

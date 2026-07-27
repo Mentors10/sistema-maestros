@@ -24,14 +24,20 @@ interface MiniMonthCalendarProps {
 }
 
 const MONTH_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DAYS_OF_WEEK = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 const formatLetterDate = (dateStr: string): string => {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
   if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
+  const year = parseInt(parts[0], 10);
   const monthIdx = parseInt(parts[1], 10) - 1;
-  return `${day}/${MONTH_ABBR[monthIdx] || parts[1]}`;
+  const day = parseInt(parts[2], 10);
+  
+  const dateObj = new Date(year, monthIdx, day);
+  const dayName = DAYS_OF_WEEK[dateObj.getDay()] || '';
+  
+  return `${dayName} ${day}/${MONTH_ABBR[monthIdx] || parts[1]}`;
 };
 
 // Full labels for display
@@ -324,10 +330,15 @@ export default function MiniMonthCalendar({
         preview.push({ date: dateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
       }
       const socDate = new Date(courseStart);
-      socDate.setDate(socDate.getDate() + (autoAudience === 'estudiantes' ? 29 : 14));
+      socDate.setDate(socDate.getDate() + (autoAudience === 'estudiantes' ? 29 : 13));
       const socDateStr = socDate.toISOString().split('T')[0];
+
+      const evalDate = new Date(courseStart);
+      evalDate.setDate(evalDate.getDate() + (autoAudience === 'estudiantes' ? 35 : 14));
+      const evalDateStr = evalDate.toISOString().split('T')[0];
+
       preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `soc${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
-      preview.push({ date: socDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `eval${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
+      preview.push({ date: evalDateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: `eval${courseNum}`, hour: sh, minute: sm, endHour: eh, endMinute: em });
     }
     setAutoPreview(preview);
   };
@@ -686,15 +697,11 @@ export default function MiniMonthCalendar({
             <div style={{ flex: 1.2 }}>
               <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Actividad</label>
               <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                {ACT_OPTIONS.map(act => {
-                  const stats = getCourseStats(act, popoverSlots);
-                  const isFull = act !== 'soc' && act !== 'eval' && (stats.sessionCount >= MAX_SESSIONS || stats.totalH >= TARGET_HOURS);
-                  return (
-                    <option key={act} value={act} disabled={isFull}>
-                      {ACT_LABELS[act]}{isFull ? ' (completo)' : ''}
-                    </option>
-                  );
-                })}
+                {ACT_OPTIONS.map(act => (
+                  <option key={act} value={act}>
+                    {ACT_LABELS[act]}
+                  </option>
+                ))}
               </select>
             </div>
             <div style={{ width: '95px' }}>
