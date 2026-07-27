@@ -56,7 +56,19 @@ export default function ParticipanteRegistroPage() {
           .single();
 
         if (error) throw error;
-        setCurso(data as Curso);
+
+        // Fetch exact real-time count of participants registered for this course
+        const { count, error: countErr } = await supabase
+          .from('inscripcion_ciclo')
+          .select('*', { count: 'exact', head: true })
+          .eq('curso_id', id);
+
+        const cursoData = data as Curso;
+        if (!countErr && count !== null) {
+          cursoData.inscritos_formulario = count;
+        }
+
+        setCurso(cursoData);
       } catch (err) {
         console.error('Error fetching course:', err);
         Swal.fire({
@@ -143,6 +155,10 @@ export default function ParticipanteRegistroPage() {
         .from('cursos')
         .update({ inscritos_formulario: count || 0 })
         .eq('id', id);
+
+      if (count !== null && curso) {
+        setCurso({ ...curso, inscritos_formulario: count });
+      }
 
       setSuccess(true);
       Swal.fire({
