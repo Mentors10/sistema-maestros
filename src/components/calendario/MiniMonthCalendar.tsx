@@ -626,13 +626,9 @@ export default function MiniMonthCalendar({
                         onClick={() => !readOnly && handleEditSlotSelect(s, globalIdx)}
                         style={{
                           background: isCurrentEditing 
-                            ? 'rgba(59, 130, 246, 0.15)' 
-                            : isCurrentDate 
-                              ? `${color}10` 
-                              : idx % 2 === 0 
-                                ? '#ffffff' 
-                                : '#f8fafc',
-                          borderLeft: isCurrentEditing ? '4px solid #3b82f6' : undefined,
+                            ? `${color}35` 
+                            : `${color}12`,
+                          borderLeft: isCurrentEditing ? `4px solid ${color}` : '4px solid transparent',
                           borderBottom: '1px solid #e2e8f0',
                           cursor: !readOnly ? 'pointer' : 'default',
                           transition: 'all 0.2s ease',
@@ -658,6 +654,13 @@ export default function MiniMonthCalendar({
                         {!readOnly && (
                           <td style={{ padding: '4px 6px', textAlign: 'center' }}>
                             <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button 
+                                style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#ecfdf5', color: '#059669', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
+                                onClick={(e) => { e.stopPropagation(); handleEditSlotSelect(s, globalIdx); }} 
+                                title="Editar"
+                              >
+                                Editar
+                              </button>
                               <button 
                                 style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
                                 onClick={(e) => { e.stopPropagation(); handleDuplicateSlot(s); }} 
@@ -685,58 +688,60 @@ export default function MiniMonthCalendar({
         )}
 
         {/* Add form */}
-        <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff' }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
-            {editingSlotIndex !== null ? 'Editar Programación' : 'Nueva Programación'}
-          </div>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ width: '130px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Día</label>
-              <input type="date" value={newDate} onChange={(e) => handleDateChange(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+        {!readOnly && (
+          <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
+              {editingSlotIndex !== null ? 'Editar Programación' : 'Nueva Programación'}
             </div>
-            <div style={{ flex: 1.2 }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Actividad</label>
-              <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                {ACT_OPTIONS.map(act => (
-                  <option key={act} value={act}>
-                    {ACT_LABELS[act]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div style={{ width: '95px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>De</label>
-              <select value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div style={{ width: '95px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>A</label>
-              <select value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '14px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 900, color: calcHours(newStart, newEnd) > 0 ? '#059669' : '#dc2626' }}>
-                {calcHours(newStart, newEnd)}h
-              </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {editingSlotIndex !== null && (
-                  <button 
-                    type="button" 
-                    onClick={() => setEditingSlotIndex(null)} 
-                    style={{ padding: '6px 10px', fontWeight: 700, fontSize: '0.82rem', background: '#94a3b8', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                  >
-                    Cancelar
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ width: '130px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Día</label>
+                <input type="date" value={newDate} onChange={(e) => handleDateChange(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              </div>
+              <div style={{ flex: 1.2 }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Actividad</label>
+                <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  {ACT_OPTIONS.map(act => (
+                    <option key={act} value={act}>
+                      {ACT_LABELS[act]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ width: '95px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>De</label>
+                <select value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ width: '95px' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>A</label>
+                <select value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '14px' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 900, color: calcHours(newStart, newEnd) > 0 ? '#059669' : '#dc2626' }}>
+                  {calcHours(newStart, newEnd)}h
+                </span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {editingSlotIndex !== null && (
+                    <button 
+                      type="button" 
+                      onClick={() => setEditingSlotIndex(null)} 
+                      style={{ padding: '6px 10px', fontWeight: 700, fontSize: '0.82rem', background: '#94a3b8', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                  <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.82rem' }}>
+                    {editingSlotIndex !== null ? 'Actualizar' : 'Guardar'}
                   </button>
-                )}
-                <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.82rem' }}>
-                  {editingSlotIndex !== null ? 'Actualizar' : 'Guardar'}
-                </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     );
   };
