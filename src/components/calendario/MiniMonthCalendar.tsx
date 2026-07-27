@@ -91,6 +91,17 @@ export default function MiniMonthCalendar({
     setPopoverDate(dateStr);
   };
 
+  const handleEditSlotSelect = (slot: HorarioSlot, globalIndex: number) => {
+    setEditingSlotIndex(globalIndex);
+    setNewDate(slot.date);
+    setPopoverDate(slot.date);
+    const courseKey = String(slot.course);
+    const baseType = courseKey.replace(/\d+$/, '') || courseKey;
+    setNewCourse(baseType === 'soc' || baseType === 'eval' ? baseType : String(parseInt(courseKey)));
+    setNewStart(slot.startTime);
+    setNewEnd(slot.endTime);
+  };
+
   // Automated scheduling states
   const [showAutoSchedule, setShowAutoSchedule] = useState(false);
   const [autoStartDate, setAutoStartDate] = useState('');
