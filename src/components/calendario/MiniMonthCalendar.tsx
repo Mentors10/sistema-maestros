@@ -23,6 +23,17 @@ interface MiniMonthCalendarProps {
   readOnly?: boolean;
 }
 
+const MONTH_ABBR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+const formatLetterDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const day = parseInt(parts[2], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  return `${day}/${MONTH_ABBR[monthIdx] || parts[1]}`;
+};
+
 // Full labels for display
 const ACT_LABELS: Record<string, string> = {
   '1': 'Curso 1',
@@ -67,6 +78,12 @@ export default function MiniMonthCalendar({
   const [newStart, setNewStart] = useState('08:00');
   const [newEnd, setNewEnd] = useState('12:00');
   const [newDate, setNewDate] = useState('');
+  const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null);
+
+  const handleDateChange = (dateStr: string) => {
+    setNewDate(dateStr);
+    setPopoverDate(dateStr);
+  };
 
   // Automated scheduling states
   const [showAutoSchedule, setShowAutoSchedule] = useState(false);
@@ -188,6 +205,7 @@ export default function MiniMonthCalendar({
     } else {
       setPopoverDate(dateStr);
       setNewDate(dateStr);
+      setEditingSlotIndex(null); // Clear editing mode when selecting a new day from calendar grid
     }
   };
 
@@ -213,6 +231,7 @@ export default function MiniMonthCalendar({
   };
 
   // â”€â”€â”€ Check if course type can accept more sessions â”€â”€â”€â”€â”€â”€â”€
+  // ————————————————— Check if course type can accept more sessions —————————————
   const canAddSession = (courseType: string, dateSlots: HorarioSlot[]): boolean => {
     if (courseType === 'soc' || courseType === 'eval') return true;
     const stats = getCourseStats(courseType, dateSlots);
@@ -221,13 +240,12 @@ export default function MiniMonthCalendar({
     return true;
   };
 
-  // â”€â”€â”€ Auto-suggest next course type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ————————————————— Auto-suggest next course type —————————————————————————————
   const getRecommendedCourse = (dateSlots: HorarioSlot[]): string => {
     for (const act of ['1', '2', '3', '4']) {
       const stats = getCourseStats(act, dateSlots);
       if (stats.sessionCount < MAX_SESSIONS && stats.totalH < TARGET_HOURS) return act;
     }
-    // Check SOC/EVAL
     const hasSoc = dateSlots.some(s => String(s.course).startsWith('soc'));
     if (!hasSoc) return 'soc';
     const hasEval = dateSlots.some(s => String(s.course).startsWith('eval'));
@@ -235,7 +253,7 @@ export default function MiniMonthCalendar({
     return '1';
   };
 
-  // â”€â”€â”€ Add slot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Add slot ────────────────────────────────────────────────
   const handleAddSlot = () => {
     if (!newDate) return;
     const targetDate = newDate;
@@ -261,10 +279,18 @@ export default function MiniMonthCalendar({
       endHour: eh,
       endMinute: em,
     };
-    onSaveSlots([...slots, newSlot]);
+    
+    if (editingSlotIndex !== null) {
+      const updatedSlots = [...slots];
+      updatedSlots[editingSlotIndex] = newSlot;
+      onSaveSlots(updatedSlots);
+      setEditingSlotIndex(null);
+    } else {
+      onSaveSlots([...slots, newSlot]);
+    }
   };
 
-  // â”€â”€â”€ Delete slot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Delete slot ──────────────────────────────────────────────
   const handleDeleteSlot = (globalIndex: number) => {
     const newSlots = slots.filter((_, i) => i !== globalIndex);
     onSaveSlots(newSlots);
@@ -426,7 +452,7 @@ export default function MiniMonthCalendar({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: `2px solid ${noteColor}30` }}>
           <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Calendar size={18} style={{ color: noteColor }} />
-            Programacion - 
+            Programación - {formatLetterDate(newDate)}
           </h4>
           <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
             <X size={18} />
@@ -557,70 +583,85 @@ export default function MiniMonthCalendar({
             )}
           </div>
         )}
-
-        {/* All sessions as table â€” filtered by selected activity */}
         {sortedDates.length > 0 && (
           <div style={{ marginBottom: '12px', maxHeight: '35vh', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
               <thead>
                 <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
                   <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Fecha</th>
-                  <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>S</th>
+                  <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Actividad</th>
                   <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>De</th>
                   <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>A</th>
                   <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>H</th>
-                  {!readOnly && <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}></th>}
+                  {!readOnly && <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
                 {sortedDates.map((date) => {
                   const dateObj = new Date(date + 'T12:00:00');
                   const isCurrentDate = date === newDate;
-                  const daySlots = (allSlotsByDate.get(date) || []).filter((s) => {
-                    const ck = String(s.course);
-                    const bt = ck.replace(/\d+$/, '') || ck;
-                    if (newCourse === 'soc') return bt === 'soc';
-                    if (newCourse === 'eval') return bt === 'eval';
-                    return ck === newCourse || bt === newCourse;
-                  });
+                  const daySlots = allSlotsByDate.get(date) || [];
                   if (daySlots.length === 0) return null;
                   return daySlots.map((s, idx) => {
                     const courseKey = String(s.course);
                     const baseType = courseKey.replace(/\d+$/, '') || courseKey;
                     const color = ACT_COLORS[baseType] || getCourseColor(s.course);
-                    const sessionNum = daySlots.filter((ss, i) => i <= idx && (String(ss.course) === courseKey || String(ss.course).replace(/\d+$/, '') === baseType)).length;
-                    const fullLabel = ACT_LABELS[baseType] || courseKey.toUpperCase();
                     const globalIdx = slots.indexOf(s);
                     const isFirstOfDay = idx === 0;
+                    const isCurrentEditing = globalIdx === editingSlotIndex;
                     return (
-                      <tr key={globalIdx} style={{
-                        background: isCurrentDate ? `${color}10` : idx % 2 === 0 ? '#ffffff' : '#f8fafc',
-                        borderBottom: '1px solid #e2e8f0',
-                      }}>
+                      <tr 
+                        key={globalIdx} 
+                        onClick={() => !readOnly && handleEditSlotSelect(s, globalIdx)}
+                        style={{
+                          background: isCurrentEditing 
+                            ? 'rgba(59, 130, 246, 0.15)' 
+                            : isCurrentDate 
+                              ? `${color}10` 
+                              : idx % 2 === 0 
+                                ? '#ffffff' 
+                                : '#f8fafc',
+                          borderLeft: isCurrentEditing ? '4px solid #3b82f6' : undefined,
+                          borderBottom: '1px solid #e2e8f0',
+                          cursor: !readOnly ? 'pointer' : 'default',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
                         <td style={{ padding: '4px 6px', fontWeight: isCurrentDate ? 800 : 400, color: isCurrentDate ? '#1e293b' : '#64748b', whiteSpace: 'nowrap' }}>
-                          {isFirstOfDay ? `${dateObj.getDate()}/${dateObj.getMonth() + 1}` : ''}
+                          {isFirstOfDay ? formatLetterDate(date) : ''}
                         </td>
                         <td style={{ padding: '4px 6px' }}>
                           <span style={{
                             background: color,
                             color: '#fff',
-                            padding: '1px 5px',
+                            padding: '2px 6px',
                             borderRadius: '3px',
-                            fontSize: '0.65rem',
+                            fontSize: '0.68rem',
                             fontWeight: 900,
-                          }}>S{sessionNum}</span>
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                          }}>{getCourseLabel(s.course)}</span>
                         </td>
                         <td style={{ padding: '4px 6px', textAlign: 'center', color: '#475569' }}>{s.startTime}</td>
                         <td style={{ padding: '4px 6px', textAlign: 'center', color: '#475569' }}>{s.endTime}</td>
                         <td style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 700, color: '#059669' }}>{s.hours}h</td>
                         {!readOnly && (
                           <td style={{ padding: '4px 6px', textAlign: 'center' }}>
-                            {isCurrentDate && (
-                              <div style={{ display: 'flex', gap: '2px', justifyContent: 'center' }}>
-                                <button style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: 'none', cursor: 'pointer' }} onClick={() => handleDuplicateSlot(s)} title="Duplicar">Dup</button>
-                                <button style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#fee2e2', color: '#dc2626', fontWeight: 700, border: 'none', cursor: 'pointer' }} onClick={() => handleDeleteSlot(globalIdx)} title="Eliminar">X</button>
-                              </div>
-                            )}
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button 
+                                style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
+                                onClick={(e) => { e.stopPropagation(); handleDuplicateSlot(s); }} 
+                                title="Duplicar"
+                              >
+                                Dup
+                              </button>
+                              <button 
+                                style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#fee2e2', color: '#dc2626', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
+                                onClick={(e) => { e.stopPropagation(); handleDeleteSlot(globalIdx); }} 
+                                title="Eliminar"
+                              >
+                                X
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -635,12 +676,12 @@ export default function MiniMonthCalendar({
         {/* Add form */}
         <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
-            Nueva Programacion - 
+            {editingSlotIndex !== null ? 'Editar Programación' : 'Nueva Programación'}
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ width: '130px' }}>
-              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>DÃ­a</label>
-              <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Día</label>
+              <input type="date" value={newDate} onChange={(e) => handleDateChange(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
             </div>
             <div style={{ flex: 1.2 }}>
               <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Actividad</label>
@@ -672,13 +713,23 @@ export default function MiniMonthCalendar({
               <span style={{ fontSize: '0.82rem', fontWeight: 900, color: calcHours(newStart, newEnd) > 0 ? '#059669' : '#dc2626' }}>
                 {calcHours(newStart, newEnd)}h
               </span>
-              <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.82rem' }}>
-                Guardar
-              </button>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                {editingSlotIndex !== null && (
+                  <button 
+                    type="button" 
+                    onClick={() => setEditingSlotIndex(null)} 
+                    style={{ padding: '6px 10px', fontWeight: 700, fontSize: '0.82rem', background: '#94a3b8', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                    Cancelar
+                  </button>
+                )}
+                <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.82rem' }}>
+                  {editingSlotIndex !== null ? 'Actualizar' : 'Guardar'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-
       </div>
     );
   };
