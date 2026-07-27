@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { HorarioSlot } from '@/types';
@@ -732,7 +732,7 @@ export default function MiniMonthCalendar({
                 {daySlots.length > 0 && (
                   <div className="mini-day-badges">
                     {daySlots.map((s, j) => (
-                      <span key={j} className="mini-day-dot" style={{ color: getCourseColor(s.course) }}>
+                      <span key={j} className="mini-day-dot" style={{ backgroundColor: getCourseColor(s.course), color: '#ffffff' }}>
                         {getCourseLabel(s.course)}
                       </span>
                     ))}
@@ -741,14 +741,26 @@ export default function MiniMonthCalendar({
                 {!readOnly && isReportDeadline && (() => {
                   const hasReportDelay = compliance.some((a) => a.type === 'informe-atrasado');
                   const hasReportWarning = compliance.some((a) => a.type === 'informe-por-vencer');
-                  let textColor = '#4f46e5';
-                  let bgColor = '#e0e7ff';
-                  let borderColor = '#c7d2fe';
-                  if (hasReportDelay) { textColor = '#b91c1c'; bgColor = '#fee2e2'; borderColor = '#fca5a5'; }
-                  else if (hasReportWarning) { textColor = '#b45309'; bgColor = '#fef3c7'; borderColor = '#fde047'; }
+                  let textColor = '#ffffff';
+                  let bgColor = '#4f46e5';
+                  let borderColor = '#4338ca';
+                  if (hasReportDelay) { textColor = '#ffffff'; bgColor = '#dc2626'; borderColor = '#b91c1c'; }
+                  else if (hasReportWarning) { textColor = '#ffffff'; bgColor = '#d97706'; borderColor = '#b45309'; }
                   return (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 800, color: textColor, backgroundColor: bgColor, padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase', letterSpacing: '0.05em', border: `1px solid ${borderColor}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px', width: '100%' }}>
+                      <span style={{ 
+                        fontSize: '0.62rem', 
+                        fontWeight: 900, 
+                        color: textColor, 
+                        backgroundColor: bgColor, 
+                        padding: '2px 5px', 
+                        borderRadius: '4px', 
+                        textTransform: 'uppercase', 
+                        letterSpacing: '0.05em', 
+                        border: `1px solid ${borderColor}`,
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                        whiteSpace: 'nowrap'
+                      }}>
                         INF{reportCourseNum}
                       </span>
                     </div>

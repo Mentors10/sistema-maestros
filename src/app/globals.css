@@ -1212,7 +1212,7 @@ h6 {
 
 .cal-month-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   background: #e2e8f0;
 }
@@ -1228,10 +1228,12 @@ h6 {
 }
 
 .mini-month-day {
-  min-height: 32px;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  min-height: 0;
   border: 2px solid #cbd5e1;
   border-radius: 5px;
-  padding: 3px;
+  padding: 2px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -1240,6 +1242,7 @@ h6 {
   transition: all 0.15s ease;
   background: #ffffff;
   position: relative;
+  overflow: hidden;
 }
 
 .mini-month-day.has-slot {
@@ -1292,19 +1295,20 @@ h6 {
 
 .mini-day-badges {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
   justify-content: center;
   width: 100%;
 }
 
 .mini-day-dot {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 900;
-  line-height: 1;
-  text-shadow: 0 0 2px rgba(255,255,255,0.8);
-  background: rgba(0,0,0,0.06);
-  padding: 0px 3px;
+  line-height: 1.1;
+  padding: 1px 3px;
   border-radius: 3px;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .calendar-compliance-strip {
