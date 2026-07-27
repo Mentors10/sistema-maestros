@@ -621,66 +621,94 @@ export default function MiniMonthCalendar({
                     const isFirstOfDay = idx === 0;
                     const isCurrentEditing = globalIdx === editingSlotIndex;
                     return (
-                      <tr 
-                        key={globalIdx} 
-                        onClick={() => !readOnly && handleEditSlotSelect(s, globalIdx)}
-                        style={{
-                          background: isCurrentEditing 
-                            ? `${color}35` 
-                            : `${color}12`,
-                          borderLeft: isCurrentEditing ? `4px solid ${color}` : '4px solid transparent',
-                          borderBottom: '1px solid #e2e8f0',
-                          cursor: !readOnly ? 'pointer' : 'default',
-                          transition: 'all 0.2s ease',
-                        }}
-                      >
-                        <td style={{ padding: '4px 6px', fontWeight: isCurrentDate ? 800 : 400, color: isCurrentDate ? '#1e293b' : '#64748b', whiteSpace: 'nowrap' }}>
-                          {isFirstOfDay ? formatLetterDate(date) : ''}
-                        </td>
-                        <td style={{ padding: '4px 6px' }}>
-                          <span style={{
-                            background: color,
-                            color: '#fff',
-                            padding: '2px 6px',
-                            borderRadius: '3px',
-                            fontSize: '0.68rem',
-                            fontWeight: 900,
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                          }}>{getCourseLabel(s.course)}</span>
-                        </td>
-                        <td style={{ padding: '4px 6px', textAlign: 'center', color: '#475569' }}>{s.startTime}</td>
-                        <td style={{ padding: '4px 6px', textAlign: 'center', color: '#475569' }}>{s.endTime}</td>
-                        <td style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 700, color: '#059669' }}>{s.hours}h</td>
-                        {!readOnly && (
-                          <td style={{ padding: '4px 6px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                              <button 
-                                style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#ecfdf5', color: '#059669', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
-                                onClick={(e) => { e.stopPropagation(); handleEditSlotSelect(s, globalIdx); }} 
-                                title="Editar"
-                              >
-                                Editar
-                              </button>
-                              <button 
-                                style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
-                                onClick={(e) => { e.stopPropagation(); handleDuplicateSlot(s); }} 
-                                title="Duplicar"
-                              >
-                                Dup
-                              </button>
-                              <button 
-                                style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#fee2e2', color: '#dc2626', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
-                                onClick={(e) => { e.stopPropagation(); handleDeleteSlot(globalIdx); }} 
-                                title="Eliminar"
-                              >
-                                X
-                              </button>
-                            </div>
+                        <tr 
+                          key={globalIdx} 
+                          onClick={() => !readOnly && handleEditSlotSelect(s, globalIdx)}
+                          style={{
+                            background: isCurrentEditing 
+                              ? 'rgba(239, 68, 68, 0.15)' 
+                              : `${color}12`,
+                            cursor: !readOnly ? 'pointer' : 'default',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <td style={{ 
+                            padding: '4px 6px', 
+                            fontWeight: isCurrentDate ? 800 : 400, 
+                            color: isCurrentDate ? '#1e293b' : '#64748b', 
+                            whiteSpace: 'nowrap',
+                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                            borderLeft: isCurrentEditing ? '3px solid #ef4444' : undefined,
+                          }}>
+                            {isFirstOfDay ? formatLetterDate(date) : ''}
                           </td>
-                        )}
-                      </tr>
-                    );
-                  });
+                          <td style={{ 
+                            padding: '4px 6px',
+                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                          }}>
+                            <span style={{
+                              background: color,
+                              color: '#fff',
+                              padding: '2px 6px',
+                              borderRadius: '3px',
+                              fontSize: '0.68rem',
+                              fontWeight: 900,
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                            }}>{getCourseLabel(s.course)}</span>
+                          </td>
+                          <td style={{ 
+                            padding: '4px 6px', 
+                            textAlign: 'center', 
+                            color: '#475569',
+                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                          }}>{s.startTime}</td>
+                          <td style={{ 
+                            padding: '4px 6px', 
+                            textAlign: 'center', 
+                            color: '#475569',
+                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                          }}>{s.endTime}</td>
+                          <td style={{ 
+                            padding: '4px 6px', 
+                            textAlign: 'center', 
+                            fontWeight: 700, 
+                            color: '#059669',
+                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                            borderRight: isCurrentEditing && readOnly ? '3px solid #ef4444' : undefined,
+                          }}>{s.hours}h</td>
+                          {!readOnly && (
+                            <td style={{ 
+                              padding: '4px 6px', 
+                              textAlign: 'center',
+                              borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                              borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
+                              borderRight: isCurrentEditing ? '3px solid #ef4444' : undefined,
+                            }}>
+                              <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                                <button 
+                                  style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
+                                  onClick={(e) => { e.stopPropagation(); handleDuplicateSlot(s); }} 
+                                  title="Duplicar"
+                                >
+                                  Dup
+                                </button>
+                                <button 
+                                  style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#fee2e2', color: '#dc2626', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteSlot(globalIdx); }} 
+                                  title="Eliminar"
+                                >
+                                  X
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
                 })}
               </tbody>
             </table>
