@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte de Monitoreo - Mayo, Junio y Julio 2026</title>
+<style>
+:root {
+    --primary: #0d3b66;
+    --primary-2: #1a5276;
+    --accent: #2e86c1;
+    --success: #16a34a;
+    --warning: #f59e0b;
+    --danger: #dc2626;
+    --bg: #eef2f7;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1f2937;
+    --muted: #64748b;
+}
+* { box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 24px; }
+.container { max-width: 1700px; margin: 0 auto; }
+.header {
+    background: linear-gradient(135deg, #0d3b66 0%, #1a5276 55%, #2e86c1 100%);
+    color: #fff; border-radius: 14px; padding: 26px 32px; margin-bottom: 20px;
+    box-shadow: 0 6px 18px rgba(13,59,102,.25);
+}
+.header h1 { margin: 0; font-size: 24px; letter-spacing: .5px; }
+.header h2 { margin: 4px 0 0; font-weight: 300; font-size: 15px; opacity: .9; }
+.header .meta { margin-top: 10px; font-size: 12px; opacity: .85; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.card { background: var(--card); border-radius: 12px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(15,23,42,.06); border-left: 4px solid var(--accent); }
+.card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+.card .value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+.card.ok { border-left-color: var(--success); }
+.card.pend { border-left-color: var(--danger); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.toolbar input[type=search] { flex: 1; min-width: 220px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; }
+.toolbar button { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; background: var(--primary-2); color: #fff; transition: all .15s; }
+.toolbar button:hover { opacity: .88; }
+.toolbar button.active { background: var(--danger); }
+.table-wrap { background: var(--card); border-radius: 12px; box-shadow: 0 2px 10px rgba(15,23,42,.08); overflow: auto; max-height: 78vh; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; min-width: 1000px; }
+thead { position: sticky; top: 0; z-index: 5; }
+th { background: var(--primary); color: #fff; padding: 12px 8px; text-align: left; font-size: 11px; letter-spacing: .4px; text-transform: uppercase; white-space: nowrap; }
+td { border-bottom: 1px solid var(--border); padding: 10px 8px; vertical-align: middle; }
+tbody tr { transition: filter .12s; }
+tbody tr:hover { filter: brightness(.96); }
+.badge { display: inline-block; padding: 3px 8px; margin: 1px 2px 1px 0; border-radius: 999px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.bg-success { background: #dcfce7 !important; color: #15803d !important; }
+.bg-warning { background: #fef3c7 !important; color: #b45309 !important; }
+.bg-danger { background: #fee2e2 !important; color: #b91c1c !important; }
+.border-success { border: 2px solid #15803d; background: #ffffff; color: #166534; }
+.border-warning { border: 2px solid #d97706; background: #ffffff; color: #92400e; }
+.border-danger { border: 2px solid #b91c1c; background: #ffffff; color: #991b1b; }
+.border-blue { border: 2px solid #1d4ed8; background: #ffffff; color: #1e40af; }
+.hidden-col { display: none !important; }
+.cell-blue { background: #dbeafe !important; }
+.cell-green { background: #dcfce7 !important; }
+.cell-yellow { background: #fef9c3 !important; }
+.cell-red { background: #fee2e2 !important; }
+.curso { min-width: 170px; max-width: 300px; }
+.curso .nombre { font-weight: 600; font-size: 11.5px; display: block; margin-bottom: 5px; line-height: 1.35; }
+.curso .fechas { margin-top: 5px; padding-top: 5px; border-top: 1px dashed var(--border); }
+a { text-decoration: none; }
+a:hover { opacity: .75; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; justify-content: center; margin-top: 16px; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.footer { text-align: center; margin-top: 14px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+    <h1>REPORTE DE MONITOREO ACADÉMICO</h1>
+    <h2>SIE UNEFCO &middot; Mayo - Junio - Julio 2026</h2>
+    <div class="meta">Generado: 01/08/2026 08:46 &middot; 34 programas &middot; 103 cursos &middot; 17 facilitadores</div>
+</div>
+
+<div class="cards">
+    <div class="card"><div class="label">Total Programas</div><div class="value">34</div></div>
+    <div class="card"><div class="label">Total Cursos</div><div class="value">103</div></div>
+    <div class="card ok"><div class="label">Todo OK</div><div class="value">0<span style="font-size:14px;color:var(--muted);font-weight:400"> / 34</span></div></div>
+    <div class="card pend"><div class="label">Con Pendientes</div><div class="value">34<span style="font-size:14px;color:var(--muted);font-weight:400"> / 34</span></div></div>
+</div>
+
+<div class="toolbar">
+    <select id="filtroTecnico" onchange="buscar()" style="padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; font-weight: 600; color: var(--primary);">
+        <option value="todos">Todos los técnicos</option>
+        <option value="8639300">Gilmar Felix Chavarria Choque</option>
+        <option value="7782629">Juan Pablo Alba Vaca</option>
+        <option value="3355859">Claudia Lisett Olivares Rivero</option>
+    </select>
+    <input type="search" id="buscar" placeholder="Buscar por ciclo, sede, facilitador o curso..." oninput="buscar()">
+    <button id="btnCiclo" class="active" onclick="toggleCol('ciclo')">Ocultar Ciclo</button>
+    <button id="btnVerdes" onclick="toggleVerdes()">Ocultar verdes</button>
+</div>
+
+<div class="table-wrap">
+<table id="reportTable">
+<thead>
+<tr>
+    <th class="toggle-ciclo">Ciclo Formativo</th><th>Sede</th><th>Facilitador</th>
+    <th>Curso 1</th><th>Curso 2</th><th>Curso 3</th><th>Curso 4</th>
+    <th style="width:40px;text-align:center">🔗</th>
+</tr>
+</thead>
+<tbody>
+<tr data-tecnico="8639300" style="background:#e3f2fd" data-ok="0">
+        <td class="toggle-ciclo" title="PREVENCIÓN, DETECCIÓN, ACTUACIÓN Y DERIVACIÓN DE LA VIOLENCIA EN EL ÁMBITO EDUCATIVO">PREVENCIÓN, DETECCIÓN, ACTUACIÓN Y DERIVACIÓN DE LA VIOLENCI</td>
+        <td title="FLORINDA BARBA">FLORINDA BARBA</td>
+        <td title="JUAN HENRRY AGUDO CAYO">JUAN HENRRY AGUDO CAYO</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">PROTECCIÓN INTEGRAL DE NIÑAS, NIÑOS Y ADOLESCENTES EN SITUACIONES DE V</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 57.6% (19)</span>
+        <span class="badge bg-warning">Repr: 1</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 30/May</span>
+            <span class="badge border-danger">Socialización: 13/Jun</span>
+            <span class="badge border-danger">Límite: 18/06</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-green"><div class="curso">
+        <span class="nombre">MARCO NORMATIVO E INSTRUMENTOS PARA LA DETECCIÓN, ACTUACIÓN Y DERIVACI</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 57.6% (19)</span>
+        <span class="badge bg-warning">Repr: 1</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 20/Jun</span>
+            <span class="badge border-danger">Socialización: 03/Jul</span>
+            <span class="badge border-danger">Límite: 08/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-yellow"><div class="curso">
+        <span class="nombre">PROCEDIMIENTOS PARA LA REFERENCIA Y CONTRA REFERENCIA EN EL PROCESO DE</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-warning">Inicio: 18/Jul</span>
+            <span class="badge border-warning">Socialización: 31/Jul</span>
+            <span class="badge border-warning">Límite: 05/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/11952/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="8639300" style="background:#fff3e0" data-ok="0">
+        <td class="toggle-ciclo" title="PREVENCIÓN, DETECCIÓN, ACTUACIÓN Y DERIVACIÓN DE LA VIOLENCIA EN EL ÁMBITO EDUCATIVO">PREVENCIÓN, DETECCIÓN, ACTUACIÓN Y DERIVACIÓN DE LA VIOLENCI</td>
+        <td title="FLORINDA BARBA">FLORINDA BARBA</td>
+        <td title="VERÓNICA  PANTOJA CUELLAR">VERÓNICA  PANTOJA CUELLAR</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">PROTECCIÓN INTEGRAL DE NIÑAS, NIÑOS Y ADOLESCENTES EN SITUACIONES DE V</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 59.4% (19)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 30/May</span>
+            <span class="badge border-danger">Socialización: 13/Jun</span>
+            <span class="badge border-danger">Límite: 18/06</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-green"><div class="curso">
+        <span class="nombre">MARCO NORMATIVO E INSTRUMENTOS PARA LA DETECCIÓN, ACTUACIÓN Y DERIVACI</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 59.4% (19)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 20/Jun</span>
+            <span class="badge border-danger">Socialización: 03/Jul</span>
+            <span class="badge border-danger">Límite: 08/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-yellow"><div class="curso">
+        <span class="nombre">PROCEDIMIENTOS PARA LA REFERENCIA Y CONTRA REFERENCIA EN EL PROCESO DE</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-warning">Inicio: 18/Jul</span>
+            <span class="badge border-warning">Socialización: 31/Jul</span>
+            <span class="badge border-warning">Límite: 05/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/11953/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="7782629" style="background:#e8f5e9" data-ok="0">
+        <td class="toggle-ciclo" title="HERRAMIENTAS TECNOLÓGICAS DIGITALES APLICADAS EN LA ENSEÑANZA DE LA LENGUA EXTRANJERA INGLÉS">HERRAMIENTAS TECNOLÓGICAS DIGITALES APLICADAS EN LA ENSEÑANZ</td>
+        <td title="ESFM ENRIQUE FINOT - ID 10007">ESFM ENRIQUE FINOT - ID 10007</td>
+        <td title="ABRAHAM DAVID  CHAMBI VILLAN">ABRAHAM DAVID  CHAMBI VILLAN</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">FUNDAMENTOS COMUNICATIVOS EN INGLÉS PARA LA FORMACIÓN DOCENTE</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 36.0% (9)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 24/Jun</span>
+            <span class="badge border-danger">Socialización: 24/Jul</span>
+            <span class="badge border-danger">Límite: 29/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">INGLÉS PARA LA COMUNICACIÓN COTIDIANA Y PROFESIONAL</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 92.0% (23)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 24/Jul</span>
+            <span class="badge border-blue">Socialización: 24/Ago</span>
+            <span class="badge border-blue">Límite: 29/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">INGLÉS PARA LA COMUNICACIÓN NARRATIVA Y REFLEXIVA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 26/Ago</span>
+            <span class="badge border-blue">Socialización: 26/Sep</span>
+            <span class="badge border-blue">Límite: 01/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12031/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#fce4ec" data-ok="0">
+        <td class="toggle-ciclo" title="CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL">CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM ENRIQUE FINOT - ID 10012">ESFM ENRIQUE FINOT - ID 10012</td>
+        <td title="MONICA LIDIA VERONICA  ALARCON  BELTRAN">MONICA LIDIA VERONICA  ALARCON  BELTRAN</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">DISEÑO Y ESTRUCTURACIÓN DE MATERIALES EDUCATIVOS</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 89.7% (35)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 24/Jun</span>
+            <span class="badge border-danger">Socialización: 23/Jul</span>
+            <span class="badge border-danger">Límite: 28/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">PRODUCCIÓN Y EDICIÓN DE TEXTOS DIDÁCTICOS PARA EL AULA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 74.4% (29)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 24/Jul</span>
+            <span class="badge border-blue">Socialización: 24/Ago</span>
+            <span class="badge border-blue">Límite: 29/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">ELABORACIÓN DE RECURSOS DIGITALES Y MULTIFORMATO PARA ENTORNOS EDUCATI</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 28/Ago</span>
+            <span class="badge border-blue">Socialización: 28/Sep</span>
+            <span class="badge border-blue">Límite: 03/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12045/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#f3e5f5" data-ok="0">
+        <td class="toggle-ciclo" title="CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL">CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM ENRIQUE FINOT - ID 10013">ESFM ENRIQUE FINOT - ID 10013</td>
+        <td title="MIGUEL ANGEL  ATTO MENCHACA">MIGUEL ANGEL  ATTO MENCHACA</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">DISEÑO Y ESTRUCTURACIÓN DE MATERIALES EDUCATIVOS</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 100.0% (28)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 24/Jun</span>
+            <span class="badge border-danger">Socialización: 24/Jul</span>
+            <span class="badge border-danger">Límite: 29/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">PRODUCCIÓN Y EDICIÓN DE TEXTOS DIDÁCTICOS PARA EL AULA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 28/Jul</span>
+            <span class="badge border-blue">Socialización: 28/Ago</span>
+            <span class="badge border-blue">Límite: 02/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">ELABORACIÓN DE RECURSOS DIGITALES Y MULTIFORMATO PARA ENTORNOS EDUCATI</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 28/Ago</span>
+            <span class="badge border-blue">Socialización: 28/Sep</span>
+            <span class="badge border-blue">Límite: 03/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12033/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#f3e5f5" data-ok="0">
+        <td class="toggle-ciclo" title="CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL">CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM ENRIQUE FINOT - ID 10014">ESFM ENRIQUE FINOT - ID 10014</td>
+        <td title="MIGUEL ANGEL  ATTO MENCHACA">MIGUEL ANGEL  ATTO MENCHACA</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">DISEÑO Y ESTRUCTURACIÓN DE MATERIALES EDUCATIVOS</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 100.0% (35)</span>
+        <span class="badge bg-warning">Repr: 1</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 24/Jun</span>
+            <span class="badge border-danger">Socialización: 24/Jul</span>
+            <span class="badge border-danger">Límite: 29/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">PRODUCCIÓN Y EDICIÓN DE TEXTOS DIDÁCTICOS PARA EL AULA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 29/Jul</span>
+            <span class="badge border-blue">Socialización: 29/Ago</span>
+            <span class="badge border-blue">Límite: 03/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">ELABORACIÓN DE RECURSOS DIGITALES Y MULTIFORMATO PARA ENTORNOS EDUCATI</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 29/Ago</span>
+            <span class="badge border-blue">Socialización: 29/Sep</span>
+            <span class="badge border-blue">Límite: 04/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12034/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#e0f7fa" data-ok="0">
+        <td class="toggle-ciclo" title="HERRAMIENTAS TECNOLÓGICAS DIGITALES APLICADAS EN LA ENSEÑANZA DE LA LENGUA EXTRANJERA INGLÉS">HERRAMIENTAS TECNOLÓGICAS DIGITALES APLICADAS EN LA ENSEÑANZ</td>
+        <td title="ESFM ENRIQUE FINOT - ID 10005">ESFM ENRIQUE FINOT - ID 10005</td>
+        <td title="FRANZ ESTEBAN  SOQUERE ORTIZ">FRANZ ESTEBAN  SOQUERE ORTIZ</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">FUNDAMENTOS COMUNICATIVOS EN INGLÉS PARA LA FORMACIÓN DOCENTE</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 92.9% (26)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 24/Jun</span>
+            <span class="badge border-danger">Socialización: 24/Jul</span>
+            <span class="badge border-danger">Límite: 29/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">INGLÉS PARA LA COMUNICACIÓN COTIDIANA Y PROFESIONAL</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 29/Jul</span>
+            <span class="badge border-blue">Socialización: 29/Ago</span>
+            <span class="badge border-blue">Límite: 03/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">INGLÉS PARA LA COMUNICACIÓN NARRATIVA Y REFLEXIVA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 29/Ago</span>
+            <span class="badge border-blue">Socialización: 29/Sep</span>
+            <span class="badge border-blue">Límite: 04/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12037/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="7782629" style="background:#fff8e1" data-ok="0">
+        <td class="toggle-ciclo" title="CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL">CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM RAFAEL CHAVEZ ORTIZ - ID 10035">ESFM RAFAEL CHAVEZ ORTIZ - ID 10035</td>
+        <td title="LIMBER NINA ORTIZ">LIMBER NINA ORTIZ</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">DISEÑO Y ESTRUCTURACIÓN DE MATERIALES EDUCATIVOS</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 11.8% (4)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 24/Jun</span>
+            <span class="badge border-danger">Socialización: 24/Jul</span>
+            <span class="badge border-danger">Límite: 29/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">PRODUCCIÓN Y EDICIÓN DE TEXTOS DIDÁCTICOS PARA EL AULA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 28/Jul</span>
+            <span class="badge border-blue">Socialización: 28/Ago</span>
+            <span class="badge border-blue">Límite: 02/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">ELABORACIÓN DE RECURSOS DIGITALES Y MULTIFORMATO PARA ENTORNOS EDUCATI</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 29/Ago</span>
+            <span class="badge border-blue">Socialización: 29/Sep</span>
+            <span class="badge border-blue">Límite: 04/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12040/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#efebe9" data-ok="0">
+        <td class="toggle-ciclo" title="PRODUCCIÓN ACADÉMICA ASISTIDA CON INTELIGENCIA ARTIFICIAL">PRODUCCIÓN ACADÉMICA ASISTIDA CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM PLURIETNICA DEL ORIENTE Y CHACO - ID 10030">ESFM PLURIETNICA DEL ORIENTE Y CHACO - I</td>
+        <td title="HERRY ALEXANDER FRONTANILLA RODRIGUEZ">HERRY ALEXANDER FRONTANILLA RODRIGUEZ</td>
+        <td class="cell-red"><div class="curso">
+        <span class="nombre">FUNDAMENTOS Y USO ÉTICO DE LA IA EN LA PRODUCCIÓN ACADÉMICA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 60.9% (14)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 24/Jun</span>
+            <span class="badge border-danger">Socialización: 24/Jul</span>
+            <span class="badge border-danger">Límite: 29/07</span>
+            <span class="badge bg-danger">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">HERRAMIENTAS DE INTELIGENCIA ARTIFICIAL PARA LA INVESTIGACIÓN Y REDACC</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 25/Jul</span>
+            <span class="badge border-blue">Socialización: 23/Ago</span>
+            <span class="badge border-blue">Límite: 28/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">DISEÑO Y PRODUCCIÓN DE MATERIALES ACADÉMICOS CON IA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 25/Ago</span>
+            <span class="badge border-blue">Socialización: 25/Sep</span>
+            <span class="badge border-blue">Límite: 30/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12043/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="7782629" style="background:#fff8e1" data-ok="0">
+        <td class="toggle-ciclo" title="CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL">CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM RAFAEL CHÁVEZ ORTIZ - ID: 10036">ESFM RAFAEL CHÁVEZ ORTIZ - ID: 10036</td>
+        <td title="LIMBER NINA ORTIZ">LIMBER NINA ORTIZ</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">DISEÑO Y ESTRUCTURACIÓN DE MATERIALES EDUCATIVOS</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 2.9% (1)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 25/Jun</span>
+            <span class="badge border-danger">Socialización: 25/Jul</span>
+            <span class="badge border-danger">Límite: 30/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">PRODUCCIÓN Y EDICIÓN DE TEXTOS DIDÁCTICOS PARA EL AULA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 29/Jul</span>
+            <span class="badge border-blue">Socialización: 29/Ago</span>
+            <span class="badge border-blue">Límite: 03/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">ELABORACIÓN DE RECURSOS DIGITALES Y MULTIFORMATO PARA ENTORNOS EDUCATI</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 29/Ago</span>
+            <span class="badge border-blue">Socialización: 29/Sep</span>
+            <span class="badge border-blue">Límite: 04/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12042/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#efebe9" data-ok="0">
+        <td class="toggle-ciclo" title="GAMIFICACIÓN E INNOVACIÓN CON INTELIGENCIA ARTIFICIAL">GAMIFICACIÓN E INNOVACIÓN CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="UE NUESTRA SEÑORA DE LA PAZ II - ID 10045">UE NUESTRA SEÑORA DE LA PAZ II - ID 1004</td>
+        <td title="HERRY ALEXANDER FRONTANILLA RODRIGUEZ">HERRY ALEXANDER FRONTANILLA RODRIGUEZ</td>
+        <td class="cell-red"><div class="curso">
+        <span class="nombre">USO Y APLICACIÓN DE HERRAMIENTAS Y RECURSOS DIGITALES PARA LA GAMIFICA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 57.9% (22)</span>
+        <span class="badge bg-warning">Repr: 10</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 25/Jun</span>
+            <span class="badge border-danger">Socialización: 09/Jul</span>
+            <span class="badge border-danger">Límite: 14/07</span>
+            <span class="badge bg-danger">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-red"><div class="curso">
+        <span class="nombre">DISEÑO DE EXPERIENCIAS GAMIFICADAS EN EL AULA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-success">%Eval: 26.3% (10)</span>
+        <span class="badge bg-warning">Repr: 7</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 09/Jul</span>
+            <span class="badge border-danger">Socialización: 23/Jul</span>
+            <span class="badge border-danger">Límite: 28/07</span>
+            <span class="badge bg-danger">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-yellow"><div class="curso">
+        <span class="nombre">EVALUACIÓN Y SEGUIMIENTO EN EL AULA GAMIFICADA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-warning">Inicio: 23/Jul</span>
+            <span class="badge border-warning">Socialización: 06/Ago</span>
+            <span class="badge border-warning">Límite: 11/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12029/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#e0f7fa" data-ok="0">
+        <td class="toggle-ciclo" title="HERRAMIENTAS TECNOLÓGICAS DIGITALES APLICADAS EN LA ENSEÑANZA DE LA LENGUA EXTRANJERA INGLÉS">HERRAMIENTAS TECNOLÓGICAS DIGITALES APLICADAS EN LA ENSEÑANZ</td>
+        <td title="ESFM ENRIQUE FINOT - ID 10006">ESFM ENRIQUE FINOT - ID 10006</td>
+        <td title="FRANZ ESTEBAN  SOQUERE ORTIZ">FRANZ ESTEBAN  SOQUERE ORTIZ</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">FUNDAMENTOS COMUNICATIVOS EN INGLÉS PARA LA FORMACIÓN DOCENTE</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 100.0% (29)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 25/Jun</span>
+            <span class="badge border-danger">Socialización: 25/Jul</span>
+            <span class="badge border-danger">Límite: 30/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">INGLÉS PARA LA COMUNICACIÓN COTIDIANA Y PROFESIONAL</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 28/Jul</span>
+            <span class="badge border-blue">Socialización: 28/Ago</span>
+            <span class="badge border-blue">Límite: 02/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">INGLÉS PARA LA COMUNICACIÓN NARRATIVA Y REFLEXIVA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 29/Ago</span>
+            <span class="badge border-blue">Socialización: 29/Sep</span>
+            <span class="badge border-blue">Límite: 04/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12039/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#efebe9" data-ok="0">
+        <td class="toggle-ciclo" title="PRODUCCIÓN ACADÉMICA ASISTIDA CON INTELIGENCIA ARTIFICIAL">PRODUCCIÓN ACADÉMICA ASISTIDA CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM PLURIETNICA DEL ORIENTE Y CHACO - ID 10031">ESFM PLURIETNICA DEL ORIENTE Y CHACO - I</td>
+        <td title="HERRY ALEXANDER FRONTANILLA RODRIGUEZ">HERRY ALEXANDER FRONTANILLA RODRIGUEZ</td>
+        <td class="cell-red"><div class="curso">
+        <span class="nombre">FUNDAMENTOS Y USO ÉTICO DE LA IA EN LA PRODUCCIÓN ACADÉMICA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 65.0% (13)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 25/Jun</span>
+            <span class="badge border-danger">Socialización: 25/Jul</span>
+            <span class="badge border-danger">Límite: 30/07</span>
+            <span class="badge bg-danger">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">HERRAMIENTAS DE INTELIGENCIA ARTIFICIAL PARA LA INVESTIGACIÓN Y REDACC</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 25/Jul</span>
+            <span class="badge border-blue">Socialización: 25/Ago</span>
+            <span class="badge border-blue">Límite: 30/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">DISEÑO Y PRODUCCIÓN DE MATERIALES ACADÉMICOS CON IA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 25/Ago</span>
+            <span class="badge border-blue">Socialización: 25/Sep</span>
+            <span class="badge border-blue">Límite: 30/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12044/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#e8eaf6" data-ok="0">
+        <td class="toggle-ciclo" title="PRODUCCIÓN ACADÉMICA ASISTIDA CON INTELIGENCIA ARTIFICIAL">PRODUCCIÓN ACADÉMICA ASISTIDA CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="UNIDAD ACADEMICA CHARAGUA - ID 10033">UNIDAD ACADEMICA CHARAGUA - ID 10033</td>
+        <td title="RAFAEL MARCELO VASQUEZ ALAVE">RAFAEL MARCELO VASQUEZ ALAVE</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">FUNDAMENTOS Y USO ÉTICO DE LA IA EN LA PRODUCCIÓN ACADÉMICA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 100.0% (27)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 25/Jun</span>
+            <span class="badge border-danger">Socialización: 25/Jul</span>
+            <span class="badge border-danger">Límite: 30/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">HERRAMIENTAS DE INTELIGENCIA ARTIFICIAL PARA LA INVESTIGACIÓN Y REDACC</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-success">%Eval: 100.0% (27)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 25/Jul</span>
+            <span class="badge border-blue">Socialización: 25/Ago</span>
+            <span class="badge border-blue">Límite: 30/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">DISEÑO Y PRODUCCIÓN DE MATERIALES ACADÉMICOS CON IA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 25/Ago</span>
+            <span class="badge border-blue">Socialización: 25/Sep</span>
+            <span class="badge border-blue">Límite: 30/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12047/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#e8eaf6" data-ok="0">
+        <td class="toggle-ciclo" title="PRODUCCIÓN ACADÉMICA ASISTIDA CON INTELIGENCIA ARTIFICIAL">PRODUCCIÓN ACADÉMICA ASISTIDA CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="UNIDAD ACADEMICA CHARAGUA - ID 10034">UNIDAD ACADEMICA CHARAGUA - ID 10034</td>
+        <td title="RAFAEL MARCELO VASQUEZ ALAVE">RAFAEL MARCELO VASQUEZ ALAVE</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">FUNDAMENTOS Y USO ÉTICO DE LA IA EN LA PRODUCCIÓN ACADÉMICA</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 100.0% (24)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-danger">Inicio: 25/Jun</span>
+            <span class="badge border-danger">Socialización: 25/Jul</span>
+            <span class="badge border-danger">Límite: 30/07</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">HERRAMIENTAS DE INTELIGENCIA ARTIFICIAL PARA LA INVESTIGACIÓN Y REDACC</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-success">%Eval: 100.0% (24)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 25/Jul</span>
+            <span class="badge border-blue">Socialización: 25/Ago</span>
+            <span class="badge border-blue">Límite: 30/08</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">DISEÑO Y PRODUCCIÓN DE MATERIALES ACADÉMICOS CON IA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 26/Ago</span>
+            <span class="badge border-blue">Socialización: 26/Sep</span>
+            <span class="badge border-blue">Límite: 01/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12048/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="3355859" style="background:#fbe9e7" data-ok="0">
+        <td class="toggle-ciclo" title="CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL">CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM ENRIQUE FINOT - ID 10011">ESFM ENRIQUE FINOT - ID 10011</td>
+        <td title="MARCELO NINA ORTIZ">MARCELO NINA ORTIZ</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">DISEÑO Y ESTRUCTURACIÓN DE MATERIALES EDUCATIVOS</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 100.0% (25)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-warning">Inicio: 27/Jun</span>
+            <span class="badge border-warning">Socialización: 27/Jul</span>
+            <span class="badge border-warning">Límite: 01/08</span>
+            <span class="badge bg-success">Venc: SI</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">PRODUCCIÓN Y EDICIÓN DE TEXTOS DIDÁCTICOS PARA EL AULA</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 31/Jul</span>
+            <span class="badge border-blue">Socialización: 31/Ago</span>
+            <span class="badge border-blue">Límite: 05/09</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td class="cell-blue"><div class="curso">
+        <span class="nombre">ELABORACIÓN DE RECURSOS DIGITALES Y MULTIFORMATO PARA ENTORNOS EDUCATI</span>
+        <span class="badge bg-danger">Plan NO</span>
+        <span class="badge bg-danger">%Eval: 0.0% (0)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-danger">Report: NO</span>
+        <div class="fechas">
+            <span class="badge border-blue">Inicio: 04/Sep</span>
+            <span class="badge border-blue">Socialización: 04/Oct</span>
+            <span class="badge border-blue">Límite: 09/10</span>
+            <span class="badge ">Venc: NO</span>
+        </div>
+    </div></td><td></td>
+        <td style="text-align:center"><a href="https://sie.unefco.edu.bo/events/12059/detail" target="_blank" title="Ver evento">👁️</a></td>
+    </tr><tr data-tecnico="7782629" style="background:#fff8e1" data-ok="0">
+        <td class="toggle-ciclo" title="CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL">CREACIÓN DE TEXTOS DIDÁCTICOS CON INTELIGENCIA ARTIFICIAL</td>
+        <td title="ESFM RAFAEL CHÁVEZ ORTIZ - ID: 10037">ESFM RAFAEL CHÁVEZ ORTIZ - ID: 10037</td>
+        <td title="LIMBER NINA ORTIZ">LIMBER NINA ORTIZ</td>
+        <td class="cell-green"><div class="curso">
+        <span class="nombre">DISEÑO Y ESTRUCTURACIÓN DE MATERIALES EDUCATIVOS</span>
+        <span class="badge bg-success">Plan SI</span>
+        <span class="badge bg-success">%Eval: 11.1% (4)</span>
+        <span class="badge bg-success">Repr: 0</span>
+        <span class="badge bg-success">Report: SI</span>
+        <div class="fechas">
+            <span class="badge border-warning">Inicio: 27/Jun</span>
+            <span class="badge border-warning">Socialización: 27/Jul</span>
+            <sp
+<tr data-tecnico="8639300"uncated 50456 bytes>
+
+NOTE: The output was truncated because it was too long. Use a more targeted query or a smaller range to get the information you need.

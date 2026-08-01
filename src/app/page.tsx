@@ -4,13 +4,14 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Curso, Grupo, AppFilters, DEFAULT_FILTERS, MESES, Tecnico, Facilitador, CicloFormativo, AgendaContacto } from '@/types';
 import { getNoteCompliance, getReviewCount } from '@/lib/utils/compliance';
 import { supabase } from '@/lib/supabase/client';
-import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye, Hash, User, Download, X } from 'lucide-react';
+import { Search, Filter, RefreshCw, Plus, LayoutGrid, CalendarDays, ChevronDown, AlertTriangle, BookOpen, Contact, Users, ZoomIn, ZoomOut, LogOut, Shield, Eye, Hash, User, Download, X, FileText } from 'lucide-react';
 import { exportAreaView } from '@/lib/utils/excelExport';
 import GrupoCard from '@/components/cursos/GrupoCard';
 import CursoForm from '@/components/cursos/CursoForm';
 import AgendaCard from '@/components/agenda/AgendaCard';
 import AgendaForm from '@/components/agenda/AgendaForm';
 import ParticipantesModal from '@/components/participantes/ParticipantesModal';
+import ReporteDiarioModal from '@/components/reporte/ReporteDiarioModal';
 import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
 import ChangePasswordPage from '@/components/auth/ChangePasswordPage';
@@ -214,6 +215,7 @@ function HomePage() {
   const [editingContacto, setEditingContacto] = useState<AgendaContacto | null>(null);
 
   const [activeCursoParticipantes, setActiveCursoParticipantes] = useState<Curso | null>(null);
+  const [showReporteDiarioModal, setShowReporteDiarioModal] = useState(false);
   const [customGrupoOrder, setCustomGrupoOrder] = useState<string[]>([]);
   const [expandedGrupo, setExpandedGrupo] = useState<string | null>(null);
   const [expandedArea, setExpandedArea] = useState<string | null>(null);
@@ -1296,27 +1298,26 @@ function HomePage() {
                 </select>
               </div>
 
-              <div className="toolbar-filter-group">
-                <label><AlertTriangle size={12} /> Alertas</label>
-                <select
-                  value={filters.alerta}
-                  onChange={(e) => setFilters({ ...filters, alerta: e.target.value })}
-                >
-                  <option value="todas">Todos los grupos</option>
-                  <option value="sin-fecha">Sin fechas programadas</option>
-                  <option value="proximo">Curso próximo</option>
-                  <option value="inminente">Curso inminente</option>
-                  <option value="en-proceso">Curso en proceso</option>
-                  <option value="planificacion-requerida">Planificación requerida</option>
-                  <option value="planificacion-atrasada">Planificación atrasada</option>
-                  <option value="soc-pendiente">SOC sin programar</option>
-                  <option value="eval-proxima">Evaluación próxima</option>
-                  <option value="eval-pendiente">Evaluación pendiente</option>
-                  <option value="informe-por-vencer">Informe por vencer</option>
-                  <option value="informe-atrasado">Informe atrasado</option>
-                  <option value="completo">Curso completado</option>
-                </select>
-              </div>
+              <button
+                className="btn btn-primary"
+                style={{
+                  background: 'linear-gradient(135deg, #0d3b66 0%, #1a5276 100%)',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: 'var(--radius-sm)',
+                  boxShadow: '0 2px 8px rgba(13, 59, 102, 0.25)',
+                  cursor: 'pointer',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                }}
+                onClick={() => setShowReporteDiarioModal(true)}
+              >
+                <FileText size={16} /> REPORTE DIARIO
+              </button>
 
               {reviewCount > 0 && (
                 <div className="alert-chip">
@@ -1738,6 +1739,12 @@ function HomePage() {
           onRefresh={loadData}
         />
       )}
+
+      <ReporteDiarioModal
+        isOpen={showReporteDiarioModal}
+        onClose={() => setShowReporteDiarioModal(false)}
+        currentUser={user}
+      />
     </div>
   );
 }
