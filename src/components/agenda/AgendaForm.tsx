@@ -125,15 +125,15 @@ export default function AgendaForm({ contacto, tecnicos, onSave, onCancel }: Age
           </select>
         </div>
 
-        {/* Google Maps Link */}
+        {/* Grupo de WhatsApp / Enlace */}
         <div className="form-group full">
-          <label className="form-label">Enlace de Google Maps</label>
+          <label className="form-label">Grupo de WhatsApp (o Enlace)</label>
           <input
             className="form-input"
             type="text"
             value={linkMaps}
             onChange={(e) => setLinkMaps(e.target.value)}
-            placeholder="https://maps.app.goo.gl/..."
+            placeholder="https://chat.whatsapp.com/..."
           />
         </div>
 

@@ -98,13 +98,13 @@ export default function AgendaCard({ contacto, tecnicos, onEdit, onDelete, readO
         <div className="agenda-comm-buttons">
           {contacto.link_maps && (
             <a 
-              href={contacto.link_maps} 
+              href={contacto.link_maps.startsWith('http') ? contacto.link_maps : `https://${contacto.link_maps}`} 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="btn btn-map btn-xs"
-              title="Abrir ubicación"
+              className="btn btn-whatsapp btn-xs"
+              title="Abrir grupo de WhatsApp o enlace"
             >
-              <MapPin size={12} /> Maps
+              <MessageCircle size={12} /> Grupo WA
             </a>
           )}
           {contacto.telefono && (

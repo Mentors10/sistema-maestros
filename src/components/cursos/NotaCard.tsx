@@ -12,7 +12,7 @@ import { distritosData } from '@/lib/utils/distritos';
 import {
   Edit3, Trash2, Users, Wrench, Globe, FileText, BookOpen,
   ClipboardEdit, ToggleLeft, Link2, MapPin, ExternalLink,
-  Phone, Eye, CheckCircle2, Copy,
+  Phone, Eye, CheckCircle2, Copy, MessageCircle,
   Calendar, Clock, Save, User
 } from 'lucide-react';
 import InscripcionOnlineModal from '@/components/cursos/InscripcionOnlineModal';
@@ -1182,13 +1182,30 @@ export default function NotaCard({
                   />
                 </div>
                 <div className="organizador-field full">
-                  <label>Link Maps</label>
-                  <input
-                    type="text"
-                    value={orgMaps}
-                    onChange={(e) => setOrgMaps(e.target.value)}
-                    placeholder="https://maps.app.goo.gl/..."
-                  />
+                  <label>Grupo de WhatsApp</label>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      value={orgMaps}
+                      onChange={(e) => {
+                        setOrgMaps(e.target.value);
+                        if (!linkExterno) setLinkExterno(e.target.value);
+                      }}
+                      placeholder="https://chat.whatsapp.com/..."
+                      style={{ flex: 1 }}
+                    />
+                    {orgMaps && (
+                      <a
+                        href={orgMaps.startsWith('http') ? orgMaps : `https://${orgMaps}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-success btn-xs"
+                        style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <MessageCircle size={11} /> Abrir WA
+                      </a>
+                    )}
+                  </div>
                 </div>
                 <div className="organizador-field full">
                   <label>Observaciones</label>
