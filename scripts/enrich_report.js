@@ -8,40 +8,92 @@ const url = env.match(/NEXT_PUBLIC_SUPABASE_URL=(.*)/)?.[1]?.trim();
 const key = env.match(/NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)/)?.[1]?.trim();
 const supabase = createClient(url, key);
 
+function normalizeText(str) {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .trim();
+}
+
 async function processHtml() {
-  const { data: cursos } = await supabase.from('cursos').select('id, tecnico_carnet');
-  const map = {};
+  const { data: cursos } = await supabase.from('cursos').select('id, tecnico_carnet, facilitador_carnet');
+  const { data: facs } = await supabase.from('facilitadores').select('carnet, nombre');
+
+  const courseMap = {};
   (cursos || []).forEach(c => {
-    map[c.id] = c.tecnico_carnet;
+    courseMap[c.id] = c.tecnico_carnet;
+  });
+
+  const facToTecnico = {};
+  (cursos || []).forEach(c => {
+    if (c.facilitador_carnet && c.facilitador_carnet !== '9999999' && c.tecnico_carnet) {
+      facToTecnico[c.facilitador_carnet] = c.tecnico_carnet;
+    }
   });
 
   const templatePath = path.join(__dirname, '..', 'public', 'reporte_diario_template.html');
   let html = fs.readFileSync(templatePath, 'utf8');
 
-  // Strip any old injected script block
+  // Strip any old injected script block before parsing
   if (html.includes('<!-- INJECTED_REPORTE_SCRIPT -->')) {
     html = html.split('<!-- INJECTED_REPORTE_SCRIPT -->')[0] + '</body></html>';
   }
 
-  // Parse table rows and annotate each tr tag with data-tecnico
+  // Parse table rows and annotate each tr tag
   const trs = html.split('<tr');
   for (let i = 1; i < trs.length; i++) {
     const block = trs[i];
     if (block.includes('<th')) continue;
 
-    // Remove existing data-tecnico if present
+    // Clean existing data-tecnico attribute
     let cleanBlock = block.replace(/\s*data-tecnico="[^"]*"/gi, '');
 
+    // 1. Try matching by Course ID
     const idMatch = cleanBlock.match(/ID\s*[:\-]?\s*(\d+)/i);
     const id = idMatch ? idMatch[1] : null;
-    const tec = id && map[id] ? map[id] : '8639300'; // Default to Gilmar if no match / no ID
+    let tec = id && courseMap[id] ? courseMap[id] : null;
+
+    // 2. If no ID match, try token matching by Facilitator Name (Nombre Apellido vs Apellido Nombre)
+    if (!tec) {
+      const tds = cleanBlock.match(/<td[\s\S]*?<\/td>/gi) || [];
+      const facTdText = tds[2] ? tds[2].replace(/<[^>]+>/g, '').trim() : '';
+      const facNorm = normalizeText(facTdText);
+      const htmlWords = facNorm.split(/\s+/).filter(w => w.length >= 2);
+
+      let matchedFac = null;
+      if (htmlWords.length > 0) {
+        for (const f of (facs || [])) {
+          const dbNorm = normalizeText(f.nombre);
+          if (!dbNorm || dbNorm === 'por confirmar') continue;
+          const dbWords = dbNorm.split(/\s+/).filter(w => w.length >= 2);
+          const overlap = htmlWords.filter(hw => dbWords.includes(hw)).length;
+          
+          if (overlap >= 2 && overlap >= Math.min(htmlWords.length, dbWords.length) - 1) {
+            matchedFac = f;
+            break;
+          }
+        }
+      }
+
+      if (matchedFac && facToTecnico[matchedFac.carnet]) {
+        tec = facToTecnico[matchedFac.carnet];
+      }
+    }
+
+    // 3. Fallback to Gilmar (8639300) if still unassigned
+    if (!tec) {
+      tec = '8639300';
+    }
 
     trs[i] = ' data-tecnico="' + tec + '"' + cleanBlock;
   }
 
   html = trs.join('<tr');
 
-  // Add technician dropdown filter in toolbar if not present
+  // Add technician selector in toolbar if not present
   if (!html.includes('id="filtroTecnico"')) {
     const toolbarTarget = '<div class="toolbar">';
     const toolbarReplacement = `<div class="toolbar">
@@ -184,7 +236,7 @@ if (document.readyState === 'loading') {
   }
 
   fs.writeFileSync(templatePath, html, 'utf8');
-  console.log('Enriched HTML template successfully with full script block!');
+  console.log('Enriched HTML template with ID + Facilitador token matching!');
 }
 
 processHtml().catch(console.error);
