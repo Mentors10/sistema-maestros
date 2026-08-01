@@ -77,14 +77,14 @@ export async function POST(request: Request) {
         const id = idMatch ? idMatch[1] : null;
         let tec = id && courseMap[id] ? courseMap[id] : null;
 
-        // 2. Try matching by Facilitador Name (word/token comparison: Nombre Apellido vs Apellido Nombre)
+        // 2. Try matching by Facilitador Name across full row text (max overlap token scoring)
         if (!tec) {
-          const tds = cleanBlock.match(/<td[\s\S]*?<\/td>/gi) || [];
-          const facTdText = tds[2] ? tds[2].replace(/<[^>]+>/g, '').trim() : '';
-          const facNorm = normalizeText(facTdText);
-          const htmlWords = facNorm.split(/\s+/).filter((w) => w.length >= 2);
+          const rowTextClean = normalizeText(cleanBlock.replace(/<[^>]+>/g, ' '));
+          const htmlWords = rowTextClean.split(/\s+/).filter((w) => w.length >= 2);
 
-          let matchedFac: any = null;
+          let bestMatch: any = null;
+          let maxOverlap = 0;
+
           if (htmlWords.length > 0) {
             for (const f of (facs || [])) {
               const dbNorm = normalizeText(f.nombre);
@@ -92,15 +92,15 @@ export async function POST(request: Request) {
               const dbWords = dbNorm.split(/\s+/).filter((w) => w.length >= 2);
               const overlap = htmlWords.filter((hw) => dbWords.includes(hw)).length;
 
-              if (overlap >= 2 && overlap >= Math.min(htmlWords.length, dbWords.length) - 1) {
-                matchedFac = f;
-                break;
+              if (overlap >= 2 && overlap > maxOverlap) {
+                maxOverlap = overlap;
+                bestMatch = f;
               }
             }
           }
 
-          if (matchedFac && facToTecnico[matchedFac.carnet]) {
-            tec = facToTecnico[matchedFac.carnet];
+          if (bestMatch && facToTecnico[bestMatch.carnet]) {
+            tec = facToTecnico[bestMatch.carnet];
           }
         }
 

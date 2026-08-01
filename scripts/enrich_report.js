@@ -19,12 +19,14 @@ function normalizeText(str) {
 }
 
 async function processHtml() {
-  const { data: cursos } = await supabase.from('cursos').select('id, tecnico_carnet, facilitador_carnet');
-  const { data: facs } = await supabase.from('facilitadores').select('carnet, nombre');
+  const [{ data: cursos }, { data: facs }] = await Promise.all([
+    supabase.from('cursos').select('id, tecnico_carnet, facilitador_carnet'),
+    supabase.from('facilitadores').select('carnet, nombre'),
+  ]);
 
   const courseMap = {};
   (cursos || []).forEach(c => {
-    courseMap[c.id] = c.tecnico_carnet;
+    if (c.id && c.tecnico_carnet) courseMap[c.id] = c.tecnico_carnet;
   });
 
   const facToTecnico = {};
@@ -56,30 +58,30 @@ async function processHtml() {
     const id = idMatch ? idMatch[1] : null;
     let tec = id && courseMap[id] ? courseMap[id] : null;
 
-    // 2. If no ID match, try token matching by Facilitator Name (Nombre Apellido vs Apellido Nombre)
+    // 2. Try matching by Facilitador Name across full row text (max overlap token scoring)
     if (!tec) {
-      const tds = cleanBlock.match(/<td[\s\S]*?<\/td>/gi) || [];
-      const facTdText = tds[2] ? tds[2].replace(/<[^>]+>/g, '').trim() : '';
-      const facNorm = normalizeText(facTdText);
-      const htmlWords = facNorm.split(/\s+/).filter(w => w.length >= 2);
+      const rowTextClean = normalizeText(cleanBlock.replace(/<[^>]+>/g, ' '));
+      const htmlWords = rowTextClean.split(/\s+/).filter(w => w.length >= 2);
 
-      let matchedFac = null;
+      let bestMatch = null;
+      let maxOverlap = 0;
+
       if (htmlWords.length > 0) {
         for (const f of (facs || [])) {
           const dbNorm = normalizeText(f.nombre);
           if (!dbNorm || dbNorm === 'por confirmar') continue;
           const dbWords = dbNorm.split(/\s+/).filter(w => w.length >= 2);
           const overlap = htmlWords.filter(hw => dbWords.includes(hw)).length;
-          
-          if (overlap >= 2 && overlap >= Math.min(htmlWords.length, dbWords.length) - 1) {
-            matchedFac = f;
-            break;
+
+          if (overlap >= 2 && overlap > maxOverlap) {
+            maxOverlap = overlap;
+            bestMatch = f;
           }
         }
       }
 
-      if (matchedFac && facToTecnico[matchedFac.carnet]) {
-        tec = facToTecnico[matchedFac.carnet];
+      if (bestMatch && facToTecnico[bestMatch.carnet]) {
+        tec = facToTecnico[bestMatch.carnet];
       }
     }
 
@@ -236,7 +238,7 @@ if (document.readyState === 'loading') {
   }
 
   fs.writeFileSync(templatePath, html, 'utf8');
-  console.log('Enriched HTML template with ID + Facilitador token matching!');
+  console.log('Enriched HTML template with max-overlap facilitator scoring!');
 }
 
 processHtml().catch(console.error);
