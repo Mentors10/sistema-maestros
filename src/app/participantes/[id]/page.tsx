@@ -4,23 +4,46 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { Curso } from '@/types';
-import { Calendar, MapPin, User, FileText, CheckCircle2, Award, ClipboardCheck, ArrowRight, Loader2, Users } from 'lucide-react';
+import { Calendar, MapPin, User, FileText, CheckCircle2, Award, ClipboardCheck, ArrowRight, Loader2, Users, AlertTriangle, MessageCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const formatOnlyDate = (fechaStr: string | null | undefined): string => {
   if (!fechaStr) return 'POR CONFIRMAR';
-  // Try to parse YYYY-MM-DD
   const match = fechaStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (match) {
     return `${match[3]}/${match[2]}/${match[1]}`;
   }
-  // Try DD/MM/YYYY
   const matchES = fechaStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
   if (matchES) {
     return `${matchES[1]}/${matchES[2]}/${matchES[3]}`;
   }
-  // Fallback to splitting by space/T and taking the first part
   return fechaStr.split(/[ T]/)[0];
+};
+
+const getWhatsAppUrl = (c: Curso | null): string | null => {
+  if (!c) return null;
+  // 1. Check link_inscripcion_externo
+  if (c.link_inscripcion_externo && c.link_inscripcion_externo.trim()) {
+    const raw = c.link_inscripcion_externo.trim();
+    if (raw.includes('chat.whatsapp.com') || raw.includes('wa.me') || raw.includes('whatsapp')) {
+      return raw.startsWith('http') ? raw : `https://${raw}`;
+    }
+  }
+  // 2. Check observaciones for whatsapp link
+  if (c.observaciones) {
+    const match = c.observaciones.match(/https?:\/\/(chat\.whatsapp\.com|wa\.me)\/[^\s]+/i);
+    if (match) return match[0];
+  }
+  // 3. Fallback to contact phone if available
+  const phone = c.organizador_telefono || (c as any).tecnico_telefono;
+  if (phone) {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length >= 7) {
+      const p = cleanPhone.length === 8 ? `591${cleanPhone}` : cleanPhone;
+      return `https://wa.me/${p}?text=${encodeURIComponent(`Hola, me inscribí al ciclo ${c.ciclo_nombre || c.id}. Quisiera unirme al grupo de WhatsApp.`)}`;
+    }
+  }
+  return null;
 };
 
 export default function ParticipanteRegistroPage() {
@@ -31,6 +54,7 @@ export default function ParticipanteRegistroPage() {
   const [loadingCurso, setLoadingCurso] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
   // Form fields
   const [nombres, setNombres] = useState('');
@@ -40,7 +64,6 @@ export default function ParticipanteRegistroPage() {
   const [celular, setCelular] = useState('');
   const [sie, setSie] = useState('');
   const [unidadEducativa, setUnidadEducativa] = useState('');
-  const [observaciones, setObservaciones] = useState('');
 
   // Fetch course details
   useEffect(() => {
@@ -91,6 +114,7 @@ export default function ParticipanteRegistroPage() {
     if (!id || !nombres.trim() || !apellidos.trim() || !ci.trim()) return;
 
     setSubmitting(true);
+    setAlreadyRegistered(false);
     try {
       // 1. Get next serial number (Nro) for this course
       const { data: countData, error: countError } = await supabase
@@ -141,7 +165,16 @@ export default function ParticipanteRegistroPage() {
 
       if (relationError) {
         if (relationError.code === '23505') {
-          throw new Error('Ya te encuentras registrado en este ciclo formativo.');
+          // Already registered! Show success screen with WhatsApp group button
+          setAlreadyRegistered(true);
+          setSuccess(true);
+          Swal.fire({
+            icon: 'info',
+            title: 'Ya estás registrado',
+            text: 'Tus datos ya figuran en la lista de inscritos de este ciclo. Puedes unirte al grupo de WhatsApp a continuación.',
+            confirmButtonColor: '#25D366'
+          });
+          return;
         }
         throw relationError;
       }
@@ -164,8 +197,8 @@ export default function ParticipanteRegistroPage() {
       Swal.fire({
         icon: 'success',
         title: '¡Inscripción Registrada!',
-        text: 'Tus datos fueron cargados exitosamente al sistema.',
-        timer: 3000,
+        text: 'Tus datos fueron cargados exitosamente al sistema. Únete al grupo de WhatsApp para continuar.',
+        timer: 3500,
         showConfirmButton: false
       });
     } catch (err: any) {
@@ -180,6 +213,8 @@ export default function ParticipanteRegistroPage() {
       setSubmitting(false);
     }
   };
+
+  const whatsappUrl = getWhatsAppUrl(curso);
 
   if (loadingCurso) {
     return (
@@ -265,7 +300,7 @@ export default function ParticipanteRegistroPage() {
               {curso.tema2 && <div style={{ display: 'flex', gap: '6px' }}><span style={{ fontWeight: 800, color: 'var(--primary-500)' }}>2.</span> {curso.tema2}</div>}
               {curso.tema3 && <div style={{ display: 'flex', gap: '6px' }}><span style={{ fontWeight: 800, color: 'var(--primary-500)' }}>3.</span> {curso.tema3}</div>}
               {curso.tema4 && <div style={{ display: 'flex', gap: '6px' }}><span style={{ fontWeight: 800, color: 'var(--primary-500)' }}>4.</span> {curso.tema4}</div>}
-          </div>
+            </div>
           </div>
 
           {/* Cronograma del Ciclo */}
@@ -347,6 +382,30 @@ export default function ParticipanteRegistroPage() {
               <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--primary-900)' }}>{curso.inscritos_formulario ?? 0}</span>
             </div>
           </div>
+
+          {/* Advertencia Importante de Depósito y Grupo de WhatsApp */}
+          <div style={{
+            background: 'linear-gradient(135deg, #fffbe6 0%, #fef3c7 100%)',
+            border: '1.5px solid #f59e0b',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            marginTop: '8px',
+            color: '#92400e',
+            fontSize: '0.83rem',
+            lineHeight: '1.5',
+            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.12)',
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'flex-start'
+          }}>
+            <AlertTriangle size={22} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <strong style={{ color: '#b45309', display: 'block', fontSize: '0.88rem', marginBottom: '2px' }}>
+                ⚠️ ADVERTENCIA IMPORTANTE:
+              </strong>
+              Por favor <strong>NO REALIZAR NINGÚN DEPÓSITO</strong> hasta confirmar la apertura del grupo. Toda la información y avisos oficiales se comunicarán a través del <strong>grupo de WhatsApp</strong> al cual te podrás unir al finalizar tu registro.
+            </div>
+          </div>
         </div>
 
         {curso.form_habilitado === false ? (
@@ -362,17 +421,64 @@ export default function ParticipanteRegistroPage() {
             </p>
           </div>
         ) : success ? (
-          /* Pantalla de éxito */
+          /* Pantalla de éxito con botón seguro a WhatsApp */
           <div style={{ padding: '40px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-            <CheckCircle2 size={64} style={{ color: 'var(--green-500)', filter: 'drop-shadow(0 4px 6px rgba(46,159,94,0.25))' }} />
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary-900)' }}>¡Inscripción Exitosa!</h3>
-            <p style={{ color: 'var(--gray-600)', maxWidth: '400px', lineHeight: 1.5 }}>
-              Tus datos han sido registrados exitosamente en el ciclo de <b>{curso.ciclo_nombre}</b>. El facilitador y el técnico a cargo confirmarán tu asistencia.
+            <CheckCircle2 size={64} style={{ color: alreadyRegistered ? '#2563eb' : 'var(--green-500)', filter: 'drop-shadow(0 4px 6px rgba(46,159,94,0.25))' }} />
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary-900)', margin: 0 }}>
+              {alreadyRegistered ? '¡Ya estás Registrado!' : '¡Inscripción Exitosa!'}
+            </h3>
+            <p style={{ color: 'var(--gray-600)', maxWidth: '440px', lineHeight: 1.5, margin: 0 }}>
+              {alreadyRegistered 
+                ? `Tus datos ya se encuentran registrados en el ciclo formativo de ${curso.ciclo_nombre}.`
+                : `Tus datos han sido registrados exitosamente en el ciclo de ${curso.ciclo_nombre}. El facilitador y el técnico a cargo confirmarán la apertura del grupo.`}
             </p>
-            <div style={{ marginTop: '16px', background: 'var(--gray-50)', padding: '12px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-100)', fontSize: '0.85rem', color: 'var(--gray-500)' }}>
-              <b>Registrado a nombre de:</b> {nombres} {apellidos}<br />
+            
+            <div style={{ background: 'var(--gray-50)', padding: '12px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)', fontSize: '0.85rem', color: 'var(--gray-700)', width: '100%', maxWidth: '380px' }}>
+              <b>Registrado a nombre de:</b> {nombres || 'Participante'} {apellidos}<br />
               <b>CI:</b> {ci}
             </div>
+
+            {/* Aviso de no realizar depósitos */}
+            <div style={{ background: '#fffbe6', border: '1px solid #f59e0b', borderRadius: '8px', padding: '10px 14px', fontSize: '0.8rem', color: '#92400e', maxWidth: '440px' }}>
+              <b>Recordatorio:</b> No realices ningún depósito hasta que se confirme la apertura del grupo en WhatsApp.
+            </div>
+
+            {/* Botón de acceso directo al grupo de WhatsApp (sin exponer URL directa en texto) */}
+            {whatsappUrl ? (
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => window.open(whatsappUrl, '_blank')}
+                  style={{
+                    background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '14px 28px',
+                    fontSize: '1.05rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    boxShadow: '0 4px 14px rgba(37, 211, 102, 0.4)',
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.03)')}
+                  onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  <MessageCircle size={24} />
+                  Unirme al Grupo de WhatsApp
+                </button>
+                <span style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>
+                  Haz clic arriba para unirte al grupo de comunicación oficial
+                </span>
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.82rem', color: 'var(--gray-500)', marginTop: '8px', fontStyle: 'italic' }}>
+                (El técnico responsable compartirá el enlace del grupo de WhatsApp próximamente)
+              </p>
+            )}
           </div>
         ) : (
           /* Formulario de registro */
@@ -468,8 +574,6 @@ export default function ParticipanteRegistroPage() {
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--gray-200)', font: 'inherit', fontSize: '0.88rem', textTransform: 'uppercase' }}
                 />
               </div>
-
-
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px', borderTop: '1px solid var(--gray-100)', paddingTop: '16px' }}>

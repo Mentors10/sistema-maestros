@@ -86,6 +86,7 @@ export default function CursoForm({
     grupo_nombre: curso?.grupo_nombre || '',
     grupo_color: curso?.grupo_color || '#2f80ed',
     observaciones: curso?.observaciones || '',
+    link_inscripcion_externo: curso?.link_inscripcion_externo || '',
   });
 
   const [areaFormativa, setAreaFormativa] = useState('');
@@ -127,6 +128,7 @@ export default function CursoForm({
       grupo_nombre: curso?.grupo_nombre || '',
       grupo_color: curso?.grupo_color || '#2f80ed',
       observaciones: curso?.observaciones || '',
+      link_inscripcion_externo: curso?.link_inscripcion_externo || '',
     });
     setIsSuggestedId(isSuggested);
 
@@ -389,6 +391,19 @@ export default function CursoForm({
             />
           ))}
         </div>
+      </div>
+
+      <div className="form-field full">
+        <label>Enlace del Grupo de WhatsApp</label>
+        <input
+          type="text"
+          value={form.link_inscripcion_externo}
+          onChange={(e) => setForm({ ...form, link_inscripcion_externo: e.target.value })}
+          placeholder="Ej: https://chat.whatsapp.com/..."
+        />
+        <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '2px' }}>
+          Este enlace se utilizará para que los participantes se unan al grupo de WhatsApp al completar el formulario.
+        </span>
       </div>
 
       <div className="form-field full">
