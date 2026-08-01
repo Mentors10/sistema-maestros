@@ -18,25 +18,30 @@ async function processHtml() {
   const templatePath = path.join(__dirname, '..', 'public', 'reporte_diario_template.html');
   let html = fs.readFileSync(templatePath, 'utf8');
 
-  // Parse table rows and annotate each tr tag
+  // Strip any old injected script block
+  if (html.includes('<!-- INJECTED_REPORTE_SCRIPT -->')) {
+    html = html.split('<!-- INJECTED_REPORTE_SCRIPT -->')[0] + '</body></html>';
+  }
+
+  // Parse table rows and annotate each tr tag with data-tecnico
   const trs = html.split('<tr');
   for (let i = 1; i < trs.length; i++) {
     const block = trs[i];
     if (block.includes('<th')) continue;
 
-    // Check if data-tecnico already exists
-    if (block.includes('data-tecnico')) continue;
+    // Remove existing data-tecnico if present
+    let cleanBlock = block.replace(/\s*data-tecnico="[^"]*"/gi, '');
 
-    const idMatch = block.match(/ID\s*[:\-]?\s*(\d+)/i);
+    const idMatch = cleanBlock.match(/ID\s*[:\-]?\s*(\d+)/i);
     const id = idMatch ? idMatch[1] : null;
     const tec = id && map[id] ? map[id] : '8639300'; // Default to Gilmar if no match / no ID
 
-    trs[i] = ' data-tecnico="' + tec + '"' + block;
+    trs[i] = ' data-tecnico="' + tec + '"' + cleanBlock;
   }
 
   html = trs.join('<tr');
 
-  // Insert script before </body> if not present
+  // Add technician dropdown filter in toolbar if not present
   if (!html.includes('id="filtroTecnico"')) {
     const toolbarTarget = '<div class="toolbar">';
     const toolbarReplacement = `<div class="toolbar">
@@ -49,8 +54,9 @@ async function processHtml() {
     html = html.replace(toolbarTarget, toolbarReplacement);
   }
 
-  if (!html.includes('function buscar()')) {
-    const scriptBlock = `
+  // Append full JS script block before </body>
+  const scriptBlock = `
+<!-- INJECTED_REPORTE_SCRIPT -->
 <script>
 function buscar() {
     var input = document.getElementById('buscar');
@@ -60,7 +66,9 @@ function buscar() {
 
     var table = document.getElementById('reportTable');
     if (!table) return;
-    var trs = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    var tbody = table.getElementsByTagName('tbody')[0];
+    if (!tbody) return;
+    var trs = tbody.getElementsByTagName('tr');
 
     var totalProg = 0;
     var totalCursos = 0;
@@ -98,8 +106,6 @@ function buscar() {
 }
 
 function toggleCol(colName) {
-    var table = document.getElementById('reportTable');
-    if (!table) return;
     var elements = document.querySelectorAll('.toggle-' + colName);
     var btn = document.getElementById('btnCiclo');
     var isHidden = false;
@@ -149,8 +155,7 @@ function toggleVerdes() {
     }
 }
 
-// Auto filter on URL parameter if present
-window.addEventListener('DOMContentLoaded', function() {
+function initReporte() {
     var params = new URLSearchParams(window.location.search);
     var tecParam = params.get('tecnico');
     if (tecParam) {
@@ -160,15 +165,26 @@ window.addEventListener('DOMContentLoaded', function() {
         }
     }
     buscar();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReporte);
+} else {
+    setTimeout(initReporte, 100);
+}
 </script>
 </body>
+</html>
 `;
+
+  if (html.includes('</body>')) {
     html = html.replace('</body>', scriptBlock);
+  } else {
+    html = html + scriptBlock;
   }
 
   fs.writeFileSync(templatePath, html, 'utf8');
-  console.log('Enriched HTML template successfully!');
+  console.log('Enriched HTML template successfully with full script block!');
 }
 
 processHtml().catch(console.error);

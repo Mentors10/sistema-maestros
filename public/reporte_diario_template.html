@@ -797,3 +797,122 @@ a:hover { opacity: .75; }
 <tr data-tecnico="8639300"uncated 50456 bytes>
 
 NOTE: The output was truncated because it was too long. Use a more targeted query or a smaller range to get the information you need.
+<!-- INJECTED_REPORTE_SCRIPT -->
+<script>
+function buscar() {
+    var input = document.getElementById('buscar');
+    var filter = input ? input.value.toLowerCase().trim() : '';
+    var tecSelect = document.getElementById('filtroTecnico');
+    var selectedTec = tecSelect ? tecSelect.value : 'todos';
+
+    var table = document.getElementById('reportTable');
+    if (!table) return;
+    var tbody = table.getElementsByTagName('tbody')[0];
+    if (!tbody) return;
+    var trs = tbody.getElementsByTagName('tr');
+
+    var totalProg = 0;
+    var totalCursos = 0;
+    var okCount = 0;
+    var pendCount = 0;
+
+    for (var i = 0; i < trs.length; i++) {
+        var tr = trs[i];
+        var text = tr.textContent.toLowerCase();
+        var rowTec = tr.getAttribute('data-tecnico') || '8639300';
+
+        var matchesText = !filter || text.includes(filter);
+        var matchesTec = (selectedTec === 'todos') || (rowTec === selectedTec);
+
+        if (matchesText && matchesTec) {
+            tr.style.display = '';
+            totalProg++;
+            var cursosInRow = tr.querySelectorAll('.curso').length;
+            totalCursos += cursosInRow;
+            var isOk = tr.getAttribute('data-ok') === '1';
+            if (isOk) okCount++; else pendCount++;
+        } else {
+            tr.style.display = 'none';
+        }
+    }
+
+    // Update summary cards
+    var cardValues = document.querySelectorAll('.card .value');
+    if (cardValues.length >= 4) {
+        cardValues[0].innerHTML = totalProg;
+        cardValues[1].innerHTML = totalCursos;
+        cardValues[2].innerHTML = okCount + '<span style="font-size:14px;color:var(--muted);font-weight:400"> / ' + totalProg + '</span>';
+        cardValues[3].innerHTML = pendCount + '<span style="font-size:14px;color:var(--muted);font-weight:400"> / ' + totalProg + '</span>';
+    }
+}
+
+function toggleCol(colName) {
+    var elements = document.querySelectorAll('.toggle-' + colName);
+    var btn = document.getElementById('btnCiclo');
+    var isHidden = false;
+    elements.forEach(function(el) {
+        if (el.classList.contains('hidden-col')) {
+            el.classList.remove('hidden-col');
+        } else {
+            el.classList.add('hidden-col');
+            isHidden = true;
+        }
+    });
+    if (btn) {
+        if (isHidden) {
+            btn.classList.remove('active');
+            btn.textContent = 'Mostrar Ciclo';
+        } else {
+            btn.classList.add('active');
+            btn.textContent = 'Ocultar Ciclo';
+        }
+    }
+}
+
+function toggleVerdes() {
+    var btn = document.getElementById('btnVerdes');
+    var table = document.getElementById('reportTable');
+    if (!table) return;
+    var trs = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    var hideVerdes = btn && !btn.classList.contains('active');
+
+    for (var i = 0; i < trs.length; i++) {
+        var tr = trs[i];
+        var isOk = tr.getAttribute('data-ok') === '1';
+        if (hideVerdes && isOk) {
+            tr.style.display = 'none';
+        } else if (!hideVerdes && isOk) {
+            tr.style.display = '';
+        }
+    }
+    if (btn) {
+        if (hideVerdes) {
+            btn.classList.add('active');
+            btn.textContent = 'Mostrar verdes';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = 'Ocultar verdes';
+        }
+    }
+}
+
+function initReporte() {
+    var params = new URLSearchParams(window.location.search);
+    var tecParam = params.get('tecnico');
+    if (tecParam) {
+        var tecSelect = document.getElementById('filtroTecnico');
+        if (tecSelect) {
+            tecSelect.value = tecParam;
+        }
+    }
+    buscar();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReporte);
+} else {
+    setTimeout(initReporte, 100);
+}
+</script>
+</body>
+</html>
