@@ -54,16 +54,30 @@ export default function ReporteDiarioModal({
   }, [htmlContent, defaultTecnicoCarnet]);
 
   // Cargar contenido HTML desde el servidor o localStorage
-  const loadHtmlReport = async () => {
+  const loadHtmlReport = async (forceFetchServer: boolean = false) => {
     setLoading(true);
+
+    // 1. Si el usuario subió su propia plantilla personalizada y no estamos forzando servidor, usar localStorage
+    const isUserUploaded = typeof window !== 'undefined' && localStorage.getItem('reporte_diario_user_uploaded') === 'true';
+    const savedLocal = typeof window !== 'undefined' ? localStorage.getItem('reporte_diario_custom_html') : null;
+
+    if (!forceFetchServer && isUserUploaded && savedLocal && savedLocal.trim().length > 0) {
+      setHtmlContent(savedLocal);
+      setLoading(false);
+      return;
+    }
+
     try {
-      // 1. Intentar cargar desde la API del servidor
+      // 2. Cargar desde la API del servidor
       const res = await fetch(`/api/reporte-diario?t=${Date.now()}`);
       if (res.ok) {
         const text = await res.text();
         if (text && text.trim().length > 0) {
           setHtmlContent(text);
           localStorage.setItem('reporte_diario_custom_html', text);
+          if (forceFetchServer) {
+            localStorage.removeItem('reporte_diario_user_uploaded');
+          }
           setLoading(false);
           return;
         }
@@ -72,8 +86,7 @@ export default function ReporteDiarioModal({
       console.warn('Error al obtener reporte desde API, intentando localStorage:', e);
     }
 
-    // 2. Fallback a localStorage
-    const savedLocal = localStorage.getItem('reporte_diario_custom_html');
+    // Fallback final a localStorage si existiera algo
     if (savedLocal) {
       setHtmlContent(savedLocal);
     }
@@ -117,10 +130,11 @@ export default function ReporteDiarioModal({
         if (res.ok) {
           setHtmlContent(content);
           localStorage.setItem('reporte_diario_custom_html', content);
+          localStorage.setItem('reporte_diario_user_uploaded', 'true');
           Swal.fire({
             icon: 'success',
             title: '¡Plantilla HTML Actualizada!',
-            html: `La plantilla del <b>Reporte Diario</b> fue actualizada exitosamente por el técnico <b>Gilmar Felix Chavarria Choque</b>.`,
+            html: `La plantilla del <b>Reporte Diario</b> con diseño de batería fue actualizada exitosamente por el técnico <b>Gilmar Felix Chavarria Choque</b>.`,
             confirmButtonColor: '#0d3b66',
             timer: 3500,
             timerProgressBar: true,
@@ -129,7 +143,8 @@ export default function ReporteDiarioModal({
           // Si falla la API backend, guardar al menos localmente
           setHtmlContent(content);
           localStorage.setItem('reporte_diario_custom_html', content);
-          Swal.fire('Actualizado localmente', 'La plantilla se guardó en tu navegador', 'info');
+          localStorage.setItem('reporte_diario_user_uploaded', 'true');
+          Swal.fire('Actualizado localmente', 'La plantilla con diseño de batería se guardó en tu navegador', 'info');
         }
         setUploading(false);
       };
@@ -252,7 +267,7 @@ export default function ReporteDiarioModal({
             )}
 
             <button
-              onClick={loadHtmlReport}
+              onClick={() => loadHtmlReport(false)}
               style={{
                 background: 'rgba(255, 255, 255, 0.15)',
                 color: '#ffffff',

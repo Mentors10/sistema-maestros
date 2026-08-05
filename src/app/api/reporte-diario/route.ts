@@ -3,6 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import { supabase } from '@/lib/supabase/client';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 function normalizeText(str: string) {
   if (!str) return '';
   return str
