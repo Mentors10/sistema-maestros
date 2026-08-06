@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Upload, ExternalLink, RefreshCw, FileText, CheckCircle2 } from 'lucide-react';
+import { X, Upload, ExternalLink, Save, RefreshCw, FileText, CheckCircle2 } from 'lucide-react';
 import { AuthUser } from '@/lib/auth/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -274,24 +274,59 @@ export default function ReporteDiarioModal({
               </>
             )}
 
-            <button
-              onClick={() => loadHtmlReport(false)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
-                border: '1px solid rgba(255, 255, 255, 0.25)',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-              title="Recargar reporte"
-            >
-              <RefreshCw size={15} className={loading ? 'spin' : ''} /> Recargar
-            </button>
+            {isGilmar && (
+              <button
+                onClick={async () => {
+                  if (!htmlContent) return;
+                  setUploading(true);
+                  try {
+                    const res = await fetch('/api/reporte-diario', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ html: htmlContent }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    const finalHtml = data.enrichedHtml || htmlContent;
+                    setHtmlContent(finalHtml);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('reporte_diario_custom_html', finalHtml);
+                      localStorage.setItem('reporte_diario_user_uploaded', 'true');
+                    }
+                    Swal.fire({
+                      icon: 'success',
+                      title: '¡Plantilla Guardada Exitosamente!',
+                      html: `La plantilla activa fue guardada permanentemente en Supabase DB y estará activa en todas las pestañas y al abrir en nueva pestaña.`,
+                      confirmButtonColor: '#0d3b66',
+                      timer: 3500,
+                      timerProgressBar: true,
+                    });
+                  } catch (e) {
+                    Swal.fire('Error', 'No se pudo guardar la plantilla', 'error');
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+                disabled={uploading || !htmlContent}
+                style={{
+                  background: 'linear-gradient(135deg, #0d3b66 0%, #1a5276 100%)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(13, 59, 102, 0.3)',
+                }}
+                title="Guardar plantilla activa en Supabase"
+              >
+                <Save size={16} />
+                {uploading ? 'Guardando...' : 'Guardar Plantilla'}
+              </button>
+            )}
 
             <a
               href={`/api/reporte-diario?tecnico=${defaultTecnicoCarnet}`}
