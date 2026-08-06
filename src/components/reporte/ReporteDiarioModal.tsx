@@ -19,6 +19,7 @@ export default function ReporteDiarioModal({
   const [htmlContent, setHtmlContent] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [syncingSie, setSyncingSie] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Comprobar si el usuario actual es el técnico Gilmar Felix Chavarria Choque
@@ -98,6 +99,51 @@ export default function ReporteDiarioModal({
       loadHtmlReport();
     }
   }, [isOpen]);
+
+  // Manejar la extracción y sincronización de datos en tiempo real desde el SIE UNEFCO
+  const handleSyncSieData = async () => {
+    const confirm = await Swal.fire({
+      title: '¿Actualizar Datos en Tiempo Real?',
+      html: 'Se conectará con el portal SIE UNEFCO para extraer eventos, planificaciones, valoraciones e informes de los programas de formación en tiempo real.<br><br><b>¿Deseas continuar?</b>',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, Sincronizar Ahora',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0d3b66',
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    setSyncingSie(true);
+    Swal.fire({
+      title: 'Sincronizando con SIE UNEFCO...',
+      html: 'Extrayendo planificaciones, evaluaciones e informes finales en tiempo real.<br>Esto tomará unos momentos...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      const res = await fetch('/api/sie/sync-reporte', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        await loadHtmlReport(true);
+        Swal.fire({
+          icon: 'success',
+          title: '¡Sincronización Exitosa!',
+          html: 'Los datos del reporte de monitoreo han sido actualizados en <b>tiempo real</b> desde el SIE y guardados permanentemente en Supabase.',
+          confirmButtonColor: '#0d3b66',
+        });
+      } else {
+        Swal.fire('Error', data.error || 'No se pudo completar la sincronización con el SIE', 'error');
+      }
+    } catch (e: any) {
+      Swal.fire('Error', 'Ocurrió un error al conectar con el servidor', 'error');
+    } finally {
+      setSyncingSie(false);
+    }
+  };
 
   // Manejar la subida de un nuevo archivo HTML (exclusivo para Gilmar Felix Chavarria Choque)
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,6 +371,31 @@ export default function ReporteDiarioModal({
               >
                 <Save size={16} />
                 {uploading ? 'Guardando...' : 'Guardar Plantilla'}
+              </button>
+            )}
+
+            {isGilmar && (
+              <button
+                onClick={handleSyncSieData}
+                disabled={syncingSie || uploading}
+                style={{
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: (syncingSie || uploading) ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+                }}
+                title="Sincronizar y actualizar reporte con datos del SIE UNEFCO en tiempo real"
+              >
+                <RefreshCw size={16} className={syncingSie ? 'spin' : ''} />
+                {syncingSie ? 'Sincronizando...' : 'Actualizar Datos SIE'}
               </button>
             )}
 
