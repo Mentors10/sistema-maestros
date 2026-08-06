@@ -20,6 +20,8 @@ export default function ReporteDiarioModal({
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
   const [syncingSie, setSyncingSie] = useState<boolean>(false);
+  const [sieUser, setSieUser] = useState<string>('gilmar.chavarria@unefco.edu.bo');
+  const [siePass, setSiePass] = useState<string>('GILMAR.chavarria24#');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Comprobar si el usuario actual es el técnico Gilmar Felix Chavarria Choque
@@ -58,7 +60,6 @@ export default function ReporteDiarioModal({
   const loadHtmlReport = async (forceFetchServer: boolean = false) => {
     setLoading(true);
 
-    // 1. Si el usuario subió su propia plantilla personalizada y no estamos forzando servidor, usar localStorage
     const isUserUploaded = typeof window !== 'undefined' && localStorage.getItem('reporte_diario_user_uploaded') === 'true';
     const savedLocal = typeof window !== 'undefined' ? localStorage.getItem('reporte_diario_custom_html') : null;
 
@@ -69,7 +70,6 @@ export default function ReporteDiarioModal({
     }
 
     try {
-      // 2. Cargar desde la API del servidor
       const res = await fetch(`/api/reporte-diario?t=${Date.now()}`);
       if (res.ok) {
         const text = await res.text();
@@ -87,7 +87,6 @@ export default function ReporteDiarioModal({
       console.warn('Error al obtener reporte desde API, intentando localStorage:', e);
     }
 
-    // Fallback final a localStorage si existiera algo
     if (savedLocal) {
       setHtmlContent(savedLocal);
     }
@@ -101,40 +100,32 @@ export default function ReporteDiarioModal({
   }, [isOpen]);
 
   // Manejar la extracción y sincronización de datos en tiempo real desde el SIE UNEFCO
-  const handleSyncSieData = async () => {
-    const { value: formValues } = await Swal.fire({
-      title: '🔐 Conexión al SIE UNEFCO',
-      html: `
-        <p style="font-size:0.88rem;color:#64748b;margin-bottom:12px;">Ingresa tus credenciales del SIE para conectar y validar los participantes y eventos en tiempo real:</p>
-        <div style="text-align:left;max-width:320px;margin:0 auto;">
-          <label style="font-size:0.8rem;font-weight:600;color:#1e293b;display:block;margin-bottom:4px;">Usuario / Correo SIE:</label>
-          <input id="swal-username" class="swal2-input" placeholder="ej. usuario@unefco.edu.bo" value="gilmar.chavarria@unefco.edu.bo" style="width:100%;margin-top:0;margin-bottom:12px;font-size:0.9rem;">
-          <label style="font-size:0.8rem;font-weight:600;color:#1e293b;display:block;margin-bottom:4px;">Contraseña SIE:</label>
-          <input id="swal-password" type="password" class="swal2-input" placeholder="Contraseña" value="GILMAR.chavarria24#" style="width:100%;margin-top:0;margin-bottom:8px;font-size:0.9rem;">
-        </div>
-      `,
-      focusConfirm: false,
-      showCancelButton: true,
-      confirmButtonText: '⚡ Conectar y Sincronizar',
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#0d3b66',
-      preConfirm: () => {
-        const u = (document.getElementById('swal-username') as HTMLInputElement)?.value;
-        const p = (document.getElementById('swal-password') as HTMLInputElement)?.value;
-        if (!u || !p) {
-          Swal.showValidationMessage('Por favor ingresa usuario y contraseña del SIE');
-          return false;
-        }
-        return { username: u, password: p };
-      }
-    });
+  const handleSyncSieData = async (userToUse?: string, passToUse?: string) => {
+    const username = (userToUse || sieUser || '').trim();
+    const password = passToUse || siePass;
 
-    if (!formValues) return;
+    if (!username || !password) {
+      Swal.fire({
+        title: 'Credenciales Requeridas',
+        text: 'Ingresa tu usuario y contraseña del SIE UNEFCO a un lado de la cabecera.',
+        icon: 'warning',
+        confirmButtonColor: '#0d3b66',
+      });
+      return;
+    }
 
     setSyncingSie(true);
+
+    // Ventana emergente indicando "Analizando..."
     Swal.fire({
-      title: 'Conectando al SIE UNEFCO...',
-      html: '🟢 <b>Conectado al SIE</b>: Validando participantes, planificaciones, notas e informes finales en tiempo real...',
+      title: '🔍 Analizando Datos del SIE...',
+      html: `
+        <div style="font-size:0.9rem;color:#334155;margin-top:6px;">
+          <p style="margin-bottom:8px;">🟢 <b>Conectado al portal SIE UNEFCO</b> (${username})</p>
+          <p style="color:#0284c7;font-weight:600;margin-bottom:4px;">Analizando participantes, eventos, planificaciones e informes finales en tiempo real...</p>
+          <p style="font-size:0.8rem;color:#64748b;">Por favor espera unos momentos mientras se procesan las baterías de monitoreo.</p>
+        </div>
+      `,
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading();
@@ -145,22 +136,37 @@ export default function ReporteDiarioModal({
       const res = await fetch('/api/sie/sync-reporte', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: formValues.username, password: formValues.password }),
+        body: JSON.stringify({ username, password }),
       });
+
       const data = await res.json().catch(() => ({}));
+
       if (res.ok && data.success) {
         await loadHtmlReport(true);
+        // Mensaje de finalización exacta "Monitoreo Realizado"
         Swal.fire({
           icon: 'success',
-          title: '¡Conectado y Sincronizado!',
-          html: '🟢 <b>Conexión al SIE verificada con éxito.</b><br>Los participantes y eventos han sido validados en tiempo real y guardados en Supabase.',
+          title: '✅ Monitoreo Realizado',
+          html: '<b>¡Análisis y Monitoreo completados con éxito!</b><br>Los participantes, valoraciones y eventos del SIE han sido validados y guardados en Supabase.',
           confirmButtonColor: '#0d3b66',
+          timer: 4000,
+          timerProgressBar: true,
         });
       } else {
-        Swal.fire('Error de Conexión', data.error || 'No se pudo iniciar sesión en el SIE UNEFCO. Verifica tus credenciales.', 'error');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de Conexión al SIE',
+          text: data.error || 'No se pudo iniciar sesión en el SIE UNEFCO. Revisa tus credenciales en el panel lateral.',
+          confirmButtonColor: '#0d3b66',
+        });
       }
     } catch (e: any) {
-      Swal.fire('Error', 'Ocurrió un error al conectar con el servidor', 'error');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de Servidor',
+        text: 'Ocurrió un error al conectar con el servicio de monitoreo.',
+        confirmButtonColor: '#0d3b66',
+      });
     } finally {
       setSyncingSie(false);
     }
@@ -252,6 +258,7 @@ export default function ReporteDiarioModal({
       }}
       onClick={onClose}
     >
+      <style>{`.swal2-container { z-index: 999999 !important; }`}</style>
       <div
         style={{
           backgroundColor: '#ffffff',
@@ -272,7 +279,7 @@ export default function ReporteDiarioModal({
           style={{
             background: 'linear-gradient(135deg, #0d3b66 0%, #1a5276 50%, #2e86c1 100%)',
             color: '#ffffff',
-            padding: '14px 24px',
+            padding: '12px 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -296,7 +303,7 @@ export default function ReporteDiarioModal({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, letterSpacing: '0.3px', color: '#ffffff' }}>
+                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, letterSpacing: '0.3px', color: '#ffffff' }}>
                   REPORTE DIARIO DE MONITOREO ACADÉMICO
                 </h2>
                 <span
@@ -324,30 +331,86 @@ export default function ReporteDiarioModal({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Panel de Conexión al SIE a un ladito */}
             {isGilmar && (
-              <button
-                onClick={handleSyncSieData}
-                disabled={syncingSie || uploading}
+              <div
                 style={{
-                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: (syncingSie || uploading) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.2)',
                 }}
-                title="Sincronizar y actualizar reporte con datos del SIE UNEFCO en tiempo real"
               >
-                <RefreshCw size={16} className={syncingSie ? 'spin' : ''} />
-                {syncingSie ? 'Conectando...' : 'Actualizar Datos SIE'}
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <input
+                    type="text"
+                    value={sieUser}
+                    onChange={(e) => setSieUser(e.target.value)}
+                    placeholder="Usuario / Correo SIE"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      border: '1px solid rgba(255, 255, 255, 0.35)',
+                      borderRadius: '5px',
+                      color: '#ffffff',
+                      fontSize: '0.75rem',
+                      padding: '2px 8px',
+                      width: '185px',
+                      outline: 'none',
+                      fontWeight: 600,
+                    }}
+                    title="Usuario del SIE UNEFCO"
+                  />
+                  <input
+                    type="password"
+                    value={siePass}
+                    onChange={(e) => setSiePass(e.target.value)}
+                    placeholder="Contraseña SIE"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      border: '1px solid rgba(255, 255, 255, 0.35)',
+                      borderRadius: '5px',
+                      color: '#ffffff',
+                      fontSize: '0.75rem',
+                      padding: '2px 8px',
+                      width: '185px',
+                      outline: 'none',
+                      fontWeight: 600,
+                    }}
+                    title="Contraseña del SIE UNEFCO"
+                  />
+                </div>
+
+                <button
+                  onClick={() => handleSyncSieData(sieUser, siePass)}
+                  disabled={syncingSie}
+                  style={{
+                    background: syncingSie
+                      ? '#64748b'
+                      : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 14px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: syncingSie ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+                    height: '38px',
+                  }}
+                  title="Conectar al SIE de Participantes e Iniciar Monitoreo"
+                >
+                  <RefreshCw size={15} className={syncingSie ? 'spin' : ''} />
+                  {syncingSie ? 'Analizando...' : 'Conectar SIE'}
+                </button>
+              </div>
             )}
 
             <a
