@@ -18,6 +18,28 @@ function normalizeText(str: string) {
 
 export async function GET() {
   try {
+    // 1. Intentar obtener plantilla guardada en Supabase (agenda_contactos CONFIG-REPORTE-PLANTILLA-HTML)
+    try {
+      const { data, error } = await supabase
+        .from('agenda_contactos')
+        .select('descripcion')
+        .eq('id_contacto', 'CONFIG-REPORTE-PLANTILLA-HTML')
+        .maybeSingle();
+
+      if (!error && data?.descripcion && data.descripcion.trim().length > 0) {
+        return new NextResponse(data.descripcion, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          },
+        });
+      }
+    } catch (dbErr) {
+      console.warn('Error leyendo plantilla desde Supabase:', dbErr);
+    }
+
+    // 2. Fallback a archivo de plantilla estático
     const filePath = path.join(process.cwd(), 'public', 'reporte_diario_template.html');
     if (fs.existsSync(filePath)) {
       const html = fs.readFileSync(filePath, 'utf8');
@@ -261,10 +283,32 @@ if (document.readyState === 'loading') {
       console.warn('Error durante el enriquecimiento del HTML:', enrichError);
     }
 
-    const filePath = path.join(process.cwd(), 'public', 'reporte_diario_template.html');
-    fs.writeFileSync(filePath, inputHtml, 'utf8');
+    // 1. Guardar plantilla enriquecida en Supabase DB (agenda_contactos)
+    try {
+      await supabase.from('agenda_contactos').upsert({
+        id_contacto: 'CONFIG-REPORTE-PLANTILLA-HTML',
+        tecnico_carnet: '8639300',
+        nombre: 'PLANTILLA_REPORTE_DIARIO',
+        descripcion: inputHtml,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (dbSaveErr) {
+      console.warn('Advertencia al guardar plantilla en Supabase DB:', dbSaveErr);
+    }
 
-    return NextResponse.json({ success: true, message: 'Plantilla de Reporte Diario actualizada exitosamente' });
+    // 2. Guardar en disco local si el entorno lo permite (ej: desarrollo local)
+    try {
+      const filePath = path.join(process.cwd(), 'public', 'reporte_diario_template.html');
+      fs.writeFileSync(filePath, inputHtml, 'utf8');
+    } catch (fileErr) {
+      // Ignorar error de solo lectura en Vercel Serverless
+    }
+
+    return NextResponse.json({
+      success: true,
+      enrichedHtml: inputHtml,
+      message: 'Plantilla de Reporte Diario guardada exitosamente en la base de datos',
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

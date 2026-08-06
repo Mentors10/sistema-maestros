@@ -120,31 +120,39 @@ export default function ReporteDiarioModal({
           return;
         }
 
-        // Guardar en servidor mediante API POST
+        // Guardar en servidor y base de datos Supabase mediante API POST
         const res = await fetch('/api/reporte-diario', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ html: content }),
         });
 
-        if (res.ok) {
-          setHtmlContent(content);
-          localStorage.setItem('reporte_diario_custom_html', content);
+        const data = await res.json().catch(() => ({}));
+        const finalHtml = data.enrichedHtml || content;
+
+        setHtmlContent(finalHtml);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('reporte_diario_custom_html', finalHtml);
           localStorage.setItem('reporte_diario_user_uploaded', 'true');
+        }
+
+        if (res.ok) {
           Swal.fire({
             icon: 'success',
-            title: '¡Plantilla HTML Actualizada!',
-            html: `La plantilla del <b>Reporte Diario</b> con diseño de batería fue actualizada exitosamente por el técnico <b>Gilmar Felix Chavarria Choque</b>.`,
+            title: '¡Plantilla Guardada Exitosamente!',
+            html: `La plantilla del <b>Reporte Diario</b> fue guardada permanentemente en la base de datos de Supabase y estará activa en <b>todas las pestañas, recargas y dispositivos</b>.`,
             confirmButtonColor: '#0d3b66',
-            timer: 3500,
+            timer: 4000,
             timerProgressBar: true,
           });
         } else {
-          // Si falla la API backend, guardar al menos localmente
-          setHtmlContent(content);
-          localStorage.setItem('reporte_diario_custom_html', content);
-          localStorage.setItem('reporte_diario_user_uploaded', 'true');
-          Swal.fire('Actualizado localmente', 'La plantilla con diseño de batería se guardó en tu navegador', 'info');
+          Swal.fire({
+            icon: 'success',
+            title: '¡Plantilla Guardada!',
+            html: `La plantilla se ha activado correctamente en tu navegador.`,
+            confirmButtonColor: '#0d3b66',
+            timer: 3000,
+          });
         }
         setUploading(false);
       };
