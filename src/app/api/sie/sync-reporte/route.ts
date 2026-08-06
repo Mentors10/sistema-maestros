@@ -809,7 +809,7 @@ if (document.readyState === 'loading') {
       success: true,
       message: 'Monitoreo Realizado. Datos sincronizados con éxito desde el SIE UNEFCO.',
       totalProgramas: deduplicatedEvents.length,
-      totalCursos,
+      totalCursos: totalCourses,
     });
   } catch (error: any) {
     console.error('Error durante la sincronización nativa del SIE:', error);
