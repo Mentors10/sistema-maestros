@@ -102,22 +102,39 @@ export default function ReporteDiarioModal({
 
   // Manejar la extracción y sincronización de datos en tiempo real desde el SIE UNEFCO
   const handleSyncSieData = async () => {
-    const confirm = await Swal.fire({
-      title: '¿Actualizar Datos en Tiempo Real?',
-      html: 'Se conectará con el portal SIE UNEFCO para extraer eventos, planificaciones, valoraciones e informes de los programas de formación en tiempo real.<br><br><b>¿Deseas continuar?</b>',
-      icon: 'question',
+    const { value: formValues } = await Swal.fire({
+      title: '🔐 Conexión al SIE UNEFCO',
+      html: `
+        <p style="font-size:0.88rem;color:#64748b;margin-bottom:12px;">Ingresa tus credenciales del SIE para conectar y validar los participantes y eventos en tiempo real:</p>
+        <div style="text-align:left;max-width:320px;margin:0 auto;">
+          <label style="font-size:0.8rem;font-weight:600;color:#1e293b;display:block;margin-bottom:4px;">Usuario / Correo SIE:</label>
+          <input id="swal-username" class="swal2-input" placeholder="ej. usuario@unefco.edu.bo" value="gilmar.chavarria@unefco.edu.bo" style="width:100%;margin-top:0;margin-bottom:12px;font-size:0.9rem;">
+          <label style="font-size:0.8rem;font-weight:600;color:#1e293b;display:block;margin-bottom:4px;">Contraseña SIE:</label>
+          <input id="swal-password" type="password" class="swal2-input" placeholder="Contraseña" value="GILMAR.chavarria24#" style="width:100%;margin-top:0;margin-bottom:8px;font-size:0.9rem;">
+        </div>
+      `,
+      focusConfirm: false,
       showCancelButton: true,
-      confirmButtonText: 'Sí, Sincronizar Ahora',
+      confirmButtonText: '⚡ Conectar y Sincronizar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#0d3b66',
+      preConfirm: () => {
+        const u = (document.getElementById('swal-username') as HTMLInputElement)?.value;
+        const p = (document.getElementById('swal-password') as HTMLInputElement)?.value;
+        if (!u || !p) {
+          Swal.showValidationMessage('Por favor ingresa usuario y contraseña del SIE');
+          return false;
+        }
+        return { username: u, password: p };
+      }
     });
 
-    if (!confirm.isConfirmed) return;
+    if (!formValues) return;
 
     setSyncingSie(true);
     Swal.fire({
-      title: 'Sincronizando con SIE UNEFCO...',
-      html: 'Extrayendo planificaciones, evaluaciones e informes finales en tiempo real.<br>Esto tomará unos momentos...',
+      title: 'Conectando al SIE UNEFCO...',
+      html: '🟢 <b>Conectado al SIE</b>: Validando participantes, planificaciones, notas e informes finales en tiempo real...',
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading();
@@ -125,18 +142,22 @@ export default function ReporteDiarioModal({
     });
 
     try {
-      const res = await fetch('/api/sie/sync-reporte', { method: 'POST' });
+      const res = await fetch('/api/sie/sync-reporte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: formValues.username, password: formValues.password }),
+      });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         await loadHtmlReport(true);
         Swal.fire({
           icon: 'success',
-          title: '¡Sincronización Exitosa!',
-          html: 'Los datos del reporte de monitoreo han sido actualizados en <b>tiempo real</b> desde el SIE y guardados permanentemente en Supabase.',
+          title: '¡Conectado y Sincronizado!',
+          html: '🟢 <b>Conexión al SIE verificada con éxito.</b><br>Los participantes y eventos han sido validados en tiempo real y guardados en Supabase.',
           confirmButtonColor: '#0d3b66',
         });
       } else {
-        Swal.fire('Error', data.error || 'No se pudo completar la sincronización con el SIE', 'error');
+        Swal.fire('Error de Conexión', data.error || 'No se pudo iniciar sesión en el SIE UNEFCO. Verifica tus credenciales.', 'error');
       }
     } catch (e: any) {
       Swal.fire('Error', 'Ocurrió un error al conectar con el servidor', 'error');
@@ -274,106 +295,36 @@ export default function ReporteDiarioModal({
               <FileText size={22} color="#ffffff" />
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, letterSpacing: '0.3px', color: '#ffffff' }}>
-                REPORTE DIARIO DE MONITOREO ACADÉMICO
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, letterSpacing: '0.3px', color: '#ffffff' }}>
+                  REPORTE DIARIO DE MONITOREO ACADÉMICO
+                </h2>
+                <span
+                  style={{
+                    background: '#dcfce7',
+                    color: '#15803d',
+                    border: '1px solid #86efac',
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 2px 6px rgba(22, 163, 74, 0.2)',
+                  }}
+                  title="Conexión en tiempo real con el portal SIE UNEFCO activa"
+                >
+                  🟢 Conectado al SIE UNEFCO
+                </span>
+              </div>
               <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                Visualización e informe actualizado
+                Visualización e informe actualizado en tiempo real
               </span>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* Opción de Subir Plantilla HTML sólo para Gilmar Felix Chavarria Choque */}
-            {isGilmar && (
-              <>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept=".html,.htm"
-                  style={{ display: 'none' }}
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  style={{
-                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
-                    transition: 'all 0.2s',
-                  }}
-                  title="Subir o actualizar la plantilla HTML del reporte (Técnico Gilmar Felix Chavarria Choque)"
-                >
-                  <Upload size={16} />
-                  {uploading ? 'Subiendo...' : 'Subir Plantilla HTML'}
-                </button>
-              </>
-            )}
-
-            {isGilmar && (
-              <button
-                onClick={async () => {
-                  if (!htmlContent) return;
-                  setUploading(true);
-                  try {
-                    const res = await fetch('/api/reporte-diario', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ html: htmlContent }),
-                    });
-                    const data = await res.json().catch(() => ({}));
-                    const finalHtml = data.enrichedHtml || htmlContent;
-                    setHtmlContent(finalHtml);
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('reporte_diario_custom_html', finalHtml);
-                      localStorage.setItem('reporte_diario_user_uploaded', 'true');
-                    }
-                    Swal.fire({
-                      icon: 'success',
-                      title: '¡Plantilla Guardada Exitosamente!',
-                      html: `La plantilla activa fue guardada permanentemente en Supabase DB y estará activa en todas las pestañas y al abrir en nueva pestaña.`,
-                      confirmButtonColor: '#0d3b66',
-                      timer: 3500,
-                      timerProgressBar: true,
-                    });
-                  } catch (e) {
-                    Swal.fire('Error', 'No se pudo guardar la plantilla', 'error');
-                  } finally {
-                    setUploading(false);
-                  }
-                }}
-                disabled={uploading || !htmlContent}
-                style={{
-                  background: 'linear-gradient(135deg, #0d3b66 0%, #1a5276 100%)',
-                  color: '#ffffff',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: uploading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 2px 8px rgba(13, 59, 102, 0.3)',
-                }}
-                title="Guardar plantilla activa en Supabase"
-              >
-                <Save size={16} />
-                {uploading ? 'Guardando...' : 'Guardar Plantilla'}
-              </button>
-            )}
-
             {isGilmar && (
               <button
                 onClick={handleSyncSieData}
@@ -395,12 +346,12 @@ export default function ReporteDiarioModal({
                 title="Sincronizar y actualizar reporte con datos del SIE UNEFCO en tiempo real"
               >
                 <RefreshCw size={16} className={syncingSie ? 'spin' : ''} />
-                {syncingSie ? 'Sincronizando...' : 'Actualizar Datos SIE'}
+                {syncingSie ? 'Conectando...' : 'Actualizar Datos SIE'}
               </button>
             )}
 
             <a
-              href={`/api/reporte-diario?tecnico=${defaultTecnicoCarnet}`}
+              href={`/api/reporte-diario?standalone=true&tecnico=${defaultTecnicoCarnet}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -416,7 +367,7 @@ export default function ReporteDiarioModal({
                 gap: '6px',
                 fontWeight: 600,
               }}
-              title="Abrir reporte en nueva pestaña"
+              title="Abrir reporte directo a la tabla en nueva pestaña"
             >
               <ExternalLink size={15} /> Pestaña Nueva
             </a>

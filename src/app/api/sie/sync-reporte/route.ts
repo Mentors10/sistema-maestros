@@ -8,14 +8,25 @@ const execPromise = util.promisify(exec);
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const body = await request.json().catch(() => ({}));
+    const username = body.username || 'gilmar.chavarria@unefco.edu.bo';
+    const password = body.password || 'GILMAR.chavarria24#';
+
     const scriptPath = path.join(process.cwd(), 'scripts', 'sync_sie_monitoreo.js');
     
+    const envOptions = {
+      ...process.env,
+      SIE_USERNAME: username,
+      SIE_PASSWORD: password,
+    };
+
     // Execute synchronization script
     const { stdout, stderr } = await execPromise(`node "${scriptPath}"`, {
       cwd: process.cwd(),
-      maxBuffer: 20 * 1024 * 1024,
+      env: envOptions,
+      maxBuffer: 25 * 1024 * 1024,
     });
 
     console.log('SIE Sync Output:', stdout);

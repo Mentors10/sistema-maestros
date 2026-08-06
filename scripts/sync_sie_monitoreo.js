@@ -29,7 +29,12 @@ async function runSync() {
   }
 
   try {
-    const pyOutput = execSync(`python "${pyScript}"`, { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
+    const envOptions = {
+      ...process.env,
+      SIE_USERNAME: process.env.SIE_USERNAME || 'gilmar.chavarria@unefco.edu.bo',
+      SIE_PASSWORD: process.env.SIE_PASSWORD || 'GILMAR.chavarria24#',
+    };
+    const pyOutput = execSync(`python "${pyScript}"`, { env: envOptions, encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
     console.log(pyOutput);
   } catch (err) {
     console.error('Error running Python script:', err);

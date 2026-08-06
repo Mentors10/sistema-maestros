@@ -16,8 +16,12 @@ function normalizeText(str: string) {
     .trim();
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const isStandalone = searchParams.get('standalone') === 'true' || searchParams.has('tecnico');
+    const hideHeaderCss = isStandalone ? '<style>.header, .cards { display: none !important; }</style></head>' : '</head>';
+
     // 1. Intentar obtener plantilla guardada en Supabase (agenda_contactos CONFIG-REPORTE-PLANTILLA-HTML)
     try {
       const { data, error } = await supabase
@@ -27,7 +31,11 @@ export async function GET() {
         .maybeSingle();
 
       if (!error && data?.descripcion && data.descripcion.trim().length > 0) {
-        return new NextResponse(data.descripcion, {
+        let outputHtml = data.descripcion;
+        if (isStandalone && outputHtml.includes('</head>')) {
+          outputHtml = outputHtml.replace('</head>', hideHeaderCss);
+        }
+        return new NextResponse(outputHtml, {
           status: 200,
           headers: {
             'Content-Type': 'text/html; charset=utf-8',
@@ -42,7 +50,10 @@ export async function GET() {
     // 2. Fallback a archivo de plantilla estático
     const filePath = path.join(process.cwd(), 'public', 'reporte_diario_template.html');
     if (fs.existsSync(filePath)) {
-      const html = fs.readFileSync(filePath, 'utf8');
+      let html = fs.readFileSync(filePath, 'utf8');
+      if (isStandalone && html.includes('</head>')) {
+        html = html.replace('</head>', hideHeaderCss);
+      }
       return new NextResponse(html, {
         status: 200,
         headers: {
