@@ -20,6 +20,7 @@ export default function ReporteDiarioModal({
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
   const [syncingSie, setSyncingSie] = useState<boolean>(false);
+  const [isSieConnected, setIsSieConnected] = useState<boolean>(false);
   const [sieUser, setSieUser] = useState<string>('gilmar.chavarria@unefco.edu.bo');
   const [siePass, setSiePass] = useState<string>('GILMAR.chavarria24#');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +143,7 @@ export default function ReporteDiarioModal({
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.success) {
+        setIsSieConnected(true);
         await loadHtmlReport(true);
         // Mensaje de finalización exacta "Monitoreo Realizado"
         Swal.fire({
@@ -306,24 +308,26 @@ export default function ReporteDiarioModal({
                 <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, letterSpacing: '0.3px', color: '#ffffff' }}>
                   REPORTE DIARIO DE MONITOREO ACADÉMICO
                 </h2>
-                <span
-                  style={{
-                    background: '#dcfce7',
-                    color: '#15803d',
-                    border: '1px solid #86efac',
-                    padding: '3px 10px',
-                    borderRadius: '20px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    boxShadow: '0 2px 6px rgba(22, 163, 74, 0.2)',
-                  }}
-                  title="Conexión en tiempo real con el portal SIE UNEFCO activa"
-                >
-                  🟢 Conectado al SIE UNEFCO
-                </span>
+                {isSieConnected && (
+                  <span
+                    style={{
+                      background: '#dcfce7',
+                      color: '#15803d',
+                      border: '1px solid #86efac',
+                      padding: '3px 10px',
+                      borderRadius: '20px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 6px rgba(22, 163, 74, 0.2)',
+                    }}
+                    title="Conexión en tiempo real con el portal SIE UNEFCO activa"
+                  >
+                    🟢 Conectado al SIE UNEFCO
+                  </span>
+                )}
               </div>
               <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>
                 Visualización e informe actualizado en tiempo real
@@ -457,25 +461,7 @@ export default function ReporteDiarioModal({
           </div>
         </div>
 
-        {/* Indicador de permiso de edición */}
-        {isGilmar && (
-          <div
-            style={{
-              backgroundColor: '#f0fdf4',
-              borderBottom: '1px solid #bbf7d0',
-              padding: '6px 24px',
-              fontSize: '0.78rem',
-              color: '#166534',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontWeight: 600,
-            }}
-          >
-            <CheckCircle2 size={14} color="#16a34a" />
-            Modo Edición Habilitado: Técnico Gilmar Felix Chavarria Choque autorizado para subir/reemplazar la plantilla HTML.
-          </div>
-        )}
+
 
         {/* Creador/Visor Iframe */}
         <div style={{ flex: 1, backgroundColor: '#eef2f7', position: 'relative' }}>
