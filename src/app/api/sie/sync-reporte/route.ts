@@ -189,14 +189,14 @@ export async function POST(request: Request) {
       });
 
       const idxHtml = await idxRes.text();
-      const tableMatch = idxHtml.match(/<table[^>]*>.*?<\/table>/is);
+      const tableMatch = idxHtml.match(/<table[^>]*>[\s\S]*?<\/table>/i);
       if (!tableMatch) continue;
 
-      const rowMatches = tableMatch[0].match(/<tr[^>]*>.*?<\/tr>/gis) || [];
+      const rowMatches = tableMatch[0].match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
       const courses: any[] = [];
 
       for (const rowHtml of rowMatches) {
-        const celdas = rowHtml.match(/<td[^>]*>(.*?)<\/td>/gis) || [];
+        const celdas = rowHtml.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || [];
         if (celdas.length < 11) continue;
 
         const txt = celdas.map(c => c.replace(/<[^>]+>/g, '').trim());
@@ -237,7 +237,7 @@ export async function POST(request: Request) {
         const ciclo = cicloMatch ? cicloMatch[1].replace(/<[^>]+>/g, '').trim() : '';
 
         // Parse course cards & date update IDs
-        const courseCards = [...detHtml.matchAll(/<span[^>]*class=["']badge[^"]*badge-primary[^"']*["'][^>]*>(.*?)<\/span>\s*<h6[^>]*class=["']mb-0[^>]*>(.*?)<\/h6>/gis)];
+        const courseCards = [...detHtml.matchAll(/<span[^>]*class=["']badge[^"]*badge-primary[^"']*["'][^>]*>([\s\S]*?)<\/span>\s*<h6[^>]*class=["']mb-0[^>]*>([\s\S]*?)<\/h6>/gi)];
         const courseIds = [...detHtml.matchAll(/id=["']date-course-update-(\d+)["']/gi)].map(m => m[1]);
 
         const courseDates: Record<string, string> = {};
@@ -273,12 +273,12 @@ export async function POST(request: Request) {
           try {
             const gRes = await fetch(`${BASE_URL}/inscription/${cid}`, { headers: { 'Cookie': cookieHeader } });
             const gHtml = await gRes.text();
-            const gTableMatch = gHtml.match(/<table[^>]*>.*?<\/table>/is);
+            const gTableMatch = gHtml.match(/<table[^>]*>[\s\S]*?<\/table>/i);
             if (gTableMatch) {
-              const gRows = gTableMatch[0].match(/<tr[^>]*>.*?<\/tr>/gis) || [];
+              const gRows = gTableMatch[0].match(/<tr[^>]*>[\s\S]*?<\/tr>/gi) || [];
               const scores: number[] = [];
               for (const r of gRows) {
-                const c = (r.match(/<td[^>]*>(.*?)<\/td>/gis) || []).map(td => td.replace(/<[^>]+>/g, '').trim());
+                const c = (r.match(/<td[^>]*>[\s\S]*?<\/td>/gi) || []).map(td => td.replace(/<[^>]+>/g, '').trim());
                 if (c.length >= 12 && /^\d+$/.test(c[0])) {
                   const val = parseFloat(c[c.length - 1]);
                   if (!isNaN(val)) scores.push(val);
