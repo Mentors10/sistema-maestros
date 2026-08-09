@@ -1,7 +1,7 @@
 -- =============================================================
 -- SCHEMA COMPLETO - SISTEMA DE CONTROL DE MAESTROS
 -- Base de datos: Supabase (PostgreSQL)
--- Fecha: 2026-06-04
+-- Fecha de última actualización: 2026-08-09
 -- =============================================================
 
 -- Habilitar extensiones necesarias
