@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Upload, ExternalLink, Save, RefreshCw, FileText, CheckCircle2 } from 'lucide-react';
+import { X, Upload, ExternalLink, Save, RefreshCw, FileText, CheckCircle2, Eraser } from 'lucide-react';
 import { AuthUser } from '@/lib/auth/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -21,8 +21,8 @@ export default function ReporteDiarioModal({
   const [uploading, setUploading] = useState<boolean>(false);
   const [syncingSie, setSyncingSie] = useState<boolean>(false);
   const [isSieConnected, setIsSieConnected] = useState<boolean>(false);
-  const [sieUser, setSieUser] = useState<string>('gilmar.chavarria@unefco.edu.bo');
-  const [siePass, setSiePass] = useState<string>('GILMAR.chavarria24#');
+  const [sieUser, setSieUser] = useState<string>('');
+  const [siePass, setSiePass] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Comprobar si el usuario actual es el técnico Gilmar Felix Chavarria Choque
@@ -356,6 +356,7 @@ export default function ReporteDiarioModal({
                     value={sieUser}
                     onChange={(e) => setSieUser(e.target.value)}
                     placeholder="Usuario / Correo SIE"
+                    autoComplete="off"
                     style={{
                       background: 'rgba(255, 255, 255, 0.2)',
                       border: '1px solid rgba(255, 255, 255, 0.35)',
@@ -374,6 +375,7 @@ export default function ReporteDiarioModal({
                     value={siePass}
                     onChange={(e) => setSiePass(e.target.value)}
                     placeholder="Contraseña SIE"
+                    autoComplete="new-password"
                     style={{
                       background: 'rgba(255, 255, 255, 0.2)',
                       border: '1px solid rgba(255, 255, 255, 0.35)',
@@ -389,31 +391,60 @@ export default function ReporteDiarioModal({
                   />
                 </div>
 
-                <button
-                  onClick={() => handleSyncSieData(sieUser, siePass)}
-                  disabled={syncingSie}
-                  style={{
-                    background: syncingSie
-                      ? '#64748b'
-                      : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 14px',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    cursor: syncingSie ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
-                    height: '38px',
-                  }}
-                  title="Conectar al SIE de Participantes e Iniciar Monitoreo"
-                >
-                  <RefreshCw size={15} className={syncingSie ? 'spin' : ''} />
-                  {syncingSie ? 'Analizando...' : 'Conectar SIE'}
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleSyncSieData(sieUser, siePass)}
+                    disabled={syncingSie}
+                    style={{
+                      background: syncingSie
+                        ? '#64748b'
+                        : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: syncingSie ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+                      height: '38px',
+                    }}
+                    title="Conectar al SIE de Participantes e Iniciar Monitoreo"
+                  >
+                    <RefreshCw size={14} className={syncingSie ? 'spin' : ''} />
+                    {syncingSie ? 'Analizando...' : 'Conectar SIE'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSieUser('');
+                      setSiePass('');
+                    }}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.15)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: '8px',
+                      padding: '8px 10px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      height: '38px',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title="Limpiar usuario y contraseña"
+                  >
+                    <Eraser size={14} /> Limpiar
+                  </button>
+                </div>
               </div>
             )}
 
