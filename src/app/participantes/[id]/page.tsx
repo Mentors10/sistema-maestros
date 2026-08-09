@@ -303,57 +303,7 @@ export default function ParticipanteRegistroPage() {
             </div>
           </div>
 
-          {/* Cronograma del Ciclo */}
-          {curso.horarios_tentativos && curso.horarios_tentativos.length > 0 && (
-            <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: '8px', padding: '10px 14px', border: '1px solid var(--primary-100)', marginTop: '8px' }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--primary-800)', marginBottom: '6px', textTransform: 'uppercase' }}>Cronograma de Actividades:</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.78rem', color: 'var(--primary-700)' }}>
-                {Array.from({ length: 4 }, (_, i) => i + 1).map(num => {
-                  const courseSlots = curso.horarios_tentativos.filter(s => Number(s.course) === num);
-                  const courseName = (curso as any)[`tema${num}`];
-                  if (courseSlots.length === 0 && !courseName) return null;
-                  return (
-                    <div key={num} style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderLeft: '3px solid var(--primary-300)', paddingLeft: '8px' }}>
-                      <span style={{ fontWeight: 800 }}>Curso {num}: {courseName || 'Sin nombre'}</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--primary-600)' }}>
-                        {courseSlots.length > 0 
-                          ? courseSlots.map(s => `${formatOnlyDate(s.date)} (${s.startTime}-${s.endTime})`).join(', ') 
-                          : 'Sin fechas programadas'}
-                      </span>
-                    </div>
-                  );
-                })}
-                {/* Socialización */}
-                {(() => {
-                  const socSlots = curso.horarios_tentativos.filter(s => String(s.course).startsWith('soc'));
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderLeft: '3px solid #0F172A', paddingLeft: '8px' }}>
-                      <span style={{ fontWeight: 800, color: '#0F172A' }}>Socialización (SOC)</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--primary-600)' }}>
-                        {socSlots.length > 0 
-                          ? socSlots.map(s => `${formatOnlyDate(s.date)} (${s.startTime}-${s.endTime})`).join(', ') 
-                          : 'Sin fechas programadas'}
-                      </span>
-                    </div>
-                  );
-                })()}
-                {/* Evaluación */}
-                {(() => {
-                  const evalSlots = curso.horarios_tentativos.filter(s => String(s.course).startsWith('eval'));
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', borderLeft: '3px solid #B91C1C', paddingLeft: '8px' }}>
-                      <span style={{ fontWeight: 800, color: '#B91C1C' }}>Evaluación (EVAL)</span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--primary-600)' }}>
-                        {evalSlots.length > 0 
-                          ? evalSlots.map(s => `${formatOnlyDate(s.date)} (${s.startTime}-${s.endTime})`).join(', ') 
-                          : 'Sin fechas programadas'}
-                      </span>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
+
 
           <div className="info-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-700)' }}>
