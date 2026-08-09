@@ -94,6 +94,39 @@ export default function ReporteDiarioModal({
     setLoading(false);
   };
 
+  // Limpiar el reporte y restablecer a la plantilla limpia del servidor
+  const handleClearReport = async () => {
+    const result = await Swal.fire({
+      title: '¿Limpiar Reporte Diario?',
+      text: 'Se borrará la vista local y se recargará el reporte limpio desde el servidor.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, Limpiar Reporte',
+      cancelButtonText: 'Cancelar',
+    });
+
+    if (result.isConfirmed) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('reporte_diario_custom_html');
+        localStorage.removeItem('reporte_diario_user_uploaded');
+      }
+      setSieUser('');
+      setSiePass('');
+      setIsSieConnected(false);
+      await loadHtmlReport(true);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Reporte Limpiado',
+        text: 'Se ha restablecido el Reporte Diario con éxito.',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       loadHtmlReport();
@@ -421,28 +454,25 @@ export default function ReporteDiarioModal({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setSieUser('');
-                      setSiePass('');
-                    }}
+                    onClick={handleClearReport}
                     style={{
                       background: 'rgba(255, 255, 255, 0.15)',
                       color: '#ffffff',
                       border: '1px solid rgba(255, 255, 255, 0.3)',
                       borderRadius: '8px',
-                      padding: '8px 10px',
+                      padding: '8px 12px',
                       fontSize: '0.78rem',
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '5px',
                       height: '38px',
                       transition: 'all 0.2s ease',
                     }}
-                    title="Limpiar usuario y contraseña"
+                    title="Limpiar datos locales y restablecer plantilla del reporte"
                   >
-                    <Eraser size={14} /> Limpiar
+                    <Eraser size={14} /> Limpiar Reporte
                   </button>
                 </div>
               </div>
