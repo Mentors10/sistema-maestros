@@ -64,8 +64,8 @@ export default function ReporteDiarioModal({
     const isUserUploaded = typeof window !== 'undefined' && localStorage.getItem('reporte_diario_user_uploaded') === 'true';
     const savedLocal = typeof window !== 'undefined' ? localStorage.getItem('reporte_diario_custom_html') : null;
 
-    if (!forceFetchServer && isUserUploaded && savedLocal && savedLocal.trim().length > 0) {
-      setHtmlContent(savedLocal);
+    if (!forceFetchServer && isUserUploaded) {
+      setHtmlContent(savedLocal || '');
       setLoading(false);
       return;
     }
@@ -88,22 +88,24 @@ export default function ReporteDiarioModal({
       console.warn('Error al obtener reporte desde API, intentando localStorage:', e);
     }
 
-    if (savedLocal) {
+    if (savedLocal !== null) {
       setHtmlContent(savedLocal);
+    } else {
+      setHtmlContent('');
     }
     setLoading(false);
   };
 
-  // Limpiar el reporte TANTO EN LOCAL COMO EN EL SERVIDOR (SUPABASE)
+  // Limpiar el reporte COMPLETAMENTE (sin versión base ni datos, 100% vacío)
   const handleClearReport = async () => {
     const result = await Swal.fire({
-      title: '¿Limpiar Reporte en Local y Servidor?',
-      text: 'Se eliminará la plantilla guardada en la base de datos (Supabase) y en la memoria local, restableciendo la versión base.',
+      title: '¿Vaciar Reporte por Completo?',
+      text: 'Se eliminará todo el contenido del reporte tanto localmente como en el servidor, dejándolo 100% vacío.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, Limpiar Todo',
+      confirmButtonText: 'Sí, Vaciar Todo',
       cancelButtonText: 'Cancelar',
     });
 
@@ -113,29 +115,27 @@ export default function ReporteDiarioModal({
         // 1. Limpiar en Servidor (API DELETE /api/reporte-diario en Supabase)
         await fetch('/api/reporte-diario', { method: 'DELETE' });
 
-        // 2. Limpiar memoria local del navegador
+        // 2. Establecer estado y memoria local 100% vacíos sin cargar versión base
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('reporte_diario_custom_html');
-          localStorage.removeItem('reporte_diario_user_uploaded');
+          localStorage.setItem('reporte_diario_custom_html', '');
+          localStorage.setItem('reporte_diario_user_uploaded', 'true');
         }
 
+        setHtmlContent('');
         setSieUser('');
         setSiePass('');
         setIsSieConnected(false);
 
-        // 3. Recargar la plantilla limpia directamente del servidor
-        await loadHtmlReport(true);
-
         Swal.fire({
           icon: 'success',
-          title: '¡Reporte Limpiado!',
-          text: 'Se ha eliminado la plantilla del servidor (Supabase) y de la memoria local exitosamente.',
+          title: '¡Reporte Vacío!',
+          text: 'Se ha borrado el reporte por completo tanto localmente como en el servidor.',
           timer: 2500,
           showConfirmButton: false,
         });
       } catch (err) {
-        console.error('Error al limpiar reporte en servidor:', err);
-        Swal.fire('Error', 'No se pudo limpiar la plantilla del servidor', 'error');
+        console.error('Error al vaciar reporte en servidor:', err);
+        Swal.fire('Error', 'No se pudo vaciar la plantilla del servidor', 'error');
       } finally {
         setLoading(false);
       }
@@ -555,6 +555,29 @@ export default function ReporteDiarioModal({
             >
               <RefreshCw size={32} className="spin" />
               <span>Cargando Reporte Diario...</span>
+            </div>
+          ) : !htmlContent || htmlContent.trim().length === 0 ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                flexDirection: 'column',
+                gap: '16px',
+                color: '#64748b',
+                textAlign: 'center',
+                padding: '20px',
+                background: '#f8fafc',
+              }}
+            >
+              <FileText size={52} style={{ opacity: 0.35, color: '#0d3b66' }} />
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#1e293b' }}>Reporte Vacío</h3>
+                <p style={{ margin: '6px 0 0', fontSize: '0.88rem', color: '#64748b', maxWidth: '480px', lineHeight: '1.4' }}>
+                  No hay ningún reporte cargado. Ingresa tu usuario y contraseña del SIE a un lado de la cabecera y presiona <b>"Conectar SIE"</b> para generar la información.
+                </p>
+              </div>
             </div>
           ) : (
             <iframe
