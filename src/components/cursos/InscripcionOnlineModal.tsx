@@ -49,30 +49,27 @@ export default function InscripcionOnlineModal({ curso, onClose }: InscripcionOn
 
   // Build WhatsApp invite message and AI Image Prompt
   const buildContent = () => {
-    const { diasStr, horarioStr } = getHorarioDetallado();
-
-    // 1. WhatsApp Text Message (ALWAYS "Fecha: A CONFIRMAR")
+    // 1. WhatsApp Text Message (Simplified - keeping header, warning, link and footer)
     const textMsg = `*CONVOCATORIA OFICIAL UNEFCO* 📚\n\n` +
       `Estimados maestros(as), los invitamos a inscribirse en el ciclo formativo:\n` +
       `📖 *${curso.ciclo_nombre || 'Ciclo Formativo'}*\n` +
       `🗂️ *Área Formativa:* ${curso.area_formativa || curso.ciclo_grupo || 'General'}\n\n` +
-      `📝 *Cursos del Ciclo:*\n` +
-      (curso.tema1 ? `🔹 Curso 1: ${curso.tema1}\n` : '') +
-      (curso.tema2 ? `🔹 Curso 2: ${curso.tema2}\n` : '') +
-      (curso.tema3 ? `🔹 Curso 3: ${curso.tema3}\n` : '') +
-      (curso.tema4 ? `🔹 Curso 4: ${curso.tema4}\n` : '') + `\n` +
-      `📅 *Fecha de Inicio:* A CONFIRMAR\n` +
-      `🗓️ *Días de Clases:* ${diasStr}\n` +
-      `⏰ *Horario:* ${horarioStr}\n` +
-      `📍 *Lugar:* ${curso.lugar || 'POR CONFIRMAR'} (${curso.distrito || ''})\n` +
-      `👤 *Facilitador:* ${curso.facilitador_nombre || 'POR CONFIRMAR'}\n` +
-      `🔧 *Técnico UNEFCO:* ${curso.tecnico_nombre || 'POR CONFIRMAR'}\n` +
-      `💵 *Inversión:* ${curso.costo || 50} Bs.\n\n` +
       `⚠️ *IMPORTANTE:* No realizar ningún depósito hasta confirmar la apertura del grupo en WhatsApp.\n\n` +
       `🔗 *Inscríbete en línea aquí:* ${linkInscripcion}\n\n` +
       `¡Fortalece tu desarrollo profesional con UNEFCO! 🚀`;
 
     setInviteText(textMsg);
+
+    // Fetch Fecha Inicio from curso object or first slot
+    const fechaInicioStr = (() => {
+      if (curso.fecha_inicio) return curso.fecha_inicio;
+      if ((curso as any).inicio) return (curso as any).inicio;
+      if (curso.horarios_tentativos && curso.horarios_tentativos.length > 0) {
+        const sorted = [...curso.horarios_tentativos].sort((a, b) => a.date.localeCompare(b.date));
+        return sorted[0].date;
+      }
+      return 'A CONFIRMAR';
+    })();
 
     // 2. AI Image Prompt (Detailed prompt following user specifications)
     const prompt = `Crea un afiche publicitario educativo profesional, limpio y moderno de alta calidad para un ciclo formativo institucional.
@@ -95,9 +92,8 @@ export default function InscripcionOnlineModal({ curso, onClose }: InscripcionOn
   ${curso.tema3 ? `• Curso 3: ${curso.tema3}` : ''}
   ${curso.tema4 ? `• Curso 4: ${curso.tema4}` : ''}
 - Datos de Convocatoria:
-  • Fecha de Inicio: A CONFIRMAR
+  • Fecha de Inicio: ${fechaInicioStr}
   • Días de Clases: ${diaClase}
-  • Horario / Turno: ${horarioStr}
   • Lugar: ${curso.lugar || 'POR CONFIRMAR'} (${curso.distrito || ''})
   • Facilitador: ${curso.facilitador_nombre || 'POR CONFIRMAR'}
   • Inversión: ${curso.costo || 50} Bs.
