@@ -336,8 +336,8 @@ export default function ReporteDiarioModal({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Panel de Conexión al SIE a un ladito */}
-            {isGilmar && (
+            {/* Panel de Conexión al SIE disponible para todos los técnicos */}
+            {currentUser && (
               <div
                 style={{
                   display: 'flex',
