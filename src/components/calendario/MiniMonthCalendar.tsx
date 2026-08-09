@@ -408,28 +408,25 @@ export default function MiniMonthCalendar({
           </h4>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {!readOnly && (
             <button
               type="button"
               onClick={() => setShowAutoSchedule(!showAutoSchedule)}
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: showAutoSchedule ? '#8b5cf6' : 'rgba(255, 255, 255, 0.18)',
                 color: '#ffffff',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 borderRadius: '6px',
-                padding: '5px 10px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
+                padding: '5px 8px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px',
+                justifyContent: 'center',
               }}
-              title="Generar programación automáticamente"
+              title={showAutoSchedule ? 'Cerrar Auto Programación' : 'Auto Programar Sesiones'}
             >
-              <Zap size={14} />
-              {showAutoSchedule ? 'Cerrar Auto' : 'Auto Programar'}
+              <Zap size={16} />
             </button>
           )}
 
@@ -441,19 +438,16 @@ export default function MiniMonthCalendar({
               color: '#ffffff',
               border: 'none',
               borderRadius: '6px',
-              padding: '5px 12px',
-              fontSize: '0.75rem',
-              fontWeight: 800,
+              padding: '5px 8px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              justifyContent: 'center',
               boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)',
             }}
-            title="Generar e imprimir el Calendario Mensual Oficial A4"
+            title="Imprimir Calendario A4 (PDF)"
           >
-            <Printer size={15} />
-            Imprimir Calendario
+            <Printer size={16} />
           </button>
         </div>
       </div>
@@ -565,11 +559,11 @@ export default function MiniMonthCalendar({
           </div>
         )}
 
-        {/* Sessions Table List with max 5 rows scrollbar & active row border highlight */}
-        <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', maxHeight: '190px', overflowY: 'auto' }}>
+        {/* Sessions Table List with max 6 rows scrollbar & active row border highlight */}
+        <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', maxHeight: '225px', overflowY: 'auto' }}>
           {sortedSlots.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
-              No hay sesiones programadas aún. Haz clic en "Auto Programar" o agrega sesiones manualmente arriba.
+              No hay sesiones programadas aún. Haz clic en el ícono de rayo para auto-programar o agrega sesiones manualmente arriba.
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -589,9 +583,8 @@ export default function MiniMonthCalendar({
                   const color = ACT_COLORS[baseKey] || ACT_COLORS[cKey] || '#1d4ed8';
                   const isEditing = idx === editingSlotIndex;
                   const isActiveToday = idx === activeRowIndex;
-                  const isTodayExact = s.date === todayStr;
 
-                  // Active border style taking today's date
+                  // Active red border style taking today's date
                   const borderStyle = isActiveToday
                     ? { outline: '2px solid #ef4444', outlineOffset: '-2px', backgroundColor: '#fef2f2' }
                     : (isEditing ? { backgroundColor: '#eff6ff' } : { backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc' });
@@ -599,14 +592,7 @@ export default function MiniMonthCalendar({
                   return (
                     <tr key={idx} style={{ ...borderStyle, borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '6px 8px', fontWeight: 700, color: '#1e293b' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          {formatLetterDate(s.date)}
-                          {isActiveToday && (
-                            <span style={{ background: '#ef4444', color: '#ffffff', padding: '1px 5px', borderRadius: '10px', fontSize: '0.62rem', fontWeight: 900 }}>
-                              {isTodayExact ? '📍 HOY' : '📍 ACTIVA'}
-                            </span>
-                          )}
-                        </div>
+                        {formatLetterDate(s.date)}
                       </td>
                       <td style={{ padding: '6px 8px' }}>
                         <span style={{ background: color, color: '#ffffff', padding: '2px 7px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 900 }}>
