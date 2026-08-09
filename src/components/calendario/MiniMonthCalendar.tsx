@@ -231,7 +231,7 @@ export default function MiniMonthCalendar({
 
         const [socSh, socSm] = socStart.split(':').map(Number);
         const [socEh, socEm] = socEnd.split(':').map(Number);
-        preview.push({ date: dateStr14, startTime: socStart, endTime: socEnd, hours: 3, course: `soc${courseNum}`, hour: socStart, endTime: socEnd, hour: socSh, minute: socSm, endHour: socEh, endMinute: socEm });
+        preview.push({ date: dateStr14, startTime: socStart, endTime: socEnd, hours: 3, course: `soc${courseNum}`, hour: socSh, minute: socSm, endHour: socEh, endMinute: socEm });
 
         const [evSh, evSm] = evalStart.split(':').map(Number);
         const [evEh, evEm] = evalEnd.split(':').map(Number);
