@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { HorarioSlot } from '@/types';
 import {
-  getCurrentMonthDays, DAY_NAMES_SHORT, MONTH_NAMES,
-  getSlotsForDate, autoAssignSocNumber, getCourseRanges, getReportRanges
+  getCurrentMonthDays, MONTH_NAMES, getSlotsForDate, autoAssignSocNumber
 } from '@/lib/utils/calendar';
-import { CALENDAR_DAY_COLORS, RANGE_COLORS, getCourseColor, getCourseLabel } from '@/lib/utils/colors';
-import { Plus, Trash2, X, Calendar, ChevronRight, Zap } from 'lucide-react';
+import { Plus, Trash2, Calendar, Zap, Printer, CheckCircle2, Clock, FileText } from 'lucide-react';
 import { ComplianceAlert } from '@/lib/utils/compliance';
 
 interface MiniMonthCalendarProps {
@@ -57,7 +55,6 @@ const getFullActivityLabel = (course: number | string): string => {
   return key.toUpperCase();
 };
 
-// Full labels for display
 const ACT_LABELS: Record<string, string> = {
   '1': 'Curso 1',
   '2': 'Curso 2',
@@ -78,15 +75,11 @@ const ACT_COLORS: Record<string, string> = {
 
 const ACT_OPTIONS = ['1', '2', '3', '4', 'soc', 'eval'];
 
-const MAX_SESSIONS = 3;
-const TARGET_HOURS = 12;
-
 export default function MiniMonthCalendar({
   slots,
   onSaveSlots,
-  noteColor = '#2f80ed',
+  noteColor = '#0d3b66',
   initialDate,
-  compliance = [],
   planificacionRecibida,
   evaluacionRealizada,
   informeFinalRecibido,
@@ -94,42 +87,20 @@ export default function MiniMonthCalendar({
   readOnly = false,
 }: MiniMonthCalendarProps) {
   const now = new Date();
-  const [year, setYear] = useState(initialDate?.getFullYear() || now.getFullYear());
-  const [month, setMonth] = useState(initialDate?.getMonth() ?? now.getMonth());
-  const [popoverDate, setPopoverDate] = useState<string | null>(null);
   const [newCourse, setNewCourse] = useState('1');
   const [newStart, setNewStart] = useState('08:00');
   const [newEnd, setNewEnd] = useState('12:00');
-  const [newDate, setNewDate] = useState('');
+  const [newDate, setNewDate] = useState(initialDate ? initialDate.toISOString().split('T')[0] : now.toISOString().split('T')[0]);
   const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null);
-
-  const handleDateChange = (dateStr: string) => {
-    setNewDate(dateStr);
-    setPopoverDate(dateStr);
-  };
-
-  const handleEditSlotSelect = (slot: HorarioSlot, globalIndex: number) => {
-    setEditingSlotIndex(globalIndex);
-    setNewDate(slot.date);
-    setPopoverDate(slot.date);
-    const courseKey = String(slot.course);
-    const baseType = courseKey.replace(/\d+$/, '') || courseKey;
-    setNewCourse(baseType === 'soc' || baseType === 'eval' ? baseType : String(parseInt(courseKey)));
-    setNewStart(slot.startTime);
-    setNewEnd(slot.endTime);
-  };
 
   // Automated scheduling states
   const [showAutoSchedule, setShowAutoSchedule] = useState(false);
-  const [autoStartDate, setAutoStartDate] = useState('');
+  const [autoStartDate, setAutoStartDate] = useState(newDate);
   const [autoStartHour, setAutoStartHour] = useState('08:00');
   const [autoEndHour, setAutoEndHour] = useState('12:00');
   const [autoNumCourses, setAutoNumCourses] = useState(3);
   const [autoPreview, setAutoPreview] = useState<HorarioSlot[]>([]);
   const [autoAudience, setAutoAudience] = useState<'estudiantes' | 'maestros'>('estudiantes');
-  const [visibleMonth, setVisibleMonth] = useState<{ year: number; month: number }>({ year, month });
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const monthBlockRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const TIME_OPTIONS = useMemo(() => {
     const opts: string[] = [];
@@ -140,170 +111,29 @@ export default function MiniMonthCalendar({
     return opts;
   }, []);
 
-  const ranges = useMemo(() => getCourseRanges(slots), [slots]);
-  const reportRanges = useMemo(() => getReportRanges(slots), [slots]);
   const totalHours = useMemo(() => slots.reduce((sum, s) => sum + (s.hours || 0), 0), [slots]);
 
-  const [localPlani, setLocalPlani] = useState(planificacionRecibida);
-  const [localEval, setLocalEval] = useState(evaluacionRealizada);
-  const [localInfo, setLocalInfo] = useState(informeFinalRecibido);
-
-  useEffect(() => { setLocalPlani(planificacionRecibida); }, [planificacionRecibida]);
-  useEffect(() => { setLocalEval(evaluacionRealizada); }, [evaluacionRealizada]);
-  useEffect(() => { setLocalInfo(informeFinalRecibido); }, [informeFinalRecibido]);
-
-  const handleTogglePlanificacion = () => { setLocalPlani(!localPlani); onToggleCheck('planificacion_recibida'); };
-  const handleToggleEvaluacion = () => { setLocalEval(!localEval); onToggleCheck('evaluacion_realizada'); };
-  const handleToggleInforme = () => { setLocalInfo(!localInfo); onToggleCheck('informe_final_recibido'); };
-
-  // â”€â”€â”€ Build months from current to December â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const months = useMemo(() => {
-    const result: { year: number; month: number; days: ReturnType<typeof getCurrentMonthDays>; isCurrent: boolean }[] = [];
-    const endYear = now.getFullYear();
-    const endMonth = 11;
-    let y = year;
-    let m = month;
-    while (y < endYear || (y === endYear && m <= endMonth)) {
-      result.push({
-        year: y,
-        month: m,
-        days: getCurrentMonthDays(y, m),
-        isCurrent: y === year && m === month,
-      });
-      m++;
-      if (m > 11) { m = 0; y++; }
-    }
-    return result;
-  }, [year, month]);
-
-  // â”€â”€â”€ Track visible month via IntersectionObserver â”€â”€â”€â”€â”€â”€â”€â”€
-  useEffect(() => {
-    const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const key = entry.target.getAttribute('data-month-key');
-            if (key) {
-              const [y, m] = key.split('-').map(Number);
-              setVisibleMonth({ year: y, month: m });
-            }
-          }
-        }
-      },
-      { root: scrollEl, threshold: 0.3 }
-    );
-
-    monthBlockRefs.current.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [months]);
-
-  // â”€â”€â”€ Close popover on outside click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  useEffect(() => {
-    if (!popoverDate) return;
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('.cal-popover-panel')) return;
-      if (target.closest('.mini-month-day')) return;
-      setPopoverDate(null);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [popoverDate]);
-
-  // â”€â”€â”€ Lock body scroll when popover is open â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  useEffect(() => {
-    if (popoverDate) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [popoverDate]);
-
-  // â”€â”€â”€ Scroll to selected date in calendar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  useEffect(() => {
-    if (!newDate || !scrollRef.current) return;
-    const el = scrollRef.current.querySelector(`[data-date="${newDate}"]`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [newDate]);
-
-  // â”€â”€â”€ Day click â†’ toggle popover panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const handleDayClick = (dateStr: string) => {
-    if (popoverDate === dateStr) {
-      setPopoverDate(null);
-    } else {
-      setPopoverDate(dateStr);
-      setNewDate(dateStr);
-      setEditingSlotIndex(null); // Clear editing mode when selecting a new day from calendar grid
-    }
-  };
-
-  // â”€â”€â”€ Calculate hours from start/end time â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const calcHours = (start: string, end: string): number => {
     const [sh, sm] = start.split(':').map(Number);
     const [eh, em] = end.split(':').map(Number);
     return Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
   };
 
-  // â”€â”€â”€ Count sessions and total hours for a course type â”€â”€â”€â”€
-  const getCourseStats = (courseType: string, dateSlots: HorarioSlot[]) => {
-    const sameType = dateSlots.filter(s => String(s.course) === courseType || String(s.course).startsWith(courseType));
-    const sessionCount = sameType.length;
-    const totalH = sameType.reduce((sum, s) => sum + (s.hours || 0), 0);
-    return { sessionCount, totalH };
-  };
-
-  // â”€â”€â”€ Get next session number for a course type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const getNextSessionNum = (courseType: string, dateSlots: HorarioSlot[]): number => {
-    const sameType = dateSlots.filter(s => String(s.course) === courseType || String(s.course).startsWith(courseType));
-    return sameType.length + 1;
-  };
-
-  // â”€â”€â”€ Check if course type can accept more sessions â”€â”€â”€â”€â”€â”€â”€
-  // ————————————————— Check if course type can accept more sessions —————————————
-  const canAddSession = (courseType: string, dateSlots: HorarioSlot[]): boolean => {
-    if (courseType === 'soc' || courseType === 'eval') return true;
-    const stats = getCourseStats(courseType, dateSlots);
-    if (stats.sessionCount >= MAX_SESSIONS) return false;
-    if (stats.totalH >= TARGET_HOURS) return false;
-    return true;
-  };
-
-  // ————————————————— Auto-suggest next course type —————————————————————————————
-  const getRecommendedCourse = (dateSlots: HorarioSlot[]): string => {
-    for (const act of ['1', '2', '3', '4']) {
-      const stats = getCourseStats(act, dateSlots);
-      if (stats.sessionCount < MAX_SESSIONS && stats.totalH < TARGET_HOURS) return act;
-    }
-    const hasSoc = dateSlots.some(s => String(s.course).startsWith('soc'));
-    if (!hasSoc) return 'soc';
-    const hasEval = dateSlots.some(s => String(s.course).startsWith('eval'));
-    if (!hasEval) return 'eval';
-    return '1';
-  };
-
-  // ─── Add slot ────────────────────────────────────────────────
   const handleAddSlot = () => {
     if (!newDate) return;
-    const targetDate = newDate;
     let courseValue: number | string = newCourse;
     if (['1', '2', '3', '4'].includes(newCourse)) {
       courseValue = parseInt(newCourse);
     } else if (newCourse === 'soc') {
-      courseValue = autoAssignSocNumber(slots, targetDate, 'soc');
+      courseValue = autoAssignSocNumber(slots, newDate, 'soc');
     } else if (newCourse === 'eval') {
-      courseValue = autoAssignSocNumber(slots, targetDate, 'eval');
+      courseValue = autoAssignSocNumber(slots, newDate, 'eval');
     }
     const [sh, sm] = newStart.split(':').map(Number);
     const [eh, em] = newEnd.split(':').map(Number);
     const hours = Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
     const newSlot: HorarioSlot = {
-      date: targetDate,
+      date: newDate,
       startTime: newStart,
       endTime: newEnd,
       hours: Math.max(hours, 0),
@@ -324,14 +154,11 @@ export default function MiniMonthCalendar({
     }
   };
 
-  // ─── Delete slot ──────────────────────────────────────────────
   const handleDeleteSlot = (globalIndex: number) => {
     const newSlots = slots.filter((_, i) => i !== globalIndex);
     onSaveSlots(newSlots);
   };
 
-  // â”€â”€â”€ Duplicate slot (same course, different day) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // ——— Duplicate slot (same course, different day) ——————————
   const handleDuplicateSlot = (slot: HorarioSlot) => {
     const newSlot = { ...slot };
     const idx = slots.indexOf(slot);
@@ -339,22 +166,23 @@ export default function MiniMonthCalendar({
       const updatedSlots = [...slots];
       updatedSlots.splice(idx + 1, 0, newSlot);
       onSaveSlots(updatedSlots);
-      
-      // Select the newly duplicated slot immediately for editing
       setEditingSlotIndex(idx + 1);
-      setNewDate(newSlot.date);
-      setPopoverDate(newSlot.date);
-      const courseKey = String(newSlot.course);
-      const baseType = courseKey.replace(/\d+$/, '') || courseKey;
-      setNewCourse(baseType === 'soc' || baseType === 'eval' ? baseType : String(parseInt(courseKey)));
-      setNewStart(newSlot.startTime);
-      setNewEnd(newSlot.endTime);
     } else {
       onSaveSlots([...slots, newSlot]);
     }
   };
 
-  // ─── Automated Scheduling ────────────────────────────────
+  const handleEditSlotSelect = (slot: HorarioSlot, globalIndex: number) => {
+    setEditingSlotIndex(globalIndex);
+    setNewDate(slot.date);
+    const courseKey = String(slot.course);
+    const baseType = courseKey.replace(/\d+$/, '') || courseKey;
+    setNewCourse(baseType === 'soc' || baseType === 'eval' ? baseType : String(parseInt(courseKey)));
+    setNewStart(slot.startTime);
+    setNewEnd(slot.endTime);
+  };
+
+  // Generate automated preview slots
   const generateAutoPreview = () => {
     if (!autoStartDate) return;
     const [sh, sm] = autoStartHour.split(':').map(Number);
@@ -399,22 +227,13 @@ export default function MiniMonthCalendar({
         const [evSh, evSm] = evalStart.split(':').map(Number);
         const [evEh, evEm] = evalEnd.split(':').map(Number);
         preview.push({ date: dateStr, startTime: evalStart, endTime: evalEnd, hours: 1, course: `eval${courseNum}`, hour: evSh, minute: evSm, endHour: evEh, endMinute: evEm });
-
       } else {
-        const dateStr0 = courseStart.toISOString().split('T')[0];
-        preview.push({ date: dateStr0, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
-
-        const afternoonStart = addHoursToTime(autoStartHour, 6);
-        const afternoonEnd = addHoursToTime(autoEndHour, 6);
-        const [aftSh, aftSm] = afternoonStart.split(':').map(Number);
-        const [aftEh, aftEm] = afternoonEnd.split(':').map(Number);
-        preview.push({ date: dateStr0, startTime: afternoonStart, endTime: afternoonEnd, hours: Math.max(hours, 0), course: courseNum, hour: aftSh, minute: aftSm, endHour: aftEh, endMinute: aftEm });
-
-        const sessionDate7 = new Date(courseStart);
-        sessionDate7.setDate(sessionDate7.getDate() + 7);
-        const dateStr7 = sessionDate7.toISOString().split('T')[0];
-        preview.push({ date: dateStr7, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
-
+        for (let session = 0; session < 3; session++) {
+          const sessionDate = new Date(courseStart);
+          sessionDate.setDate(sessionDate.getDate() + session * 2);
+          const dateStr = sessionDate.toISOString().split('T')[0];
+          preview.push({ date: dateStr, startTime: autoStartHour, endTime: autoEndHour, hours: Math.max(hours, 0), course: courseNum, hour: sh, minute: sm, endHour: eh, endMinute: em });
+        }
         const socEvalDate14 = new Date(courseStart);
         socEvalDate14.setDate(socEvalDate14.getDate() + 14);
         const dateStr14 = socEvalDate14.toISOString().split('T')[0];
@@ -430,571 +249,392 @@ export default function MiniMonthCalendar({
     }
     setAutoPreview(preview);
   };
+
   const handleConfirmAutoSchedule = () => {
     if (autoPreview.length === 0) return;
     onSaveSlots(autoPreview);
     setShowAutoSchedule(false);
     setAutoPreview([]);
   };
-  const autoPreviewByCourse = useMemo(() => {
-    const map = new Map<string, HorarioSlot[]>();
-    autoPreview.forEach(s => {
-      const key = String(s.course).replace(/\d+$/, '') || String(s.course);
-      const existing = map.get(key) || [];
-      existing.push(s);
-      map.set(key, existing);
-    });
-    return map;
-  }, [autoPreview]);
 
-  // â”€â”€â”€ Cell styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const getDayCellStyle = (dateStr: string): React.CSSProperties => {
-    const daySlots = getSlotsForDate(slots, dateStr);
-    const hasPlanningDelay = !readOnly && compliance.some((a) => a.type === 'planificacion-atrasada');
-    const hasPlanningRequired = !readOnly && compliance.some((a) => a.type === 'planificacion-requerida');
-    const hasEvalDelay = !readOnly && compliance.some((a) => a.type === 'eval-pendiente');
-
-    if (daySlots.length > 0) {
-      const key = String(daySlots[0].course);
-      const colors = CALENDAR_DAY_COLORS[key];
-      if (colors) {
-        if (['1', '2', '3', '4'].includes(key)) {
-          if (hasPlanningDelay) return { background: colors.bg, borderColor: '#dc2626', borderWidth: '2.5px', boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.15)' };
-          if (hasPlanningRequired) return { background: colors.bg, borderColor: '#d97706', borderWidth: '2.5px', boxShadow: '0 0 0 2px rgba(217, 119, 6, 0.15)' };
-        }
-        if (key.startsWith('eval') && hasEvalDelay) return { background: '#fee2e2', borderColor: '#dc2626', borderWidth: '2.5px', boxShadow: '0 0 0 2px rgba(220, 38, 38, 0.15)' };
-        return { background: colors.bg, borderColor: colors.border };
-      }
-    }
-    const rangeNum = ranges.get(dateStr);
-    if (rangeNum) {
-      const rc = RANGE_COLORS[String(rangeNum)];
-      if (rc) return { background: rc.bg, borderColor: rc.border };
-    }
-    if (!readOnly) {
-      const reportInfo = reportRanges.get(dateStr);
-      if (reportInfo) {
-        const hasReportDelay = compliance.some((a) => a.type === 'informe-atrasado');
-        const hasReportWarning = compliance.some((a) => a.type === 'informe-por-vencer');
-        if (hasReportDelay) return { background: '#fef2f2', borderColor: '#fca5a5', borderStyle: 'dashed', borderWidth: '1.5px' };
-        if (hasReportWarning) return { background: '#fffbeb', borderColor: '#fde047', borderStyle: 'dashed', borderWidth: '1.5px' };
-        return { background: '#eef2ff', borderColor: '#c7d2fe', borderStyle: 'dashed', borderWidth: '1.5px' };
-      }
-    }
-    return {};
-  };
-
-  const popoverSlots = newDate ? getSlotsForDate(slots, newDate) : [];
-
-  const getDayComplianceStatus = (dateStr: string) => {
-    const daySlots = getSlotsForDate(slots, dateStr);
-    if (daySlots.length > 0) {
-      const key = String(daySlots[0].course);
-      if (['1', '2', '3', '4'].includes(key)) return { hasBar: true, isOk: localPlani };
-      if (key.startsWith('eval')) return { hasBar: true, isOk: localEval };
-      if (key.startsWith('soc')) return { hasBar: true, isOk: localInfo };
-    }
-    if (ranges.get(dateStr)) return { hasBar: true, isOk: localPlani };
-    if (reportRanges.get(dateStr)) return { hasBar: true, isOk: localInfo };
-    return { hasBar: false, isOk: false };
-  };
-
-  // â”€â”€â”€ Popover panel content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const popoverDayDate = newDate ? new Date(newDate + 'T12:00:00') : null;
-
-  // Compute stats for current popover date
-  const dayCourseStats = newDate ? ACT_OPTIONS.filter(a => a === '1' || a === '2' || a === '3' || a === '4').map(act => ({
-    act,
-    label: ACT_LABELS[act],
-    color: ACT_COLORS[act],
-    ...getCourseStats(act, popoverSlots),
-  })) : [];
-
-  const nextRecommended = newDate ? getRecommendedCourse(popoverSlots) : '1';
-
-  // All slots grouped by date
-  const allSlotsByDate = useMemo(() => {
-    const map = new Map<string, HorarioSlot[]>();
-    slots.forEach(s => {
-      const existing = map.get(s.date) || [];
-      existing.push(s);
-      map.set(s.date, existing);
-    });
-    return map;
+  // Group slots by date and sort
+  const sortedSlots = useMemo(() => {
+    return [...slots].sort((a, b) => a.date.localeCompare(b.date));
   }, [slots]);
 
-  const sortedDates = useMemo(() => {
-    return Array.from(allSlotsByDate.keys()).sort();
-  }, [allSlotsByDate]);
+  // Printable A4 Monthly Calendar Generator
+  const handlePrintCalendar = () => {
+    const printWin = window.open('', '_blank', 'width=1100,height=850');
+    if (!printWin) return;
 
-  const renderPopoverPanel = () => {
-    if (!newDate || !popoverDayDate) return null;
+    const firstDateStr = slots.length > 0 ? slots[0].date : (initialDate ? initialDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    const dParts = firstDateStr.split('-');
+    const printYear = parseInt(dParts[0], 10);
+    const printMonthIdx = parseInt(dParts[1], 10) - 1;
+    const monthName = MONTH_NAMES[printMonthIdx] || 'Actual';
 
-    return (
-      <div className="cal-popover-panel" onClick={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()} style={{
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        padding: '18px',
-        width: '640px',
-        maxHeight: '85vh',
-        overflowY: 'auto',
-        background: '#ffffff',
-        border: `2.5px solid ${noteColor}`,
-        borderRadius: '14px',
-        boxShadow: `0 8px 32px rgba(0,0,0,0.18), 0 0 0 1px ${noteColor}30`,
-        zIndex: 9000,
-        animation: 'popoverFadeIn 0.15s ease-out',
-      }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: `2px solid ${noteColor}30` }}>
-          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Calendar size={18} style={{ color: noteColor }} />
-            Programación - {formatLetterDate(newDate)}
-          </h4>
-          <button onClick={() => setPopoverDate(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}>
-            <X size={18} />
-          </button>
+    const monthDays = getCurrentMonthDays(printYear, printMonthIdx);
+    const slotsByDate: Record<string, HorarioSlot[]> = {};
+    slots.forEach(s => {
+      if (!slotsByDate[s.date]) slotsByDate[s.date] = [];
+      slotsByDate[s.date].push(s);
+    });
+
+    let calendarCellsHtml = '';
+    const firstEmpty = monthDays[0]?.emptyCells || 0;
+    for (let i = 0; i < firstEmpty; i++) {
+      calendarCellsHtml += `<div style="background:#f8fafc;border:1px solid #cbd5e1;min-height:75px;"></div>`;
+    }
+
+    monthDays.forEach(dayObj => {
+      const dateKey = dayObj.dateStr;
+      const daySlots = slotsByDate[dateKey] || [];
+      let slotsMarkup = '';
+
+      daySlots.forEach(s => {
+        const cKey = String(s.course);
+        const baseKey = cKey.replace(/\d+$/, '') || cKey;
+        const color = ACT_COLORS[baseKey] || ACT_COLORS[cKey] || '#1d4ed8';
+        const label = getFullActivityLabel(s.course);
+        slotsMarkup += `<div style="background:${color};color:#fff;font-size:7pt;padding:2px 4px;border-radius:3px;margin-top:2px;font-weight:bold;">${label}: ${s.startTime}-${s.endTime} (${s.hours}h)</div>`;
+      });
+
+      const dayClass = dayObj.isCurrentMonth ? 'background:#ffffff;' : 'background:#f8fafc;color:#94a3b8;';
+      calendarCellsHtml += `
+        <div style="border:1px solid #cbd5e1;min-height:75px;padding:4px;box-sizing:border-box;${dayClass}">
+          <div style="font-weight:bold;font-size:9pt;text-align:right;color:#334155;">${dayObj.dayNumber}</div>
+          ${slotsMarkup}
         </div>
+      `;
+    });
 
-        {/* Automated Schedule Button */}
-        {!readOnly && (
-          <button
-            type="button"
-            onClick={() => { setShowAutoSchedule(!showAutoSchedule); if (showAutoSchedule) { setAutoPreview([]); } }}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              marginBottom: '12px',
-              background: showAutoSchedule ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 700,
-              fontSize: '0.82rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
-            }}
-          >
-            <Zap size={16} />
-            {showAutoSchedule ? 'Cerrar Automatizado' : 'Programación Automatizada'}
-          </button>
-        )}
+    const printHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Calendario Académico UNEFCO - ${monthName} ${printYear}</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; color: #1e293b; background: #fff; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #0d3b66; padding-bottom: 10px; margin-bottom: 12px; }
+    .header h1 { margin: 0; font-size: 16pt; color: #0d3b66; text-transform: uppercase; letter-spacing: 0.5px; }
+    .header p { margin: 3px 0 0 0; font-size: 9.5pt; color: #64748b; font-weight: 600; }
+    .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #f1f5f9; padding: 10px 14px; border-radius: 8px; font-size: 9pt; margin-bottom: 12px; border: 1px solid #cbd5e1; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: #cbd5e1; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; }
+    .day-name { background: #0d3b66; color: #ffffff; font-weight: bold; text-align: center; padding: 6px 2px; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.5px; }
+    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 120px; margin-top: 35px; padding: 0 50px; }
+    .sig-box { border-top: 1.5px dashed #475569; text-align: center; padding-top: 6px; font-size: 9pt; font-weight: bold; color: #334155; }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>UNEFCO &middot; CALENDARIO ACADÉMICO OFICIAL</h1>
+      <p>Cronograma Programado de Actividades y Sesiones de Formación</p>
+    </div>
+    <div style="text-align:right;">
+      <span style="font-weight:bold;font-size:12pt;color:#0d3b66;">${monthName.toUpperCase()} ${printYear}</span><br>
+      <span style="font-size:9pt;color:#475569;">Total Carga Horaria: <b>${totalHours} HORAS</b></span>
+    </div>
+  </div>
 
-        {/* Automated Schedule Panel */}
-        {showAutoSchedule && (
-          <div style={{ border: '1.5px solid #8b5cf6', borderRadius: '8px', padding: '12px', background: '#faf5ff', marginBottom: '12px' }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#6d28d9', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>
-              Configurar Programación Automática
-            </div>
-            <p style={{ margin: '0 0 10px 0', fontSize: '0.72rem', color: '#6b7280' }}>
-              Genera todas las sesiones (C1-C4 + SOC) automáticamente. Reemplaza las Programacion - 
-            </p>
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div style={{ width: '130px' }}>
-                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Fecha Inicio</label>
-                <input type="date" value={autoStartDate} onChange={(e) => { setAutoStartDate(e.target.value); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }} />
-              </div>
-              <div style={{ width: '85px' }}>
-                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>De</label>
-                <select value={autoStartHour} onChange={(e) => { setAutoStartHour(e.target.value); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
-                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div style={{ width: '85px' }}>
-                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>A</label>
-                <select value={autoEndHour} onChange={(e) => { setAutoEndHour(e.target.value); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
-                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div style={{ width: '100px' }}>
-                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Para</label>
-                <select value={autoAudience} onChange={(e) => { setAutoAudience(e.target.value as 'estudiantes' | 'maestros'); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
-                  <option value="estudiantes">Estudiantes (35 dias)</option>
-                  <option value="maestros">Maestros/as (14 dias)</option>
-                </select>
-              </div>
-              <div style={{ width: '90px' }}>
-                <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '3px' }}>Cursos</label>
-                <select value={autoNumCourses} onChange={(e) => { setAutoNumCourses(Number(e.target.value)); setAutoPreview([]); }} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
-                  <option value={3}>3 Cursos</option>
-                  <option value={4}>4 Cursos</option>
-                </select>
-              </div>
-              <button type="button" onClick={generateAutoPreview} disabled={!autoStartDate} style={{ padding: '6px 12px', background: autoStartDate ? '#8b5cf6' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.78rem', cursor: autoStartDate ? 'pointer' : 'not-allowed' }}>
-                Vista Previa
-              </button>
-            </div>
-            {autoPreview.length > 0 && (
-              <div style={{ marginTop: '12px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
-                  Se generarán <b>{autoPreview.length}</b> Programacion - 
-                </div>
-                <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #c4b5fd', borderRadius: '6px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
-                    <thead>
-                      <tr style={{ background: '#ede9fe', position: 'sticky', top: 0 }}>
-                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Curso</th>
-                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>Sesiones (3x4h)</th>
-                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>SOC</th>
-                        <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, color: '#5b21b6' }}>EVAL</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.from({ length: autoNumCourses }, (_, i) => i + 1).map(courseNum => {
-                        const courseSlots = autoPreview.filter(s => s.course === courseNum);
-                        const socSlots = autoPreview.filter(s => String(s.course) === 'soc' + courseNum);
-                        const evalSlots = autoPreview.filter(s => String(s.course) === 'eval' + courseNum);
-                        const color = ACT_COLORS[String(courseNum)] || '#6b7280';
-                        const fmtDate = (d: string) => { const dt = new Date(d + 'T12:00:00'); const m = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return dt.getDate() + ' ' + m[dt.getMonth()]; };
-                        return (
-                          <tr key={courseNum} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                            <td style={{ padding: '4px 6px', fontWeight: 700, color }}>{ACT_LABELS[String(courseNum)]}</td>
-                            <td style={{ padding: '4px 6px', color: '#374151' }}>
-                              {courseSlots.sort((a, b) => a.date.localeCompare(b.date)).map(s => fmtDate(s.date)).join(', ')}
-                            </td>
-                            <td style={{ padding: '4px 6px', color: '#0F172A', fontWeight: 600 }}>
-                              {socSlots.map(s => fmtDate(s.date)).join(', ')}
-                            </td>
-                            <td style={{ padding: '4px 6px', color: '#B91C1C', fontWeight: 600 }}>
-                              {evalSlots.map(s => fmtDate(s.date)).join(', ')}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '10px', justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={() => setAutoPreview([])} style={{ padding: '6px 12px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
-                    Cancelar
-                  </button>
-                  <button type="button" onClick={handleConfirmAutoSchedule} style={{ padding: '6px 14px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Zap size={14} /> Generar {autoPreview.length} Programacion - 
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        {sortedDates.length > 0 && (
-          <div style={{ marginBottom: '12px', maxHeight: '35vh', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-              <thead>
-                <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
-                  <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Fecha</th>
-                  <th style={{ padding: '5px 6px', textAlign: 'left', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Actividad</th>
-                  <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>De</th>
-                  <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>A</th>
-                  <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>H</th>
-                  {!readOnly && <th style={{ padding: '5px 6px', textAlign: 'center', fontWeight: 800, color: '#475569', fontSize: '0.68rem', borderBottom: '2px solid #cbd5e1' }}>Acciones</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedDates.map((date) => {
-                  const dateObj = new Date(date + 'T12:00:00');
-                  const isCurrentDate = date === newDate;
-                  const daySlots = allSlotsByDate.get(date) || [];
-                  if (daySlots.length === 0) return null;
-                  return daySlots.map((s, idx) => {
-                    const courseKey = String(s.course);
-                    const baseType = courseKey.replace(/\d+$/, '') || courseKey;
-                    const color = ACT_COLORS[baseType] || getCourseColor(s.course);
-                    const globalIdx = slots.indexOf(s);
-                    const isFirstOfDay = idx === 0;
-                    const isCurrentEditing = globalIdx === editingSlotIndex;
-                    return (
-                        <tr 
-                          key={globalIdx} 
-                          onClick={() => !readOnly && handleEditSlotSelect(s, globalIdx)}
-                          style={{
-                            background: isCurrentEditing 
-                              ? 'rgba(239, 68, 68, 0.15)' 
-                              : `${color}12`,
-                            cursor: !readOnly ? 'pointer' : 'default',
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          <td style={{ 
-                            padding: '4px 6px', 
-                            fontWeight: isCurrentDate ? 800 : 400, 
-                            color: isCurrentDate ? '#1e293b' : '#64748b', 
-                            whiteSpace: 'nowrap',
-                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                            borderLeft: isCurrentEditing ? '3px solid #ef4444' : undefined,
-                          }}>
-                            {formatLetterDate(date)}
-                          </td>
-                          <td style={{ 
-                            padding: '4px 6px',
-                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                          }}>
-                            <span style={{
-                              background: color,
-                              color: '#fff',
-                              padding: '2px 6px',
-                              borderRadius: '3px',
-                              fontSize: '0.68rem',
-                              fontWeight: 900,
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                            }}>{getFullActivityLabel(s.course)}</span>
-                          </td>
-                          <td style={{ 
-                            padding: '4px 6px', 
-                            textAlign: 'center', 
-                            color: '#475569',
-                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                          }}>{s.startTime}</td>
-                          <td style={{ 
-                            padding: '4px 6px', 
-                            textAlign: 'center', 
-                            color: '#475569',
-                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                          }}>{s.endTime}</td>
-                          <td style={{ 
-                            padding: '4px 6px', 
-                            textAlign: 'center', 
-                            fontWeight: 700, 
-                            color: '#059669',
-                            borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                            borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                            borderRight: isCurrentEditing && readOnly ? '3px solid #ef4444' : undefined,
-                          }}>{s.hours}h</td>
-                          {!readOnly && (
-                            <td style={{ 
-                              padding: '4px 6px', 
-                              textAlign: 'center',
-                              borderTop: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                              borderBottom: isCurrentEditing ? '2px solid #ef4444' : undefined,
-                              borderRight: isCurrentEditing ? '3px solid #ef4444' : undefined,
-                            }}>
-                              <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                                <button 
-                                  style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
-                                  onClick={(e) => { e.stopPropagation(); handleDuplicateSlot(s); }} 
-                                  title="Duplicar"
-                                >
-                                  Dup
-                                </button>
-                                <button 
-                                  style={{ padding: '1px 5px', fontSize: '0.65rem', borderRadius: '3px', background: '#fee2e2', color: '#dc2626', fontWeight: 700, border: 'none', cursor: 'pointer' }} 
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteSlot(globalIdx); }} 
-                                  title="Eliminar"
-                                >
-                                  X
-                                </button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    });
-                  })}
-              </tbody>
-            </table>
-          </div>
-        )}
+  <div class="meta-grid">
+    <div><b>Mes / Gestión:</b> ${monthName} ${printYear}</div>
+    <div><b>Sesiones Cargadas:</b> ${slots.length} sesiones</div>
+    <div><b>Total Horas:</b> ${totalHours} hrs acumuladas</div>
+    <div><b>Fecha de Emisión:</b> ${new Date().toLocaleDateString('es-BO')}</div>
+  </div>
 
-        {/* Add form */}
-        {!readOnly && (
-          <div style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '10px', background: '#f0f9ff' }}>
-            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
-              {editingSlotIndex !== null ? 'Editar Programación' : 'Nueva Programación'}
-            </div>
-            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ width: '130px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Día</label>
-                <input type="date" value={newDate} onChange={(e) => handleDateChange(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
-              </div>
-              <div style={{ flex: 1.2 }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>Actividad</label>
-                <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                  {ACT_OPTIONS.map(act => (
-                    <option key={act} value={act}>
-                      {ACT_LABELS[act]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ width: '95px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>De</label>
-                <select value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div style={{ width: '95px' }}>
-                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '3px', display: 'block' }}>A</label>
-                <select value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '5px 6px', fontSize: '0.82rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                  {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '14px' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 900, color: calcHours(newStart, newEnd) > 0 ? '#059669' : '#dc2626' }}>
-                  {calcHours(newStart, newEnd)}h
-                </span>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {editingSlotIndex !== null && (
-                    <button 
-                      type="button" 
-                      onClick={() => setEditingSlotIndex(null)} 
-                      style={{ padding: '6px 10px', fontWeight: 700, fontSize: '0.82rem', background: '#94a3b8', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Cancelar
-                    </button>
-                  )}
-                  <button className="btn btn-success" onClick={handleAddSlot} style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.82rem' }}>
-                    {editingSlotIndex !== null ? 'Actualizar' : 'Guardar'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
+  <div class="cal-grid">
+    <div class="day-name">Domingo</div>
+    <div class="day-name">Lunes</div>
+    <div class="day-name">Martes</div>
+    <div class="day-name">Miércoles</div>
+    <div class="day-name">Jueves</div>
+    <div class="day-name">Viernes</div>
+    <div class="day-name">Sábado</div>
+    ${calendarCellsHtml}
+  </div>
 
-  // â”€â”€â”€ Render a single month block â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const renderMonthBlock = (m: { year: number; month: number; days: ReturnType<typeof getCurrentMonthDays>; isCurrent: boolean }) => {
-    const key = `${m.year}-${m.month}`;
-    const firstDayEmptyCells = m.days[0]?.emptyCells || 0;
-    return (
-      <div
-        className="cal-month-block"
-        key={key}
-        data-month-key={key}
-        ref={(el) => { if (el) monthBlockRefs.current.set(key, el); }}
-      >
-        <div style={{
-          textAlign: 'center',
-          fontSize: '0.68rem',
-          fontWeight: 900,
-          color: 'var(--nota-color, #2563EB)',
-          padding: '4px 0 2px 0',
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          background: `linear-gradient(90deg, transparent, color-mix(in srgb, var(--nota-color, #2563EB) 8%, #ffffff), transparent)`,
-          borderBottom: `2px solid var(--nota-color, #2563EB)`,
-        }}>
-          {MONTH_NAMES[m.month].substring(0, 3).toUpperCase()} {m.year}
-        </div>
-        <div className="cal-month-grid">
-          {Array.from({ length: firstDayEmptyCells }, (_, i) => (
-            <div key={`empty-${i}`} className="mini-month-day" style={{ visibility: 'hidden' }} />
-          ))}
-          {m.days.map((day, i) => {
-            const daySlots = getSlotsForDate(slots, day.dateStr);
-            const cellStyle = getDayCellStyle(day.dateStr);
-            const isSelected = popoverDate === day.dateStr;
-            const reportInfo = reportRanges.get(day.dateStr);
-            const isReportDeadline = reportInfo?.isDeadline;
-            const reportCourseNum = reportInfo?.courseNum;
-            const compStatus = getDayComplianceStatus(day.dateStr);
+  <div style="margin-top:12px;font-size:8.5pt;color:#475569;background:#f8fafc;padding:8px 12px;border-radius:6px;border:1px solid #e2e8f0;display:flex;gap:15px;align-items:center;flex-wrap:wrap;">
+    <b>Leyenda de Actividades:</b>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#1D4ED8;border-radius:2px;margin-right:3px;"></span> Curso 1</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#047857;border-radius:2px;margin-right:3px;"></span> Curso 2</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:3px;"></span> Curso 3</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#6D28D9;border-radius:2px;margin-right:3px;"></span> Curso 4</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#0F172A;border-radius:2px;margin-right:3px;"></span> Socialización</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#B91C1C;border-radius:2px;margin-right:3px;"></span> Evaluación</span>
+  </div>
 
-            return (
-              <div
-                key={i}
-                data-date={day.dateStr}
-                className={`mini-month-day ${!m.isCurrent && !day.isCurrentMonth ? 'muted' : ''} ${day.isToday ? 'today' : ''} ${daySlots.length > 0 ? 'has-slot' : ''} ${isSelected ? 'selected-day' : ''}`}
-                style={{ ...cellStyle, position: 'relative', zIndex: isSelected ? 10 : undefined, cursor: 'pointer' }}
-                onClick={() => !readOnly && handleDayClick(day.dateStr)}
-              >
-                <span className="mini-day-number">{day.dayNumber}</span>
-                {daySlots.length > 0 && (
-                  <div className="mini-day-badges">
-                    {daySlots.map((s, j) => (
-                      <span key={j} className="mini-day-dot" style={{ backgroundColor: getCourseColor(s.course), color: '#ffffff' }}>
-                        {getCourseLabel(s.course)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {!readOnly && isReportDeadline && (() => {
-                  const hasReportDelay = compliance.some((a) => a.type === 'informe-atrasado');
-                  const hasReportWarning = compliance.some((a) => a.type === 'informe-por-vencer');
-                  let textColor = '#ffffff';
-                  let bgColor = '#4f46e5';
-                  let borderColor = '#4338ca';
-                  if (hasReportDelay) { textColor = '#ffffff'; bgColor = '#dc2626'; borderColor = '#b91c1c'; }
-                  else if (hasReportWarning) { textColor = '#ffffff'; bgColor = '#d97706'; borderColor = '#b45309'; }
-                  return (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px', width: '100%' }}>
-                      <span style={{ 
-                        fontSize: '0.62rem', 
-                        fontWeight: 900, 
-                        color: textColor, 
-                        backgroundColor: bgColor, 
-                        padding: '2px 5px', 
-                        borderRadius: '4px', 
-                        textTransform: 'uppercase', 
-                        letterSpacing: '0.05em', 
-                        border: `1px solid ${borderColor}`,
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        INF{reportCourseNum}
-                      </span>
-                    </div>
-                  );
-                })()}
-                {!readOnly && compStatus.hasBar && (
-                  <div style={{ height: '4px', width: '90%', background: compStatus.isOk ? '#10b981' : '#ef4444', borderRadius: '2px', marginTop: 'auto', marginBottom: '2px', transition: 'all 0.2s ease' }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
+  <div class="signatures">
+    <div class="sig-box">Firma del Facilitador / Docente</div>
+    <div class="sig-box">Firma del Técnico de Seguimiento UNEFCO</div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</body>
+</html>`;
+
+    printWin.document.open();
+    printWin.document.write(printHtml);
+    printWin.document.close();
   };
 
   return (
-    <>
-      {/* Title bar */}
-      <div className="calendar-title-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Calendar size={14} />
-          Calendario
-          {totalHours > 0 && (
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, opacity: 0.85, background: '#e2e8f0', color: '#1e293b', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center' }}>
-              {totalHours}h
-            </span>
-          )}
-        </h4>
-      </div>
-
-      {/* Vertical scroll container with months */}
-      <div ref={scrollRef} className="calendar-scroll-wrapper">
-        <div className="cal-month-grid" style={{ position: 'sticky', top: 0, zIndex: 10, background: 'linear-gradient(180deg, var(--nota-color, #2563EB), color-mix(in srgb, var(--nota-color, #2563EB) 80%, #000))', margin: 0, padding: '5px 8px' }}>
-          {DAY_NAMES_SHORT.map((d, i) => (
-            <div key={i} className="mini-month-head" style={{ color: '#ffffff' }}>{d}</div>
-          ))}
+    <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+      {/* Header Bar */}
+      <div style={{ background: 'linear-gradient(135deg, #0d3b66 0%, #1a5276 100%)', color: '#ffffff', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Clock size={18} color="#ffffff" />
+          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.3px' }}>
+            Programación de Sesiones ({totalHours}h acumuladas)
+          </h4>
         </div>
 
-        {months.map((m) => renderMonthBlock(m))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => setShowAutoSchedule(!showAutoSchedule)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.15)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '6px',
+                padding: '5px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+              title="Generar programación automáticamente"
+            >
+              <Zap size={14} />
+              {showAutoSchedule ? 'Cerrar Auto' : 'Auto Programar'}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handlePrintCalendar}
+            style={{
+              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '5px 12px',
+              fontSize: '0.75rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)',
+            }}
+            title="Generar e imprimir el Calendario Mensual Oficial A4"
+          >
+            <Printer size={15} />
+            Imprimir Calendario
+          </button>
+        </div>
       </div>
 
-      {/* Popover */}
-      {popoverDate && (
-        <>
-          <div onClick={() => { setPopoverDate(null); }} onWheel={(e) => e.preventDefault()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.15)', zIndex: 8999 }} />
-          {renderPopoverPanel()}
-        </>
+      {/* Auto-Schedule Drawer */}
+      {showAutoSchedule && (
+        <div style={{ borderBottom: '1.5px solid #8b5cf6', padding: '12px 14px', background: '#faf5ff' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#6d28d9', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
+            Configurar Programación Automática
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ width: '130px' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>Fecha Inicio</label>
+              <input type="date" value={autoStartDate} onChange={(e) => { setAutoStartDate(e.target.value); setAutoPreview([]); }} style={{ padding: '5px', fontSize: '0.8rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }} />
+            </div>
+            <div style={{ width: '80px' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>De</label>
+              <select value={autoStartHour} onChange={(e) => { setAutoStartHour(e.target.value); setAutoPreview([]); }} style={{ padding: '5px', fontSize: '0.8rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
+                {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div style={{ width: '80px' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>A</label>
+              <select value={autoEndHour} onChange={(e) => { setAutoEndHour(e.target.value); setAutoPreview([]); }} style={{ padding: '5px', fontSize: '0.8rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
+                {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div style={{ width: '110px' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>Público</label>
+              <select value={autoAudience} onChange={(e) => { setAutoAudience(e.target.value as 'estudiantes' | 'maestros'); setAutoPreview([]); }} style={{ padding: '5px', fontSize: '0.8rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
+                <option value="estudiantes">Estudiantes (35d)</option>
+                <option value="maestros">Maestros/as (14d)</option>
+              </select>
+            </div>
+            <div style={{ width: '85px' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>Cursos</label>
+              <select value={autoNumCourses} onChange={(e) => { setAutoNumCourses(Number(e.target.value)); setAutoPreview([]); }} style={{ padding: '5px', fontSize: '0.8rem', width: '100%', border: '1px solid #c4b5fd', borderRadius: '4px' }}>
+                <option value={3}>3 Cursos</option>
+                <option value={4}>4 Cursos</option>
+              </select>
+            </div>
+            <button type="button" onClick={generateAutoPreview} disabled={!autoStartDate} style={{ padding: '5px 12px', background: autoStartDate ? '#8b5cf6' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.78rem', cursor: autoStartDate ? 'pointer' : 'not-allowed' }}>
+              Generar Vista Previa
+            </button>
+          </div>
+
+          {autoPreview.length > 0 && (
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', marginBottom: '4px' }}>
+                Se generarán <b>{autoPreview.length}</b> sesiones automáticas:
+              </div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                <button type="button" onClick={() => setAutoPreview([])} style={{ padding: '4px 10px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button type="button" onClick={handleConfirmAutoSchedule} style={{ padding: '4px 12px', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Zap size={13} /> Confirmar {autoPreview.length} Sesiones
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
-    </>
+
+      {/* Main Container */}
+      <div style={{ padding: '12px' }}>
+        {/* Checkbox Checklist Controls */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+            <input type="checkbox" checked={planificacionRecibida} onChange={() => onToggleCheck('planificacion_recibida')} disabled={readOnly} />
+            Planificación Recibida
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+            <input type="checkbox" checked={evaluacionRealizada} onChange={() => onToggleCheck('evaluacion_realizada')} disabled={readOnly} />
+            Evaluación Realizada
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
+            <input type="checkbox" checked={informeFinalRecibido} onChange={() => onToggleCheck('informe_final_recibido')} disabled={readOnly} />
+            Informe Final Recibido
+          </label>
+        </div>
+
+        {/* Quick Session Adder */}
+        {!readOnly && (
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', marginBottom: '6px' }}>
+              {editingSlotIndex !== null ? '✏️ Editar Sesión Programada' : '➕ Agregar Nueva Sesión'}
+            </div>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ width: '125px' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>Fecha</label>
+                <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} style={{ padding: '4px 6px', fontSize: '0.8rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
+              </div>
+              <div style={{ width: '120px' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>Actividad</label>
+                <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '4px 6px', fontSize: '0.8rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  {ACT_OPTIONS.map(act => (
+                    <option key={act} value={act}>{ACT_LABELS[act]}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ width: '85px' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>De</label>
+                <select value={newStart} onChange={(e) => setNewStart(e.target.value)} style={{ padding: '4px 6px', fontSize: '0.8rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ width: '85px' }}>
+                <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>A</label>
+                <select value={newEnd} onChange={(e) => setNewEnd(e.target.value)} style={{ padding: '4px 6px', fontSize: '0.8rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '4px', marginTop: '14px' }}>
+                {editingSlotIndex !== null && (
+                  <button type="button" onClick={() => setEditingSlotIndex(null)} style={{ padding: '5px 8px', fontSize: '0.75rem', background: '#94a3b8', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                )}
+                <button type="button" onClick={handleAddSlot} style={{ padding: '5px 12px', fontSize: '0.75rem', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 700, cursor: 'pointer' }}>
+                  {editingSlotIndex !== null ? 'Actualizar' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sessions Table List */}
+        <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', maxHeight: '350px', overflowY: 'auto' }}>
+          {sortedSlots.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
+              No hay sesiones programadas aún. Haz clic en "Auto Programar" o agrega sesiones manualmente arriba.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 800, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>Fecha</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 800, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>Actividad</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 800, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>Horario</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 800, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>Horas</th>
+                  {!readOnly && <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 800, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>Acciones</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedSlots.map((s, idx) => {
+                  const cKey = String(s.course);
+                  const baseKey = cKey.replace(/\d+$/, '') || cKey;
+                  const color = ACT_COLORS[baseKey] || ACT_COLORS[cKey] || '#1d4ed8';
+                  const isEditing = idx === editingSlotIndex;
+
+                  return (
+                    <tr key={idx} style={{ background: isEditing ? '#fef2f2' : (idx % 2 === 0 ? '#ffffff' : '#f8fafc'), borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '6px 8px', fontWeight: 700, color: '#1e293b' }}>
+                        {formatLetterDate(s.date)}
+                      </td>
+                      <td style={{ padding: '6px 8px' }}>
+                        <span style={{ background: color, color: '#ffffff', padding: '2px 7px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800 }}>
+                          {getFullActivityLabel(s.course)}
+                        </span>
+                      </td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', color: '#475569' }}>
+                        {s.startTime} - {s.endTime}
+                      </td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 800, color: '#059669' }}>
+                        {s.hours}h
+                      </td>
+                      {!readOnly && (
+                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                            <button type="button" onClick={() => handleEditSlotSelect(s, idx)} style={{ padding: '2px 6px', fontSize: '0.68rem', borderRadius: '3px', background: '#e0f2fe', color: '#0369a1', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                              Editar
+                            </button>
+                            <button type="button" onClick={() => handleDuplicateSlot(s)} style={{ padding: '2px 6px', fontSize: '0.68rem', borderRadius: '3px', background: '#fef3c7', color: '#b45309', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                              Duplicar
+                            </button>
+                            <button type="button" onClick={() => handleDeleteSlot(idx)} style={{ padding: '2px 6px', fontSize: '0.68rem', borderRadius: '3px', background: '#fee2e2', color: '#dc2626', fontWeight: 700, border: 'none', cursor: 'pointer' }}>
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
-
-
-
-
-
