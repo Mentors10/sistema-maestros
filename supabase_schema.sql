@@ -127,6 +127,11 @@ CREATE TABLE IF NOT EXISTS cursos (
   planificacion_recibida BOOLEAN DEFAULT false,
   evaluacion_realizada BOOLEAN DEFAULT false,
   informe_final_recibido BOOLEAN DEFAULT false,
+  registrado_sie BOOLEAN DEFAULT false,
+  conforme BOOLEAN DEFAULT false,
+  total_participantes INTEGER DEFAULT 0,
+  total_aprobados INTEGER DEFAULT 0,
+  total_reprobados INTEGER DEFAULT 0,
   form_habilitado BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -475,3 +480,34 @@ LEFT JOIN ciclos_formativos cf ON c.ciclo_id = cf.id
 LEFT JOIN agenda_contactos ac ON c.contacto_agenda = ac.id_contacto;
 
 COMMENT ON VIEW cursos_enriquecidos IS 'Vista con todos los datos de cursos enriquecidos con nombres de técnico, facilitador, ciclo y organizador';
+
+-- =============================================================
+-- 13. TABLA: plantillas_reporte
+-- Plantillas HTML personalizadas para el Reporte Diario de Monitoreo
+-- =============================================================
+CREATE TABLE IF NOT EXISTS plantillas_reporte (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  tecnico_carnet TEXT,
+  contenido_html TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+COMMENT ON TABLE plantillas_reporte IS 'Almacena plantillas HTML personalizadas para la generación del Reporte Diario de Monitoreo';
+
+CREATE TRIGGER trg_plantillas_updated
+  BEFORE UPDATE ON plantillas_reporte
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE plantillas_reporte ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for plantillas_reporte" ON plantillas_reporte FOR ALL USING (true) WITH CHECK (true);
+
+-- =============================================================
+-- 14. MIGRACIONES Y ACTUALIZACIONES DE COLUMNAS (Para bases existentes)
+-- =============================================================
+ALTER TABLE cursos ADD COLUMN IF NOT EXISTS registrado_sie BOOLEAN DEFAULT false;
+ALTER TABLE cursos ADD COLUMN IF NOT EXISTS conforme BOOLEAN DEFAULT false;
+ALTER TABLE cursos ADD COLUMN IF NOT EXISTS total_participantes INTEGER DEFAULT 0;
+ALTER TABLE cursos ADD COLUMN IF NOT EXISTS total_aprobados INTEGER DEFAULT 0;
+ALTER TABLE cursos ADD COLUMN IF NOT EXISTS total_reprobados INTEGER DEFAULT 0;
+
