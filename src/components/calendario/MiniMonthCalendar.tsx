@@ -3,9 +3,9 @@
 import { useState, useMemo } from 'react';
 import { HorarioSlot } from '@/types';
 import {
-  getCurrentMonthDays, MONTH_NAMES, getSlotsForDate, autoAssignSocNumber
+  getCurrentMonthDays, MONTH_NAMES, autoAssignSocNumber
 } from '@/lib/utils/calendar';
-import { Plus, Trash2, Calendar, Zap, Printer, CheckCircle2, Clock, FileText } from 'lucide-react';
+import { Zap, Printer, Clock } from 'lucide-react';
 import { ComplianceAlert } from '@/lib/utils/compliance';
 
 interface MiniMonthCalendarProps {
@@ -14,10 +14,10 @@ interface MiniMonthCalendarProps {
   noteColor?: string;
   initialDate?: Date;
   compliance?: ComplianceAlert[];
-  planificacionRecibida: boolean;
-  evaluacionRealizada: boolean;
-  informeFinalRecibido: boolean;
-  onToggleCheck: (field: 'planificacion_recibida' | 'evaluacion_realizada' | 'informe_final_recibido') => void;
+  planificacionRecibida?: boolean;
+  evaluacionRealizada?: boolean;
+  informeFinalRecibido?: boolean;
+  onToggleCheck?: (field: 'planificacion_recibida' | 'evaluacion_realizada' | 'informe_final_recibido') => void;
   readOnly?: boolean;
 }
 
@@ -40,28 +40,28 @@ const formatLetterDate = (dateStr: string): string => {
 
 const getFullActivityLabel = (course: number | string): string => {
   const key = String(course);
-  if (key === '1') return 'Curso 1';
-  if (key === '2') return 'Curso 2';
-  if (key === '3') return 'Curso 3';
-  if (key === '4') return 'Curso 4';
+  if (key === '1') return 'C1';
+  if (key === '2') return 'C2';
+  if (key === '3') return 'C3';
+  if (key === '4') return 'C4';
   if (key.startsWith('soc')) {
     const num = key.replace('soc', '');
-    return `Socialización ${num}`.trim();
+    return `Soc ${num}`.trim();
   }
   if (key.startsWith('eval')) {
     const num = key.replace('eval', '');
-    return `Evaluación ${num}`.trim();
+    return `Eval ${num}`.trim();
   }
   return key.toUpperCase();
 };
 
 const ACT_LABELS: Record<string, string> = {
-  '1': 'Curso 1',
-  '2': 'Curso 2',
-  '3': 'Curso 3',
-  '4': 'Curso 4',
-  'soc': 'Socialización',
-  'eval': 'Evaluación',
+  '1': 'C1',
+  '2': 'C2',
+  '3': 'C3',
+  '4': 'C4',
+  'soc': 'Soc',
+  'eval': 'Eval',
 };
 
 const ACT_COLORS: Record<string, string> = {
@@ -78,19 +78,16 @@ const ACT_OPTIONS = ['1', '2', '3', '4', 'soc', 'eval'];
 export default function MiniMonthCalendar({
   slots,
   onSaveSlots,
-  noteColor = '#0d3b66',
   initialDate,
-  planificacionRecibida,
-  evaluacionRealizada,
-  informeFinalRecibido,
-  onToggleCheck,
   readOnly = false,
 }: MiniMonthCalendarProps) {
   const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
   const [newCourse, setNewCourse] = useState('1');
   const [newStart, setNewStart] = useState('08:00');
   const [newEnd, setNewEnd] = useState('12:00');
-  const [newDate, setNewDate] = useState(initialDate ? initialDate.toISOString().split('T')[0] : now.toISOString().split('T')[0]);
+  const [newDate, setNewDate] = useState(initialDate ? initialDate.toISOString().split('T')[0] : todayStr);
   const [editingSlotIndex, setEditingSlotIndex] = useState<number | null>(null);
 
   // Automated scheduling states
@@ -112,12 +109,6 @@ export default function MiniMonthCalendar({
   }, []);
 
   const totalHours = useMemo(() => slots.reduce((sum, s) => sum + (s.hours || 0), 0), [slots]);
-
-  const calcHours = (start: string, end: string): number => {
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    return Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100;
-  };
 
   const handleAddSlot = () => {
     if (!newDate) return;
@@ -240,7 +231,7 @@ export default function MiniMonthCalendar({
 
         const [socSh, socSm] = socStart.split(':').map(Number);
         const [socEh, socEm] = socEnd.split(':').map(Number);
-        preview.push({ date: dateStr14, startTime: socStart, endTime: socEnd, hours: 3, course: `soc${courseNum}`, hour: socSh, minute: socSm, endHour: socEh, endMinute: socEm });
+        preview.push({ date: dateStr14, startTime: socStart, endTime: socEnd, hours: 3, course: `soc${courseNum}`, hour: socStart, endTime: socEnd, hour: socSh, minute: socSm, endHour: socEh, endMinute: socEm });
 
         const [evSh, evSm] = evalStart.split(':').map(Number);
         const [evEh, evEm] = evalEnd.split(':').map(Number);
@@ -262,12 +253,31 @@ export default function MiniMonthCalendar({
     return [...slots].sort((a, b) => a.date.localeCompare(b.date));
   }, [slots]);
 
+  // Find the active row closest to today's date
+  const activeRowIndex = useMemo(() => {
+    if (sortedSlots.length === 0) return -1;
+    const todayMs = new Date(todayStr + 'T00:00:00').getTime();
+    let closestIdx = 0;
+    let minDiff = Infinity;
+
+    sortedSlots.forEach((s, idx) => {
+      const sMs = new Date(s.date + 'T00:00:00').getTime();
+      const diff = Math.abs(sMs - todayMs);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = idx;
+      }
+    });
+
+    return closestIdx;
+  }, [sortedSlots, todayStr]);
+
   // Printable A4 Monthly Calendar Generator
   const handlePrintCalendar = () => {
     const printWin = window.open('', '_blank', 'width=1100,height=850');
     if (!printWin) return;
 
-    const firstDateStr = slots.length > 0 ? slots[0].date : (initialDate ? initialDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    const firstDateStr = slots.length > 0 ? slots[0].date : (initialDate ? initialDate.toISOString().split('T')[0] : todayStr);
     const dParts = firstDateStr.split('-');
     const printYear = parseInt(dParts[0], 10);
     const printMonthIdx = parseInt(dParts[1], 10) - 1;
@@ -326,7 +336,6 @@ export default function MiniMonthCalendar({
     .sig-box { border-top: 1.5px dashed #475569; text-align: center; padding-top: 6px; font-size: 9pt; font-weight: bold; color: #334155; }
     @media print {
       body { padding: 0; }
-      .no-print { display: none; }
     }
   </style>
 </head>
@@ -362,12 +371,12 @@ export default function MiniMonthCalendar({
 
   <div style="margin-top:12px;font-size:8.5pt;color:#475569;background:#f8fafc;padding:8px 12px;border-radius:6px;border:1px solid #e2e8f0;display:flex;gap:15px;align-items:center;flex-wrap:wrap;">
     <b>Leyenda de Actividades:</b>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#1D4ED8;border-radius:2px;margin-right:3px;"></span> Curso 1</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#047857;border-radius:2px;margin-right:3px;"></span> Curso 2</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:3px;"></span> Curso 3</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#6D28D9;border-radius:2px;margin-right:3px;"></span> Curso 4</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#0F172A;border-radius:2px;margin-right:3px;"></span> Socialización</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#B91C1C;border-radius:2px;margin-right:3px;"></span> Evaluación</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#1D4ED8;border-radius:2px;margin-right:3px;"></span> C1</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#047857;border-radius:2px;margin-right:3px;"></span> C2</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:3px;"></span> C3</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#6D28D9;border-radius:2px;margin-right:3px;"></span> C4</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#0F172A;border-radius:2px;margin-right:3px;"></span> Soc</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#B91C1C;border-radius:2px;margin-right:3px;"></span> Eval</span>
   </div>
 
   <div class="signatures">
@@ -395,7 +404,7 @@ export default function MiniMonthCalendar({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Clock size={18} color="#ffffff" />
           <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.3px' }}>
-            Programación de Sesiones ({totalHours}h acumuladas)
+            Programación ({totalHours}h acumuladas)
           </h4>
         </div>
 
@@ -511,22 +520,6 @@ export default function MiniMonthCalendar({
 
       {/* Main Container */}
       <div style={{ padding: '12px' }}>
-        {/* Checkbox Checklist Controls */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
-            <input type="checkbox" checked={planificacionRecibida} onChange={() => onToggleCheck('planificacion_recibida')} disabled={readOnly} />
-            Planificación Recibida
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
-            <input type="checkbox" checked={evaluacionRealizada} onChange={() => onToggleCheck('evaluacion_realizada')} disabled={readOnly} />
-            Evaluación Realizada
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
-            <input type="checkbox" checked={informeFinalRecibido} onChange={() => onToggleCheck('informe_final_recibido')} disabled={readOnly} />
-            Informe Final Recibido
-          </label>
-        </div>
-
         {/* Quick Session Adder */}
         {!readOnly && (
           <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px', marginBottom: '12px' }}>
@@ -538,7 +531,7 @@ export default function MiniMonthCalendar({
                 <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>Fecha</label>
                 <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} style={{ padding: '4px 6px', fontSize: '0.8rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
               </div>
-              <div style={{ width: '120px' }}>
+              <div style={{ width: '110px' }}>
                 <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>Actividad</label>
                 <select value={newCourse} onChange={(e) => setNewCourse(e.target.value)} style={{ padding: '4px 6px', fontSize: '0.8rem', width: '100%', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
                   {ACT_OPTIONS.map(act => (
@@ -572,8 +565,8 @@ export default function MiniMonthCalendar({
           </div>
         )}
 
-        {/* Sessions Table List */}
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', maxHeight: '350px', overflowY: 'auto' }}>
+        {/* Sessions Table List with max 5 rows scrollbar & active row border highlight */}
+        <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', maxHeight: '190px', overflowY: 'auto' }}>
           {sortedSlots.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
               No hay sesiones programadas aún. Haz clic en "Auto Programar" o agrega sesiones manualmente arriba.
@@ -581,7 +574,7 @@ export default function MiniMonthCalendar({
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
               <thead>
-                <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
+                <tr style={{ background: '#f1f5f9', position: 'sticky', top: 0, zIndex: 2 }}>
                   <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 800, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>Fecha</th>
                   <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 800, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>Actividad</th>
                   <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 800, color: '#475569', borderBottom: '2px solid #cbd5e1' }}>Horario</th>
@@ -595,14 +588,28 @@ export default function MiniMonthCalendar({
                   const baseKey = cKey.replace(/\d+$/, '') || cKey;
                   const color = ACT_COLORS[baseKey] || ACT_COLORS[cKey] || '#1d4ed8';
                   const isEditing = idx === editingSlotIndex;
+                  const isActiveToday = idx === activeRowIndex;
+                  const isTodayExact = s.date === todayStr;
+
+                  // Active border style taking today's date
+                  const borderStyle = isActiveToday
+                    ? { outline: '2px solid #ef4444', outlineOffset: '-2px', backgroundColor: '#fef2f2' }
+                    : (isEditing ? { backgroundColor: '#eff6ff' } : { backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc' });
 
                   return (
-                    <tr key={idx} style={{ background: isEditing ? '#fef2f2' : (idx % 2 === 0 ? '#ffffff' : '#f8fafc'), borderBottom: '1px solid #f1f5f9' }}>
+                    <tr key={idx} style={{ ...borderStyle, borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '6px 8px', fontWeight: 700, color: '#1e293b' }}>
-                        {formatLetterDate(s.date)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          {formatLetterDate(s.date)}
+                          {isActiveToday && (
+                            <span style={{ background: '#ef4444', color: '#ffffff', padding: '1px 5px', borderRadius: '10px', fontSize: '0.62rem', fontWeight: 900 }}>
+                              {isTodayExact ? '📍 HOY' : '📍 ACTIVA'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '6px 8px' }}>
-                        <span style={{ background: color, color: '#ffffff', padding: '2px 7px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800 }}>
+                        <span style={{ background: color, color: '#ffffff', padding: '2px 7px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 900 }}>
                           {getFullActivityLabel(s.course)}
                         </span>
                       </td>
