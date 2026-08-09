@@ -272,7 +272,7 @@ export default function MiniMonthCalendar({
     return closestIdx;
   }, [sortedSlots, todayStr]);
 
-  // Printable A4 Monthly Calendar Generator
+  // Printable A4 Session Program List Generator (Same format as screen)
   const handlePrintCalendar = () => {
     const printWin = window.open('', '_blank', 'width=1100,height=850');
     if (!printWin) return;
@@ -283,38 +283,23 @@ export default function MiniMonthCalendar({
     const printMonthIdx = parseInt(dParts[1], 10) - 1;
     const monthName = MONTH_NAMES[printMonthIdx] || 'Actual';
 
-    const monthDays = getCurrentMonthDays(printYear, printMonthIdx);
-    const slotsByDate: Record<string, HorarioSlot[]> = {};
-    slots.forEach(s => {
-      if (!slotsByDate[s.date]) slotsByDate[s.date] = [];
-      slotsByDate[s.date].push(s);
-    });
+    let tableRowsHtml = '';
+    sortedSlots.forEach((s, idx) => {
+      const cKey = String(s.course);
+      const baseKey = cKey.replace(/\d+$/, '') || cKey;
+      const color = ACT_COLORS[baseKey] || ACT_COLORS[cKey] || '#1d4ed8';
+      const label = getFullActivityLabel(s.course);
 
-    let calendarCellsHtml = '';
-    const firstEmpty = monthDays[0]?.emptyCells || 0;
-    for (let i = 0; i < firstEmpty; i++) {
-      calendarCellsHtml += `<div style="background:#f8fafc;border:1px solid #cbd5e1;min-height:75px;"></div>`;
-    }
-
-    monthDays.forEach(dayObj => {
-      const dateKey = dayObj.dateStr;
-      const daySlots = slotsByDate[dateKey] || [];
-      let slotsMarkup = '';
-
-      daySlots.forEach(s => {
-        const cKey = String(s.course);
-        const baseKey = cKey.replace(/\d+$/, '') || cKey;
-        const color = ACT_COLORS[baseKey] || ACT_COLORS[cKey] || '#1d4ed8';
-        const label = getFullActivityLabel(s.course);
-        slotsMarkup += `<div style="background:${color};color:#fff;font-size:7pt;padding:2px 4px;border-radius:3px;margin-top:2px;font-weight:bold;">${label}: ${s.startTime}-${s.endTime} (${s.hours}h)</div>`;
-      });
-
-      const dayClass = dayObj.isCurrentMonth ? 'background:#ffffff;' : 'background:#f8fafc;color:#94a3b8;';
-      calendarCellsHtml += `
-        <div style="border:1px solid #cbd5e1;min-height:75px;padding:4px;box-sizing:border-box;${dayClass}">
-          <div style="font-weight:bold;font-size:9pt;text-align:right;color:#334155;">${dayObj.dayNumber}</div>
-          ${slotsMarkup}
-        </div>
+      tableRowsHtml += `
+        <tr style="border-bottom:1px solid #e2e8f0;${idx % 2 === 0 ? 'background:#ffffff;' : 'background:#f8fafc;'}">
+          <td style="padding:8px 12px;font-weight:bold;color:#475569;text-align:center;">${idx + 1}</td>
+          <td style="padding:8px 12px;font-weight:bold;color:#1e293b;">${formatLetterDate(s.date)}</td>
+          <td style="padding:8px 12px;">
+            <span style="background:${color};color:#ffffff;padding:3px 10px;border-radius:4px;font-size:8.5pt;font-weight:800;">${label}</span>
+          </td>
+          <td style="padding:8px 12px;text-align:center;color:#334155;font-weight:600;">${s.startTime} - ${s.endTime}</td>
+          <td style="padding:8px 12px;text-align:center;font-weight:800;color:#059669;">${s.hours}h</td>
+        </tr>
       `;
     });
 
@@ -322,17 +307,17 @@ export default function MiniMonthCalendar({
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Calendario Académico UNEFCO - ${monthName} ${printYear}</title>
+  <title>Cronograma Programado UNEFCO - ${monthName} ${printYear}</title>
   <style>
-    @page { size: A4 landscape; margin: 10mm; }
+    @page { size: A4 portrait; margin: 12mm; }
     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 15px; color: #1e293b; background: #fff; }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #0d3b66; padding-bottom: 10px; margin-bottom: 12px; }
-    .header h1 { margin: 0; font-size: 16pt; color: #0d3b66; text-transform: uppercase; letter-spacing: 0.5px; }
-    .header p { margin: 3px 0 0 0; font-size: 9.5pt; color: #64748b; font-weight: 600; }
-    .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #f1f5f9; padding: 10px 14px; border-radius: 8px; font-size: 9pt; margin-bottom: 12px; border: 1px solid #cbd5e1; }
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: #cbd5e1; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; }
-    .day-name { background: #0d3b66; color: #ffffff; font-weight: bold; text-align: center; padding: 6px 2px; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.5px; }
-    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 120px; margin-top: 35px; padding: 0 50px; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #0d3b66; padding-bottom: 10px; margin-bottom: 15px; }
+    .header h1 { margin: 0; font-size: 15pt; color: #0d3b66; text-transform: uppercase; letter-spacing: 0.5px; }
+    .header p { margin: 3px 0 0 0; font-size: 9pt; color: #64748b; font-weight: 600; }
+    .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #f1f5f9; padding: 10px 14px; border-radius: 8px; font-size: 9pt; margin-bottom: 15px; border: 1px solid #cbd5e1; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; font-size: 9.5pt; }
+    th { background: #0d3b66; color: #ffffff; padding: 10px 12px; font-weight: 800; text-transform: uppercase; font-size: 8.5pt; letter-spacing: 0.5px; }
+    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; margin-top: 55px; padding: 0 40px; }
     .sig-box { border-top: 1.5px dashed #475569; text-align: center; padding-top: 6px; font-size: 9pt; font-weight: bold; color: #334155; }
     @media print {
       body { padding: 0; }
@@ -342,8 +327,8 @@ export default function MiniMonthCalendar({
 <body>
   <div class="header">
     <div>
-      <h1>UNEFCO &middot; CALENDARIO ACADÉMICO OFICIAL</h1>
-      <p>Cronograma Programado de Actividades y Sesiones de Formación</p>
+      <h1>UNEFCO &middot; PROGRAMACIÓN DE ACTIVIDADES ACADÉMICAS</h1>
+      <p>Cronograma Oficial de Sesiones Programadas</p>
     </div>
     <div style="text-align:right;">
       <span style="font-weight:bold;font-size:12pt;color:#0d3b66;">${monthName.toUpperCase()} ${printYear}</span><br>
@@ -353,31 +338,25 @@ export default function MiniMonthCalendar({
 
   <div class="meta-grid">
     <div><b>Mes / Gestión:</b> ${monthName} ${printYear}</div>
-    <div><b>Sesiones Cargadas:</b> ${slots.length} sesiones</div>
-    <div><b>Total Horas:</b> ${totalHours} hrs acumuladas</div>
+    <div><b>Sesiones Programadas:</b> ${sortedSlots.length} sesiones</div>
+    <div><b>Total Carga Horaria:</b> ${totalHours} hrs acumuladas</div>
     <div><b>Fecha de Emisión:</b> ${new Date().toLocaleDateString('es-BO')}</div>
   </div>
 
-  <div class="cal-grid">
-    <div class="day-name">Domingo</div>
-    <div class="day-name">Lunes</div>
-    <div class="day-name">Martes</div>
-    <div class="day-name">Miércoles</div>
-    <div class="day-name">Jueves</div>
-    <div class="day-name">Viernes</div>
-    <div class="day-name">Sábado</div>
-    ${calendarCellsHtml}
-  </div>
-
-  <div style="margin-top:12px;font-size:8.5pt;color:#475569;background:#f8fafc;padding:8px 12px;border-radius:6px;border:1px solid #e2e8f0;display:flex;gap:15px;align-items:center;flex-wrap:wrap;">
-    <b>Leyenda de Actividades:</b>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#1D4ED8;border-radius:2px;margin-right:3px;"></span> C1</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#047857;border-radius:2px;margin-right:3px;"></span> C2</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#B45309;border-radius:2px;margin-right:3px;"></span> C3</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#6D28D9;border-radius:2px;margin-right:3px;"></span> C4</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#0F172A;border-radius:2px;margin-right:3px;"></span> Soc</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:#B91C1C;border-radius:2px;margin-right:3px;"></span> Eval</span>
-  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40px;text-align:center;">#</th>
+        <th style="text-align:left;">Fecha Programada</th>
+        <th style="text-align:left;">Actividad</th>
+        <th style="text-align:center;">Horario</th>
+        <th style="text-align:center;">Carga Horaria</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${tableRowsHtml}
+    </tbody>
+  </table>
 
   <div class="signatures">
     <div class="sig-box">Firma del Facilitador / Docente</div>

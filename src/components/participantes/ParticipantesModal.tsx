@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import * as XLSX from 'xlsx';
 import { Curso } from '@/types';
 import {
   X, Search, UserPlus, Trash2, Save, Download, Printer,
@@ -102,10 +103,93 @@ export default function ParticipantesModal({
 
   // Importer Panel states
   const [showImporter, setShowImporter] = useState(false);
-  const [activeImportTab, setActiveImportTab] = useState<'individual' | 'excel' | 'ia'>('individual');
+  const [activeImportTab, setActiveImportTab] = useState<'individual' | 'excel'>('individual');
   const [excelText, setExcelText] = useState('');
   const [previewList, setPreviewList] = useState<PreviewParticipant[]>([]);
   const [importingBatch, setImportingBatch] = useState(false);
+
+  // Smart Excel / CSV File Importer Handler
+  const handleSmartExcelFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const jsonRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
+
+      const parsed: PreviewParticipant[] = [];
+
+      for (const row of jsonRows) {
+        const rowKeys = Object.keys(row);
+
+        const getVal = (keywords: string[]) => {
+          const foundKey = rowKeys.find(k => {
+            const norm = String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+            return keywords.some(kw => norm.includes(kw));
+          });
+          return foundKey ? String(row[foundKey]).trim() : '';
+        };
+
+        const rawCi = getVal(['ci', 'carnet', 'documento', 'cedula', 'dni']);
+        const rawNombres = getVal(['nombres', 'nombre', 'participante']);
+        const rawApellidos = getVal(['apellidos', 'apellido', 'paterno', 'materno']);
+        const rawNombreCompleto = getVal(['nombrecompleto', 'nombreyapellido', 'estudiante', 'docente', 'maestro']);
+        const rawCelular = getVal(['celular', 'telefono', 'whatsapp', 'cel', 'movil', 'fono']);
+        const rawRda = getVal(['rda', 'registrorda', 'nrorda']);
+        const rawUe = getVal(['unidadeducativa', 'colegio', 'escuela', 'ue', 'institucion']);
+        const rawSie = getVal(['sie', 'codigosie', 'codsie']);
+
+        let nombres = rawNombres;
+        let apellidos = rawApellidos;
+
+        if ((!nombres || !apellidos) && rawNombreCompleto) {
+          const parts = rawNombreCompleto.trim().split(/\s+/);
+          if (parts.length >= 3) {
+            nombres = parts.slice(2).join(' ');
+            apellidos = parts.slice(0, 2).join(' ');
+          } else if (parts.length === 2) {
+            nombres = parts[0];
+            apellidos = parts[1];
+          } else {
+            nombres = rawNombreCompleto;
+            apellidos = '';
+          }
+        }
+
+        if (!rawCi && !nombres) continue;
+
+        parsed.push({
+          ci: rawCi.toUpperCase(),
+          nombres: nombres.toUpperCase(),
+          apellidos: apellidos.toUpperCase(),
+          celular: rawCelular,
+          rda: rawRda,
+          unidad_educativa: rawUe.toUpperCase(),
+          sie: rawSie,
+        });
+      }
+
+      if (parsed.length === 0) {
+        Swal.fire('Atención', 'No se encontraron registros válidos en el archivo Excel/CSV.', 'warning');
+        return;
+      }
+
+      setPreviewList(parsed);
+      Swal.fire({
+        icon: 'success',
+        title: '¡Archivo Excel/CSV Procesado!',
+        text: `Se detectaron ${parsed.length} participantes listos para revisar e importar.`,
+        timer: 2500,
+        timerProgressBar: true,
+      });
+    } catch (err: any) {
+      console.error(err);
+      Swal.fire('Error', 'No se pudo leer el archivo Excel/CSV. Verifica el formato del archivo.', 'error');
+    }
+  };
 
   // Migration states
   const [showMigrator, setShowMigrator] = useState(false);
@@ -1958,7 +2042,7 @@ export default function ParticipantesModal({
                   className={`btn ${showImporter ? 'btn-secondary' : 'btn-success'} btn-sm`}
                   onClick={() => setShowImporter(!showImporter)}
                 >
-                  <UserPlus size={14} /> {showImporter ? 'Cerrar Importador' : 'Importar Lote (IA / Excel)'}
+                  <UserPlus size={14} /> {showImporter ? 'Cerrar Importador' : 'Importar Excel / CSV'}
                 </button>
               </div>
             </div>
@@ -1985,18 +2069,10 @@ export default function ParticipantesModal({
                   <button
                     type="button"
                     className="btn btn-xs"
-                    style={{ background: activeImportTab === 'excel' ? 'var(--primary-500)' : 'transparent', color: activeImportTab === 'excel' ? 'var(--white)' : 'var(--gray-700)' }}
+                    style={{ background: activeImportTab === 'excel' ? 'var(--primary-500)' : 'transparent', color: activeImportTab === 'excel' ? 'var(--white)' : 'var(--gray-700)', display: 'flex', alignItems: 'center', gap: '4px' }}
                     onClick={() => setActiveImportTab('excel')}
                   >
-                    Copiar de Excel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-xs"
-                    style={{ background: activeImportTab === 'ia' ? 'var(--primary-500)' : 'transparent', color: activeImportTab === 'ia' ? 'var(--white)' : 'var(--gray-700)' }}
-                    onClick={() => setActiveImportTab('ia')}
-                  >
-                    Escaneo con IA
+                    <Upload size={12} /> Importar Excel / CSV
                   </button>
                 </div>
               </div>
@@ -2104,102 +2180,33 @@ export default function ParticipantesModal({
                 </form>
               )}
 
-              {/* Tab Content: 2. Paste Excel columns */}
+              {/* Tab Content: 2. Smart Excel / CSV File Upload */}
               {activeImportTab === 'excel' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--gray-600)' }}>
-                    Copia las columnas directamente de tu archivo Excel (por ejemplo, seleccionando las columnas de C.I., Nombres, RDA, etc.) y pégalas en el cuadro de abajo. El sistema detectará las columnas automáticamente.
-                  </p>
-                  <textarea
-                    rows={6}
-                    value={excelText}
-                    onChange={(e) => setExcelText(e.target.value)}
-                    placeholder="Pega las filas y columnas copiadas de Excel aquí..."
-                    style={{ width: '100%', padding: '10px', fontSize: '0.85rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-sm)', fontFamily: 'monospace', background: 'var(--white)', resize: 'vertical' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button type="button" className="btn btn-primary btn-sm" onClick={handleParseExcelText}>
-                      Procesar Columnas
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab Content: 3. AI Scan (Camera / File) */}
-              {activeImportTab === 'ia' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--gray-600)' }}>
-                    Escanea una nómina física utilizando tu cámara web, o sube una fotografía/PDF del documento. La IA transcribirá los datos del lote automáticamente.
+                    Carga tu plantilla o nómina en archivo <b>Excel (.xlsx, .xls)</b> o <b>CSV (.csv)</b>. El lector inteligente detectará automáticamente las columnas de C.I., Nombres, Apellidos, Celular, RDA y Unidad Educativa sin importar el orden.
                   </p>
 
-                  <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    {/* Webcam Area */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '320px' }}>
-                      <div style={{ width: '320px', height: '240px', background: 'var(--gray-900)', borderRadius: 'var(--radius-md)', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)' }}>
-                        {cameraActive ? (
-                          <video
-                            ref={videoRef}
-                            id="webcam-video"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            playsInline
-                            muted
-                          />
-                        ) : (
-                          <div style={{ color: 'var(--gray-400)', textAlign: 'center', padding: '20px' }}>
-                            <Camera size={40} style={{ display: 'block', margin: '0 auto 10px', opacity: 0.5 }} />
-                            <span style={{ fontSize: '0.82rem' }}>Cámara apagada</span>
-                          </div>
-                        )}
-                        {iaLoading && (
-                          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(11,21,32,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', color: 'var(--white)' }}>
-                            <Loader2 size={32} className="spin" />
-                            <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>IA Procesando Nómina...</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {cameraActive ? (
-                          <>
-                            <button type="button" className="btn btn-primary btn-sm" onClick={handleCaptureAndParse} disabled={iaLoading}>
-                              Capturar y Escanear
-                            </button>
-                            <button type="button" className="btn btn-secondary btn-sm" onClick={stopCamera} disabled={iaLoading}>
-                              Apagar
-                            </button>
-                          </>
-                        ) : (
-                          <button type="button" className="btn btn-primary btn-sm" onClick={startCamera}>
-                            Activar Cámara
-                          </button>
-                        )}
-                      </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px', border: '2px dashed var(--primary-300)', borderRadius: 'var(--radius-md)', padding: '24px', background: 'var(--white)', transition: 'all 0.2s ease' }}>
+                    <Upload size={42} style={{ color: 'var(--primary-500)' }} />
+                    <div style={{ textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--gray-800)', display: 'block', marginBottom: '4px' }}>
+                        Seleccionar o Arrastrar Archivo Excel / CSV
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
+                        Formatos soportados: <b>.xlsx, .xls, .csv</b>
+                      </span>
                     </div>
 
-                    {/* Divider */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 800, color: 'var(--gray-400)' }}>
-                      O TAMBIÉN
-                    </div>
-
-                    {/* File Upload Area */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', border: '2px dashed var(--primary-200)', borderRadius: 'var(--radius-md)', padding: '20px', width: '320px', background: 'var(--white)' }}>
-                      <Upload size={36} style={{ color: 'var(--primary-400)' }} />
-                      <div style={{ textAlign: 'center' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--gray-700)', display: 'block' }}>Subir Imagen o PDF</span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--gray-400)' }}>Formatos soportados: JPG, PNG, PDF</span>
-                      </div>
-
-                      <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', gap: '8px' }}>
-                        <FileText size={14} /> Seleccionar archivo
-                        <input
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={handleFileUpload}
-                          style={{ display: 'none' }}
-                          disabled={iaLoading}
-                        />
-                      </label>
-                    </div>
+                    <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', gap: '8px', fontWeight: 700, padding: '8px 18px', borderRadius: '8px' }}>
+                      <FileText size={16} /> Seleccionar Archivo
+                      <input
+                        type="file"
+                        accept=".xlsx, .xls, .csv"
+                        onChange={handleSmartExcelFileUpload}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
                   </div>
                 </div>
               )}
