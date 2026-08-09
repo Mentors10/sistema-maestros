@@ -324,3 +324,24 @@ if (document.readyState === 'loading') {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE() {
+  try {
+    // Eliminar la plantilla personalizada en la base de datos de Supabase
+    const { error } = await supabase
+      .from('agenda_contactos')
+      .delete()
+      .eq('id_contacto', 'CONFIG-REPORTE-PLANTILLA-HTML');
+
+    if (error) {
+      console.warn('Error borrando CONFIG-REPORTE-PLANTILLA-HTML de Supabase:', error);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Plantilla personalizada eliminada del servidor (Supabase)',
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

@@ -94,36 +94,51 @@ export default function ReporteDiarioModal({
     setLoading(false);
   };
 
-  // Limpiar el reporte y restablecer a la plantilla limpia del servidor
+  // Limpiar el reporte TANTO EN LOCAL COMO EN EL SERVIDOR (SUPABASE)
   const handleClearReport = async () => {
     const result = await Swal.fire({
-      title: '¿Limpiar Reporte Diario?',
-      text: 'Se borrará la vista local y se recargará el reporte limpio desde el servidor.',
+      title: '¿Limpiar Reporte en Local y Servidor?',
+      text: 'Se eliminará la plantilla guardada en la base de datos (Supabase) y en la memoria local, restableciendo la versión base.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, Limpiar Reporte',
+      confirmButtonText: 'Sí, Limpiar Todo',
       cancelButtonText: 'Cancelar',
     });
 
     if (result.isConfirmed) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('reporte_diario_custom_html');
-        localStorage.removeItem('reporte_diario_user_uploaded');
-      }
-      setSieUser('');
-      setSiePass('');
-      setIsSieConnected(false);
-      await loadHtmlReport(true);
+      setLoading(true);
+      try {
+        // 1. Limpiar en Servidor (API DELETE /api/reporte-diario en Supabase)
+        await fetch('/api/reporte-diario', { method: 'DELETE' });
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Reporte Limpiado',
-        text: 'Se ha restablecido el Reporte Diario con éxito.',
-        timer: 2000,
-        showConfirmButton: false,
-      });
+        // 2. Limpiar memoria local del navegador
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('reporte_diario_custom_html');
+          localStorage.removeItem('reporte_diario_user_uploaded');
+        }
+
+        setSieUser('');
+        setSiePass('');
+        setIsSieConnected(false);
+
+        // 3. Recargar la plantilla limpia directamente del servidor
+        await loadHtmlReport(true);
+
+        Swal.fire({
+          icon: 'success',
+          title: '¡Reporte Limpiado!',
+          text: 'Se ha eliminado la plantilla del servidor (Supabase) y de la memoria local exitosamente.',
+          timer: 2500,
+          showConfirmButton: false,
+        });
+      } catch (err) {
+        console.error('Error al limpiar reporte en servidor:', err);
+        Swal.fire('Error', 'No se pudo limpiar la plantilla del servidor', 'error');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
