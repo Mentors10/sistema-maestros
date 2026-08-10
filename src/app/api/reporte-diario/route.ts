@@ -19,8 +19,7 @@ function normalizeText(str: string) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const isStandalone = searchParams.get('standalone') === 'true' || searchParams.has('tecnico');
-    const hideHeaderCss = isStandalone ? '<style>.header, .cards { display: none !important; }</style></head>' : '</head>';
+    const hideHeaderCss = '<style>.header, .cards { display: none !important; } body { padding: 12px 16px !important; } .table-wrap { max-height: 88vh !important; }</style></head>';
 
     // 1. Intentar obtener plantilla guardada en Supabase (agenda_contactos CONFIG-REPORTE-PLANTILLA-HTML)
     try {
@@ -32,7 +31,7 @@ export async function GET(request: Request) {
 
       if (!error && data?.descripcion && data.descripcion.trim().length > 0) {
         let outputHtml = data.descripcion;
-        if (isStandalone && outputHtml.includes('</head>')) {
+        if (outputHtml.includes('</head>')) {
           outputHtml = outputHtml.replace('</head>', hideHeaderCss);
         }
         return new NextResponse(outputHtml, {
@@ -51,7 +50,7 @@ export async function GET(request: Request) {
     const filePath = path.join(process.cwd(), 'public', 'reporte_diario_template.html');
     if (fs.existsSync(filePath)) {
       let html = fs.readFileSync(filePath, 'utf8');
-      if (isStandalone && html.includes('</head>')) {
+      if (html.includes('</head>')) {
         html = html.replace('</head>', hideHeaderCss);
       }
       return new NextResponse(html, {
@@ -267,6 +266,26 @@ function toggleVerdes() {
     }
 }
 
+function ordenarPorFacilitador() {
+    var table = document.getElementById('reportTable');
+    if (!table) return;
+    var tbody = table.getElementsByTagName('tbody')[0];
+    if (!tbody) return;
+    var trs = Array.prototype.slice.call(tbody.getElementsByTagName('tr'));
+
+    trs.sort(function(a, b) {
+        var tdsA = a.getElementsByTagName('td');
+        var tdsB = b.getElementsByTagName('td');
+        var facA = (tdsA[2] ? (tdsA[2].getAttribute('title') || tdsA[2].textContent) : '').trim().toLowerCase();
+        var facB = (tdsB[2] ? (tdsB[2].getAttribute('title') || tdsB[2].textContent) : '').trim().toLowerCase();
+        return facA.localeCompare(facB, 'es', { sensitivity: 'base' });
+    });
+
+    for (var i = 0; i < trs.length; i++) {
+        tbody.appendChild(trs[i]);
+    }
+}
+
 function initReporte() {
     var params = new URLSearchParams(window.location.search);
     var tecParam = params.get('tecnico');
@@ -276,6 +295,7 @@ function initReporte() {
             tecSelect.value = tecParam;
         }
     }
+    ordenarPorFacilitador();
     buscar();
 }
 

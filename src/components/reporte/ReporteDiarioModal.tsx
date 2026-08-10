@@ -498,21 +498,23 @@ export default function ReporteDiarioModal({
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                 color: '#ffffff',
-                border: '1px solid rgba(255, 255, 255, 0.25)',
-                borderRadius: '8px',
-                padding: '8px 12px',
-                fontSize: '0.85rem',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                borderRadius: '10px',
+                padding: '10px 18px',
+                fontSize: '0.95rem',
+                fontWeight: 800,
                 textDecoration: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                fontWeight: 600,
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)',
+                transition: 'all 0.2s ease',
               }}
-              title="Abrir reporte directo a la tabla en nueva pestaña"
+              title="Abrir reporte directo a la tabla en nueva pestaña completa"
             >
-              <ExternalLink size={15} /> Pestaña Nueva
+              <ExternalLink size={18} /> 🚀 Abrir Pestaña Nueva
             </a>
 
             <button
