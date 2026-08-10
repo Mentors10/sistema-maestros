@@ -127,29 +127,20 @@ export async function POST(request: Request) {
           tec = id && courseMap[id] ? courseMap[id] : null;
         }
 
-        // 2. Try matching by Facilitador Name across full row text (max overlap token scoring)
+        // 2. Try matching by Facilitador Name - REQUIRE 100% EXACT FULL NAME MATCH
         if (!tec) {
-          const htmlWords = rowTextClean.split(/\s+/).filter((w) => w.length >= 2);
+          for (const f of (facs || [])) {
+            const dbNorm = normalizeText(f.nombre);
+            if (!dbNorm || dbNorm === 'por confirmar') continue;
+            
+            // Require EVERY word of the facilitator's full name to be present in the row text (100% match)
+            const dbWords = dbNorm.split(/\s+/).filter((w) => w.length >= 2);
+            const allWordsMatch = dbWords.length > 0 && dbWords.every((w) => rowTextClean.includes(w));
 
-          let bestMatch: any = null;
-          let maxOverlap = 0;
-
-          if (htmlWords.length > 0) {
-            for (const f of (facs || [])) {
-              const dbNorm = normalizeText(f.nombre);
-              if (!dbNorm || dbNorm === 'por confirmar') continue;
-              const dbWords = dbNorm.split(/\s+/).filter((w) => w.length >= 2);
-              const overlap = htmlWords.filter((hw) => dbWords.includes(hw)).length;
-
-              if (overlap >= 2 && overlap > maxOverlap) {
-                maxOverlap = overlap;
-                bestMatch = f;
-              }
+            if (allWordsMatch && facToTecnico[f.carnet]) {
+              tec = facToTecnico[f.carnet];
+              break;
             }
-          }
-
-          if (bestMatch && facToTecnico[bestMatch.carnet]) {
-            tec = facToTecnico[bestMatch.carnet];
           }
         }
 
