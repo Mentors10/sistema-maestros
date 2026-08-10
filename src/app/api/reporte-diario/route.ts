@@ -107,15 +107,28 @@ export async function POST(request: Request) {
         if (block.includes('<th')) continue;
 
         let cleanBlock = block.replace(/\s*data-tecnico="[^"]*"/gi, '');
+        const rowTextClean = normalizeText(cleanBlock.replace(/<[^>]+>/g, ' '));
 
-        // 1. Try matching by Course ID
-        const idMatch = cleanBlock.match(/ID\s*[:\-]?\s*(\d+)/i);
-        const id = idMatch ? idMatch[1] : null;
-        let tec = id && courseMap[id] ? courseMap[id] : null;
+        let tec: string | null = null;
+
+        // 0. Match directly by explicit Technician name or surname in row HTML text
+        if (rowTextClean.includes('juan pablo') || rowTextClean.includes('alba')) {
+          tec = '7782629';
+        } else if (rowTextClean.includes('claudia') || rowTextClean.includes('olivares')) {
+          tec = '3355859';
+        } else if (rowTextClean.includes('gilmar') || rowTextClean.includes('chavarria')) {
+          tec = '8639300';
+        }
+
+        // 1. Try matching by Course ID in database
+        if (!tec) {
+          const idMatch = cleanBlock.match(/ID\s*[:\-]?\s*(\d+)/i);
+          const id = idMatch ? idMatch[1] : null;
+          tec = id && courseMap[id] ? courseMap[id] : null;
+        }
 
         // 2. Try matching by Facilitador Name across full row text (max overlap token scoring)
         if (!tec) {
-          const rowTextClean = normalizeText(cleanBlock.replace(/<[^>]+>/g, ' '));
           const htmlWords = rowTextClean.split(/\s+/).filter((w) => w.length >= 2);
 
           let bestMatch: any = null;
