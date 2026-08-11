@@ -78,9 +78,10 @@ export async function POST(request: Request) {
 
     // Fetch database mappings for enrichment
     try {
-      const [{ data: cursos }, { data: facs }] = await Promise.all([
+      const [{ data: cursos }, { data: facs }, { data: tecnicosDB }] = await Promise.all([
         supabase.from('cursos').select('id, tecnico_carnet, facilitador_carnet'),
         supabase.from('facilitadores').select('carnet, nombre'),
+        supabase.from('tecnicos').select('carnet, nombre'),
       ]);
 
       const courseMap: { [id: string]: string } = {};
@@ -110,13 +111,29 @@ export async function POST(request: Request) {
 
         let tec: string | null = null;
 
-        // 0. Match directly by explicit Technician name or surname in row HTML text
-        if (rowTextClean.includes('juan pablo') || rowTextClean.includes('alba')) {
-          tec = '7782629';
-        } else if (rowTextClean.includes('claudia') || rowTextClean.includes('olivares')) {
-          tec = '3355859';
-        } else if (rowTextClean.includes('gilmar') || rowTextClean.includes('chavarria')) {
-          tec = '8639300';
+        // 0. Match directly by explicit Technician name or surname from DB tecnicos table or row text
+        for (const t of (tecnicosDB || [])) {
+          const tNorm = normalizeText(t.nombre);
+          if (!tNorm) continue;
+          const tWords = tNorm.split(/\s+/).filter((w) => w.length >= 3);
+          if (tWords.length > 0 && tWords.some((w) => rowTextClean.includes(w))) {
+            tec = t.carnet;
+            break;
+          }
+        }
+
+        // Direct hardcoded fallback for key technicians if not in tecnicosDB table
+        if (!tec) {
+          if (rowTextClean.includes('juan pablo') || rowTextClean.includes('alba')) {
+            tec = '7782629';
+          } else if (rowTextClean.includes('claudia') || rowTextClean.includes('olivares')) {
+            tec = '3355859';
+          } else if (rowTextClean.includes('gilmar') || rowTextClean.includes('chavarria')) {
+            tec = '8639300';
+          } else if (rowTextClean.includes('violeta') || rowTextClean.includes('garay')) {
+            const tecVio = (tecnicosDB || []).find((t: any) => normalizeText(t.nombre).includes('violeta') || normalizeText(t.nombre).includes('garay'));
+            tec = tecVio ? tecVio.carnet : 'GARAY001';
+          }
         }
 
         // 1. Try matching by Course ID in database
@@ -143,9 +160,13 @@ export async function POST(request: Request) {
           }
         }
 
-        // 3. Fallback to Gilmar (8639300) if still unassigned
+        // 3. Fallback to first technician in DB, or Violeta/Gilmar
         if (!tec) {
-          tec = '8639300';
+          if (tecnicosDB && tecnicosDB.length > 0) {
+            tec = tecnicosDB[0].carnet;
+          } else {
+            tec = '8639300';
+          }
         }
 
         trs[i] = ` data-tecnico="${tec}"${cleanBlock}`;
@@ -153,15 +174,24 @@ export async function POST(request: Request) {
 
       inputHtml = trs.join('<tr');
 
-      // Add technician filter dropdown in toolbar
+      // Add dynamic technician filter dropdown in toolbar
       if (!inputHtml.includes('id="filtroTecnico"')) {
         const toolbarTarget = '<div class="toolbar">';
+        
+        let tecOptions = `<option value="todos">Todos los técnicos</option>`;
+        if (tecnicosDB && tecnicosDB.length > 0) {
+          tecOptions += tecnicosDB.map((t: any) => `<option value="${t.carnet}">${t.nombre}</option>`).join('');
+        } else {
+          tecOptions += `
+            <option value="8639300">Gilmar Felix Chavarria Choque</option>
+            <option value="7782629">Juan Pablo Alba Vaca</option>
+            <option value="3355859">Claudia Lisett Olivares Rivero</option>
+          `;
+        }
+
         const toolbarReplacement = `<div class="toolbar">
     <select id="filtroTecnico" onchange="buscar()" style="padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; font-weight: 600; color: var(--primary);">
-        <option value="todos">Todos los técnicos</option>
-        <option value="8639300">Gilmar Felix Chavarria Choque</option>
-        <option value="7782629">Juan Pablo Alba Vaca</option>
-        <option value="3355859">Claudia Lisett Olivares Rivero</option>
+        ${tecOptions}
     </select>`;
         inputHtml = inputHtml.replace(toolbarTarget, toolbarReplacement);
       }
