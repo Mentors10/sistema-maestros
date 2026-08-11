@@ -43,8 +43,8 @@ export default function ReporteDiarioModal({
     if (!currentUser) return 'todos';
     if (currentUser.rol === 'supervisor') return 'todos';
     if (currentUser.username === '7782629' || (currentUser.nombre_completo || '').toUpperCase().includes('JUAN PABLO')) return '7782629';
-    if (currentUser.username === '3355859' || (currentUser.nombre_completo || '').toUpperCase().includes('CLAUDIA')) return '3355859';
-    return '8639300'; // Gilmar por defecto
+    if (currentUser.username) return currentUser.username;
+    return 'todos';
   }, [currentUser]);
 
   // Inyectar el filtro por defecto del usuario en la plantilla HTML
