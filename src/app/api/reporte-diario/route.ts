@@ -111,7 +111,7 @@ export async function POST(request: Request) {
 
         let tec: string | null = null;
 
-        // 0. Match directly by explicit Technician name or surname from DB tecnicos table or row text
+        // 0. Match directly by explicit Technician name or surname from DB tecnicos table
         for (const t of (tecnicosDB || [])) {
           const tNorm = normalizeText(t.nombre);
           if (!tNorm) continue;
@@ -119,20 +119,6 @@ export async function POST(request: Request) {
           if (tWords.length > 0 && tWords.some((w) => rowTextClean.includes(w))) {
             tec = t.carnet;
             break;
-          }
-        }
-
-        // Direct hardcoded fallback for key technicians if not in tecnicosDB table
-        if (!tec) {
-          if (rowTextClean.includes('juan pablo') || rowTextClean.includes('alba')) {
-            tec = '7782629';
-          } else if (rowTextClean.includes('claudia') || rowTextClean.includes('olivares')) {
-            tec = '3355859';
-          } else if (rowTextClean.includes('gilmar') || rowTextClean.includes('chavarria')) {
-            tec = '8639300';
-          } else if (rowTextClean.includes('violeta') || rowTextClean.includes('garay')) {
-            const tecVio = (tecnicosDB || []).find((t: any) => normalizeText(t.nombre).includes('violeta') || normalizeText(t.nombre).includes('garay'));
-            tec = tecVio ? tecVio.carnet : 'GARAY001';
           }
         }
 
@@ -160,12 +146,12 @@ export async function POST(request: Request) {
           }
         }
 
-        // 3. Fallback to first technician in DB, or Violeta/Gilmar
+        // 3. Fallback to first technician in DB (e.g. GARAY FLORES VIOLETA ANGELA for Mentors10)
         if (!tec) {
           if (tecnicosDB && tecnicosDB.length > 0) {
             tec = tecnicosDB[0].carnet;
           } else {
-            tec = '8639300';
+            tec = 'GARAY001';
           }
         }
 
