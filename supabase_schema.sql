@@ -305,11 +305,12 @@ CREATE POLICY "Allow all for sync_log" ON sync_log FOR ALL USING (true) WITH CHE
 -- 11. DATOS DE EJEMPLO (SEED)
 -- =============================================================
 
--- Técnicos de ejemplo
+-- Técnicos de ejemplo / oficiales
 INSERT INTO tecnicos (carnet, nombre) VALUES
-  ('TEC001', 'Juan Pérez Mamani'),
-  ('TEC002', 'María López Quispe'),
-  ('TEC003', 'Carlos Huanca Flores')
+  ('8639300', 'Gilmar Felix Chavarria Choque'),
+  ('7782629', 'Juan Pablo Alba Vaca'),
+  ('3355859', 'Claudia Lisett Olivares Rivero'),
+  ('GARAY001', 'GARAY FLORES VIOLETA ANGELA')
 ON CONFLICT (carnet) DO NOTHING;
 
 -- Facilitadores de ejemplo
