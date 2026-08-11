@@ -21,6 +21,31 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const hideHeaderCss = '<style>.header, .cards { display: none !important; } body { padding: 12px 16px !important; } .table-wrap { max-height: 88vh !important; }</style></head>';
 
+    // Helper to dynamically inject technician options from Supabase DB
+    const injectDynamicSelect = async (htmlStr: string) => {
+      let finalHtml = htmlStr;
+      try {
+        const { data: tecnicosDB } = await supabase.from('tecnicos').select('carnet, nombre');
+        let tecOptions = `<option value="todos">Todos los técnicos</option>`;
+        if (tecnicosDB && tecnicosDB.length > 0) {
+          tecOptions += tecnicosDB.map((t: any) => `<option value="${t.carnet}">${t.nombre}</option>`).join('');
+        } else {
+          tecOptions += `<option value="GARAY001">GARAY FLORES VIOLETA ANGELA</option>`;
+        }
+
+        const dynamicSelectHtml = `<select id="filtroTecnico" onchange="buscar()" style="padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; font-weight: 600; color: var(--primary);">
+    ${tecOptions}
+</select>`;
+
+        if (finalHtml.includes('id="filtroTecnico"')) {
+          finalHtml = finalHtml.replace(/<select id="filtroTecnico"[\s\S]*?<\/select>/gi, dynamicSelectHtml);
+        }
+      } catch (e) {
+        console.warn('Error al inyectar opciones dinámicas de técnico:', e);
+      }
+      return finalHtml;
+    };
+
     // 1. Intentar obtener plantilla guardada en Supabase (agenda_contactos CONFIG-REPORTE-PLANTILLA-HTML)
     try {
       const { data, error } = await supabase
@@ -30,7 +55,7 @@ export async function GET(request: Request) {
         .maybeSingle();
 
       if (!error && data?.descripcion && data.descripcion.trim().length > 0) {
-        let outputHtml = data.descripcion;
+        let outputHtml = await injectDynamicSelect(data.descripcion);
         if (outputHtml.includes('</head>')) {
           outputHtml = outputHtml.replace('</head>', hideHeaderCss);
         }
@@ -49,7 +74,7 @@ export async function GET(request: Request) {
     // 2. Fallback a archivo de plantilla estático
     const filePath = path.join(process.cwd(), 'public', 'reporte_diario_template.html');
     if (fs.existsSync(filePath)) {
-      let html = fs.readFileSync(filePath, 'utf8');
+      let html = await injectDynamicSelect(fs.readFileSync(filePath, 'utf8'));
       if (html.includes('</head>')) {
         html = html.replace('</head>', hideHeaderCss);
       }
@@ -160,26 +185,22 @@ export async function POST(request: Request) {
 
       inputHtml = trs.join('<tr');
 
-      // Add dynamic technician filter dropdown in toolbar
-      if (!inputHtml.includes('id="filtroTecnico"')) {
-        const toolbarTarget = '<div class="toolbar">';
-        
-        let tecOptions = `<option value="todos">Todos los técnicos</option>`;
-        if (tecnicosDB && tecnicosDB.length > 0) {
-          tecOptions += tecnicosDB.map((t: any) => `<option value="${t.carnet}">${t.nombre}</option>`).join('');
-        } else {
-          tecOptions += `
-            <option value="8639300">Gilmar Felix Chavarria Choque</option>
-            <option value="7782629">Juan Pablo Alba Vaca</option>
-            <option value="3355859">Claudia Lisett Olivares Rivero</option>
-          `;
-        }
+      // Build dynamic technician filter dropdown in toolbar from DB tecnicos table
+      let tecOptions = `<option value="todos">Todos los técnicos</option>`;
+      if (tecnicosDB && tecnicosDB.length > 0) {
+        tecOptions += tecnicosDB.map((t: any) => `<option value="${t.carnet}">${t.nombre}</option>`).join('');
+      } else {
+        tecOptions += `<option value="GARAY001">GARAY FLORES VIOLETA ANGELA</option>`;
+      }
 
-        const toolbarReplacement = `<div class="toolbar">
-    <select id="filtroTecnico" onchange="buscar()" style="padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; font-weight: 600; color: var(--primary);">
-        ${tecOptions}
-    </select>`;
-        inputHtml = inputHtml.replace(toolbarTarget, toolbarReplacement);
+      const dynamicSelectHtml = `<select id="filtroTecnico" onchange="buscar()" style="padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; font-weight: 600; color: var(--primary);">
+    ${tecOptions}
+</select>`;
+
+      if (inputHtml.includes('id="filtroTecnico"')) {
+        inputHtml = inputHtml.replace(/<select id="filtroTecnico"[\s\S]*?<\/select>/gi, dynamicSelectHtml);
+      } else {
+        inputHtml = inputHtml.replace('<div class="toolbar">', `<div class="toolbar">\n${dynamicSelectHtml}`);
       }
 
       // Inject interactive filtering script before </body>
