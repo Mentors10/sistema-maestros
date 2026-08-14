@@ -103,8 +103,17 @@ async function processHtml() {
     <button id="btnFiltroOk" class="btn-filter" onclick="setFiltroEstado('ok')">✓ Todo OK</button>
 </div>`;
 
-  if (html.includes('id="btnCiclo"')) {
-    html = html.replace(/<button id="btnCiclo"[\s\S]*?<\/button>\s*<button id="btnVerdes"[\s\S]*?<\/button>/gi, filterButtonsHtml);
+  html = html.replace(/<button[^>]*\bid=["']?btnCiclo["']?[^>]*>[\s\S]*?<\/button>/gi, '');
+  html = html.replace(/<button[^>]*\bid=["']?btnVerdes["']?[^>]*>[\s\S]*?<\/button>/gi, '');
+  html = html.replace(/<button[^>]*toggleCol\(['"]ciclo['"]\)[\s\S]*?<\/button>/gi, '');
+  html = html.replace(/<button[^>]*toggleVerdes\(\)[\s\S]*?<\/button>/gi, '');
+
+  if (!html.includes('btnFiltroPrioritarios')) {
+    if (html.includes('id="buscar"')) {
+      html = html.replace(/(<input[^>]*id="buscar"[^>]*>)/gi, `$1\n    ${filterButtonsHtml}`);
+    } else if (html.includes('class="toolbar"')) {
+      html = html.replace(/(<div[^>]*class="toolbar"[^>]*>)/gi, `$1\n    ${filterButtonsHtml}`);
+    }
   }
 
   // Inject priority CSS if missing

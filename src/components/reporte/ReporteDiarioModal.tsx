@@ -52,7 +52,7 @@ export default function ReporteDiarioModal({
     if (!htmlContent) return '';
     let finalHtml = htmlContent;
 
-    // Reemplazar botones antiguos por grupo de filtros
+    // Reemplazar botones antiguos por grupo de filtros (sin importar el orden de atributos)
     const filterButtonsHtml = `<div class="filter-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
     <button id="btnFiltroTodos" class="btn-filter active" onclick="setFiltroEstado('todos')">Todos</button>
     <button id="btnFiltroPrioritarios" class="btn-filter" onclick="setFiltroEstado('prioritarios')" style="color:#e11d48; font-weight:700;">⚡ Prioritarios</button>
@@ -60,8 +60,17 @@ export default function ReporteDiarioModal({
     <button id="btnFiltroOk" class="btn-filter" onclick="setFiltroEstado('ok')">✓ Todo OK</button>
 </div>`;
 
-    if (finalHtml.includes('id="btnCiclo"')) {
-      finalHtml = finalHtml.replace(/<button id="btnCiclo"[\s\S]*?<\/button>\s*<button id="btnVerdes"[\s\S]*?<\/button>/gi, filterButtonsHtml);
+    finalHtml = finalHtml.replace(/<button[^>]*\bid=["']?btnCiclo["']?[^>]*>[\s\S]*?<\/button>/gi, '');
+    finalHtml = finalHtml.replace(/<button[^>]*\bid=["']?btnVerdes["']?[^>]*>[\s\S]*?<\/button>/gi, '');
+    finalHtml = finalHtml.replace(/<button[^>]*toggleCol\(['"]ciclo['"]\)[\s\S]*?<\/button>/gi, '');
+    finalHtml = finalHtml.replace(/<button[^>]*toggleVerdes\(\)[\s\S]*?<\/button>/gi, '');
+
+    if (!finalHtml.includes('btnFiltroPrioritarios')) {
+      if (finalHtml.includes('id="buscar"')) {
+        finalHtml = finalHtml.replace(/(<input[^>]*id="buscar"[^>]*>)/gi, `$1\n    ${filterButtonsHtml}`);
+      } else if (finalHtml.includes('class="toolbar"')) {
+        finalHtml = finalHtml.replace(/(<div[^>]*class="toolbar"[^>]*>)/gi, `$1\n    ${filterButtonsHtml}`);
+      }
     }
 
     // Inyectar CSS de prioridades si falta
