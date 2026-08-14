@@ -95,6 +95,69 @@ async function processHtml() {
 
   html = trs.join('<tr');
 
+  // Replace old toolbar buttons with filter group if present
+  const filterButtonsHtml = `<div class="filter-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
+    <button id="btnFiltroTodos" class="btn-filter active" onclick="setFiltroEstado('todos')">Todos</button>
+    <button id="btnFiltroPrioritarios" class="btn-filter" onclick="setFiltroEstado('prioritarios')" style="color:#e11d48; font-weight:700;">⚡ Prioritarios</button>
+    <button id="btnFiltroPendientes" class="btn-filter" onclick="setFiltroEstado('pendientes')">⚠️ Con Pendientes</button>
+    <button id="btnFiltroOk" class="btn-filter" onclick="setFiltroEstado('ok')">✓ Todo OK</button>
+</div>`;
+
+  if (html.includes('id="btnCiclo"')) {
+    html = html.replace(/<button id="btnCiclo"[\s\S]*?<\/button>\s*<button id="btnVerdes"[\s\S]*?<\/button>/gi, filterButtonsHtml);
+  }
+
+  // Inject priority CSS if missing
+  if (!html.includes('.curso-prioritario')) {
+    const prioCss = `<style>
+.curso.curso-prioritario {
+    border: 2.5px solid #e11d48 !important;
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25) !important;
+    border-radius: 10px !important;
+    padding: 6px !important;
+    background: #ffffff !important;
+}
+.badge-prioridad {
+    background: #ffe4e6 !important;
+    color: #be123c !important;
+    border: 1px solid #f43f5e !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    margin-bottom: 4px;
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+}
+.paso-prioritario-plan {
+    border: 2px solid #d97706 !important;
+    background: #fffbe3 !important;
+    color: #92400e !important;
+    font-weight: 700 !important;
+}
+.paso-prioritario-informe {
+    border: 2px solid #dc2626 !important;
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+    font-weight: 700 !important;
+}
+.btn-filter {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #fff;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s;
+}
+.btn-filter:hover { background: #f1f5f9; }
+.btn-filter.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-filter.active-prio { background: #e11d48 !important; color: #fff !important; border-color: #e11d48 !important; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.3); }
+</style></head>`;
+    html = html.replace('</head>', prioCss);
+  }
+
   // Add technician selector in toolbar if not present
   if (!html.includes('id="filtroTecnico"')) {
     const toolbarTarget = '<div class="toolbar">';
@@ -112,7 +175,128 @@ async function processHtml() {
   const scriptBlock = `
 <!-- INJECTED_REPORTE_SCRIPT -->
 <script>
+var currentFiltroEstado = 'todos';
+
+function setFiltroEstado(estado) {
+    currentFiltroEstado = estado;
+    var btnMap = {
+        'todos': 'btnFiltroTodos',
+        'prioritarios': 'btnFiltroPrioritarios',
+        'pendientes': 'btnFiltroPendientes',
+        'ok': 'btnFiltroOk'
+    };
+    for (var k in btnMap) {
+        var btn = document.getElementById(btnMap[k]);
+        if (btn) {
+            if (k === estado) {
+                btn.className = (k === 'prioritarios') ? 'btn-filter active-prio' : 'btn-filter active';
+            } else {
+                btn.className = 'btn-filter';
+            }
+        }
+    }
+    buscar();
+}
+
+function parseFechaStr(dateStr, defaultYear) {
+    if (!dateStr || dateStr === '—' || dateStr === 'OK' || dateStr === 'SI' || dateStr === 'NO') return null;
+    var year = defaultYear || 2026;
+    var str = dateStr.trim();
+    var parts = str.split('/');
+    if (parts.length === 3) {
+        var d = parseInt(parts[0], 10);
+        var m = parseInt(parts[1], 10) - 1;
+        var y = parseInt(parts[2], 10);
+        if (!isNaN(d) && !isNaN(m) && !isNaN(y)) return new Date(y, m, d);
+    }
+    if (parts.length === 2) {
+        var d = parseInt(parts[0], 10);
+        var mNum = parseInt(parts[1], 10);
+        if (!isNaN(mNum)) return new Date(year, mNum - 1, d);
+        var monthsMap = { ene:0, feb:1, mar:2, abr:3, may:4, jun:5, jul:6, ago:7, sep:8, oct:9, nov:10, dic:11 };
+        var mKey = parts[1].toLowerCase().substring(0, 3);
+        if (monthsMap[mKey] !== undefined) return new Date(year, monthsMap[mKey], d);
+    }
+    return null;
+}
+
+function marcarPrioritarios() {
+    var cursos = document.querySelectorAll('.curso');
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    cursos.forEach(function(curso) {
+        var pasos = curso.querySelectorAll('.paso');
+        if (!pasos || pasos.length === 0) return;
+
+        var pasoPlan = null, pasoPlanFecha = null, pasoInicio = null;
+        var pasoSoc = null, pasoInforme = null, pasoLimite = null;
+
+        pasos.forEach(function(p) {
+            var lblEl = p.querySelector('.lbl');
+            if (!lblEl) return;
+            var txt = lblEl.textContent.trim().toLowerCase();
+            if (txt === 'planificación') pasoPlan = p;
+            else if (txt === 'planificación fecha') pasoPlanFecha = p;
+            else if (txt === 'fecha de inicio') pasoInicio = p;
+            else if (txt === 'socialización') pasoSoc = p;
+            else if (txt === 'informe final') pasoInforme = p;
+            else if (txt === 'fecha límite') pasoLimite = p;
+        });
+
+        var isPlanOk = pasoPlan && pasoPlan.classList.contains('ok');
+        var isInformeOk = pasoInforme && pasoInforme.classList.contains('ok');
+
+        var inicioVal = pasoInicio ? pasoInicio.querySelector('.val').textContent.trim() : '';
+        var socVal = pasoSoc ? pasoSoc.querySelector('.val').textContent.trim() : '';
+
+        var inicioDate = parseFechaStr(inicioVal, 2026);
+        var socDate = parseFechaStr(socVal, 2026);
+
+        var isPrioPlan = false;
+        if (!isPlanOk && inicioDate) {
+            var diffDaysPlan = Math.ceil((inicioDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+            if (diffDaysPlan <= 5) {
+                isPrioPlan = true;
+                if (pasoPlan) pasoPlan.classList.add('paso-prioritario-plan');
+                if (pasoPlanFecha) pasoPlanFecha.classList.add('paso-prioritario-plan');
+            }
+        }
+
+        var isPrioInforme = false;
+        if (!isInformeOk && socDate) {
+            var diffDaysSoc = Math.ceil((today.getTime() - socDate.getTime()) / (1000 * 3600 * 24));
+            if (diffDaysSoc >= 0) {
+                isPrioInforme = true;
+                if (pasoInforme) pasoInforme.classList.add('paso-prioritario-informe');
+                if (pasoLimite) pasoLimite.classList.add('paso-prioritario-informe');
+            }
+        }
+
+        if (isPrioPlan || isPrioInforme) {
+            curso.classList.add('curso-prioritario');
+            var tr = curso.closest('tr');
+            if (tr) tr.setAttribute('data-prioritario', '1');
+
+            if (!curso.querySelector('.badge-prioridad')) {
+                var badge = document.createElement('span');
+                badge.className = 'badge badge-prioridad';
+                if (isPrioPlan && isPrioInforme) {
+                    badge.innerHTML = '⚡ Planificación & Final Pendiente';
+                } else if (isPrioPlan) {
+                    badge.innerHTML = '⚡ Planificación URGENTE (≤5d)';
+                } else {
+                    badge.innerHTML = '🚨 Informe Final URGENTE';
+                }
+                curso.insertBefore(badge, curso.firstChild);
+            }
+        }
+    });
+}
+
 function buscar() {
+    marcarPrioritarios();
+
     var input = document.getElementById('buscar');
     var filter = input ? input.value.toLowerCase().trim() : '';
     var tecSelect = document.getElementById('filtroTecnico');
@@ -133,16 +317,26 @@ function buscar() {
         var tr = trs[i];
         var text = tr.textContent.toLowerCase();
         var rowTec = tr.getAttribute('data-tecnico') || '8639300';
+        var isOk = tr.getAttribute('data-ok') === '1';
+        var isPrio = tr.getAttribute('data-prioritario') === '1';
 
         var matchesText = !filter || text.includes(filter);
         var matchesTec = (selectedTec === 'todos') || (rowTec === selectedTec);
 
-        if (matchesText && matchesTec) {
+        var matchesEstado = true;
+        if (currentFiltroEstado === 'prioritarios') {
+            matchesEstado = isPrio;
+        } else if (currentFiltroEstado === 'pendientes') {
+            matchesEstado = !isOk;
+        } else if (currentFiltroEstado === 'ok') {
+            matchesEstado = isOk;
+        }
+
+        if (matchesText && matchesTec && matchesEstado) {
             tr.style.display = '';
             totalProg++;
             var cursosInRow = tr.querySelectorAll('.curso').length;
             totalCursos += cursosInRow;
-            var isOk = tr.getAttribute('data-ok') === '1';
             if (isOk) okCount++; else pendCount++;
         } else {
             tr.style.display = 'none';
@@ -156,56 +350,6 @@ function buscar() {
         cardValues[1].innerHTML = totalCursos;
         cardValues[2].innerHTML = okCount + '<span style="font-size:14px;color:var(--muted);font-weight:400"> / ' + totalProg + '</span>';
         cardValues[3].innerHTML = pendCount + '<span style="font-size:14px;color:var(--muted);font-weight:400"> / ' + totalProg + '</span>';
-    }
-}
-
-function toggleCol(colName) {
-    var elements = document.querySelectorAll('.toggle-' + colName);
-    var btn = document.getElementById('btnCiclo');
-    var isHidden = false;
-    elements.forEach(function(el) {
-        if (el.classList.contains('hidden-col')) {
-            el.classList.remove('hidden-col');
-        } else {
-            el.classList.add('hidden-col');
-            isHidden = true;
-        }
-    });
-    if (btn) {
-        if (isHidden) {
-            btn.classList.remove('active');
-            btn.textContent = 'Mostrar Ciclo';
-        } else {
-            btn.classList.add('active');
-            btn.textContent = 'Ocultar Ciclo';
-        }
-    }
-}
-
-function toggleVerdes() {
-    var btn = document.getElementById('btnVerdes');
-    var table = document.getElementById('reportTable');
-    if (!table) return;
-    var trs = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-    var hideVerdes = btn && !btn.classList.contains('active');
-
-    for (var i = 0; i < trs.length; i++) {
-        var tr = trs[i];
-        var isOk = tr.getAttribute('data-ok') === '1';
-        if (hideVerdes && isOk) {
-            tr.style.display = 'none';
-        } else if (!hideVerdes && isOk) {
-            tr.style.display = '';
-        }
-    }
-    if (btn) {
-        if (hideVerdes) {
-            btn.classList.add('active');
-            btn.textContent = 'Mostrar verdes';
-        } else {
-            btn.classList.remove('active');
-            btn.textContent = 'Ocultar verdes';
-        }
     }
 }
 
