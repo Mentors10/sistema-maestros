@@ -91,8 +91,9 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const username = body.username || 'gilmar.chavarria@unefco.edu.bo';
     const password = body.password || 'GILMAR.chavarria24#';
+    const action = body.action || 'sync';
 
-    console.log(`=== Iniciando sesión en SIE UNEFCO para ${username} ===`);
+    console.log(`=== Iniciando sesión en SIE UNEFCO para ${username} (modo: ${action}) ===`);
 
     // 1. GET login page for initial CSRF token & cookies
     const loginGetRes = await fetch(`${BASE_URL}/login`, {
@@ -145,13 +146,23 @@ export async function POST(request: Request) {
       if (mCsrf) loggedCsrf = mCsrf[1];
     }
 
-    const postHtml = await loginPostRes.text();
-    if (!sessionId || postHtml.includes('Iniciar') || loginPostRes.url.includes('error')) {
-      return NextResponse.json({ success: false, error: 'Credenciales del SIE incorrectas o fallo de inicio de sesión' }, { status: 401 });
+    const isLoginSuccess = (loginPostRes.status === 302 || loginPostRes.status === 301 || !!sessionId);
+
+    if (!isLoginSuccess) {
+      return NextResponse.json({ success: false, error: 'Credenciales del SIE incorrectas o fallo de inicio de sesión en el portal' }, { status: 401 });
     }
 
     const cookieHeader = `csrftoken=${loggedCsrf}; sessionid=${sessionId}`;
     console.log('Login OK en SIE UNEFCO. Sesión activa:', sessionId.substring(0, 8) + '...');
+
+    // Si la acción es solo verificar conexión, retornar éxito de inmediato
+    if (action === 'verify') {
+      return NextResponse.json({
+        success: true,
+        message: 'Conexión establecida con éxito con el portal SIE UNEFCO',
+        username,
+      });
+    }
 
     // 3. Obtain CSRF token for programming
     const progRes = await fetch(`${BASE_URL}/events/programming`, {

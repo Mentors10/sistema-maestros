@@ -358,8 +358,8 @@ function marcarPrioritarios() {
     }
   }, [isOpen]);
 
-  // Manejar la extracción y sincronización de datos en tiempo real desde el SIE UNEFCO
-  const handleSyncSieData = async (userToUse?: string, passToUse?: string) => {
+  // Paso 1: Verificar credenciales y Conectar con el SIE UNEFCO
+  const handleConnectSie = async (userToUse?: string, passToUse?: string) => {
     const username = (userToUse || sieUser || '').trim();
     const password = passToUse || siePass;
 
@@ -374,15 +374,77 @@ function marcarPrioritarios() {
     }
 
     setSyncingSie(true);
-
-    // Ventana emergente indicando "Analizando..."
     Swal.fire({
-      title: '🔍 Analizando Datos del SIE...',
+      title: '🔌 Verificando Conexión al SIE...',
+      html: `<div style="font-size:0.88rem;color:#334155;">Validando credenciales con el portal <b>sie.unefco.edu.bo</b>...</div>`,
+      allowOutsideClick: false,
+      didOpen: () => { Swal.showLoading(); },
+    });
+
+    try {
+      const res = await fetch('/api/sie/sync-reporte', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, action: 'verify' }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        setIsSieConnected(true);
+        Swal.fire({
+          icon: 'success',
+          title: '🟢 Conexión Exitosa con el SIE',
+          html: `Conectado correctamente como <b>${username}</b>.<br><br>Presiona el botón <b>"Analizar y Sincronizar"</b> a continuación para procesar los eventos y valoraciones.`,
+          confirmButtonColor: '#16a34a',
+          confirmButtonText: 'Entendido',
+        });
+      } else {
+        setIsSieConnected(false);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de Conexión al SIE',
+          text: data.error || 'No se pudo verificar el inicio de sesión en el SIE UNEFCO. Revisa tus credenciales.',
+          confirmButtonColor: '#0d3b66',
+        });
+      }
+    } catch (e) {
+      setIsSieConnected(false);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de Servidor',
+        text: 'No se pudo conectar con el servicio de autenticación.',
+        confirmButtonColor: '#0d3b66',
+      });
+    } finally {
+      setSyncingSie(false);
+    }
+  };
+
+  // Paso 2: Analizar y sincronizar todos los datos del SIE en tiempo real
+  const handleSyncSieData = async (userToUse?: string, passToUse?: string) => {
+    const username = (userToUse || sieUser || '').trim();
+    const password = passToUse || siePass;
+
+    if (!username || !password) {
+      Swal.fire({
+        title: 'Credenciales Requeridas',
+        text: 'Ingresa tu usuario y contraseña del SIE UNEFCO.',
+        icon: 'warning',
+        confirmButtonColor: '#0d3b66',
+      });
+      return;
+    }
+
+    setSyncingSie(true);
+
+    Swal.fire({
+      title: '📊 Analizando Datos del SIE...',
       html: `
         <div style="font-size:0.9rem;color:#334155;margin-top:6px;">
           <p style="margin-bottom:8px;">🟢 <b>Conectado al portal SIE UNEFCO</b> (${username})</p>
-          <p style="color:#0284c7;font-weight:600;margin-bottom:4px;">Analizando participantes, eventos, planificaciones e informes finales en tiempo real...</p>
-          <p style="font-size:0.8rem;color:#64748b;">Por favor espera unos momentos mientras se procesan las baterías de monitoreo.</p>
+          <p style="color:#0284c7;font-weight:600;margin-bottom:4px;">Procesando participantes, eventos, planificaciones e informes finales en tiempo real...</p>
+          <p style="font-size:0.8rem;color:#64748b;">Por favor espera unos momentos mientras se actualizan las baterías de monitoreo.</p>
         </div>
       `,
       allowOutsideClick: false,
@@ -395,7 +457,7 @@ function marcarPrioritarios() {
       const res = await fetch('/api/sie/sync-reporte', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, action: 'sync' }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -403,20 +465,19 @@ function marcarPrioritarios() {
       if (res.ok && data.success) {
         setIsSieConnected(true);
         await loadHtmlReport(true);
-        // Mensaje de finalización exacta "Monitoreo Realizado"
         Swal.fire({
           icon: 'success',
           title: '✅ Monitoreo Realizado',
-          html: '<b>¡Análisis y Monitoreo completados con éxito!</b><br>Los participantes, valoraciones y eventos del SIE han sido validados y guardados en Supabase.',
+          html: '<b>¡Análisis y Monitoreo completados con éxito!</b><br>Los datos del SIE fueron actualizados y guardados en Supabase.',
           confirmButtonColor: '#0d3b66',
-          timer: 4000,
+          timer: 3500,
           timerProgressBar: true,
         });
       } else {
         Swal.fire({
           icon: 'error',
-          title: 'Error de Conexión al SIE',
-          text: data.error || 'No se pudo iniciar sesión en el SIE UNEFCO. Revisa tus credenciales en el panel lateral.',
+          title: 'Error durante el Análisis',
+          text: data.error || 'No se pudo completar el análisis del SIE. Verifica la conexión o credenciales.',
           confirmButtonColor: '#0d3b66',
         });
       }
@@ -424,7 +485,7 @@ function marcarPrioritarios() {
       Swal.fire({
         icon: 'error',
         title: 'Error de Servidor',
-        text: 'Ocurrió un error al conectar con el servicio de monitoreo.',
+        text: 'Ocurrió un error al procesar el servicio de monitoreo.',
         confirmButtonColor: '#0d3b66',
       });
     } finally {
@@ -652,12 +713,12 @@ function marcarPrioritarios() {
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button
                     type="button"
-                    onClick={() => handleSyncSieData(sieUser, siePass)}
+                    onClick={() => handleConnectSie(sieUser, siePass)}
                     disabled={syncingSie}
                     style={{
-                      background: syncingSie
-                        ? '#64748b'
-                        : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                      background: isSieConnected
+                        ? '#059669'
+                        : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '8px',
@@ -668,13 +729,39 @@ function marcarPrioritarios() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '5px',
+                      boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+                      height: '38px',
+                    }}
+                    title="Paso 1: Verificar credenciales y Conectar con el SIE UNEFCO"
+                  >
+                    <RefreshCw size={14} className={syncingSie ? 'spin' : ''} />
+                    {syncingSie ? 'Verificando...' : isSieConnected ? '🟢 Conectado' : '🔌 Conectar SIE'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSyncSieData(sieUser, siePass)}
+                    disabled={syncingSie}
+                    style={{
+                      background: syncingSie
+                        ? '#64748b'
+                        : 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: syncingSie ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
                       boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
                       height: '38px',
                     }}
-                    title="Conectar al SIE de Participantes e Iniciar Monitoreo"
+                    title="Paso 2: Procesar eventos, planificaciones e informes en tiempo real"
                   >
-                    <RefreshCw size={14} className={syncingSie ? 'spin' : ''} />
-                    {syncingSie ? 'Analizando...' : 'Conectar SIE'}
+                    🚀 Analizar y Sincronizar
                   </button>
 
                   <button
