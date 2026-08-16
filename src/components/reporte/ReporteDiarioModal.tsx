@@ -334,67 +334,9 @@ function marcarPrioritarios() {
     }
   }, [isOpen]);
 
-  // Paso 1: Verificar credenciales y Conectar con el SIE UNEFCO
+  // Conectar al SIE y realizar sincronización completa
   const handleConnectSie = async (userToUse?: string, passToUse?: string) => {
-    const username = (userToUse || sieUser || '').trim();
-    const password = passToUse || siePass;
-
-    if (!username || !password) {
-      Swal.fire({
-        title: 'Credenciales Requeridas',
-        text: 'Ingresa tu usuario y contraseña del SIE UNEFCO a un lado de la cabecera.',
-        icon: 'warning',
-        confirmButtonColor: '#0d3b66',
-      });
-      return;
-    }
-
-    setSyncingSie(true);
-    Swal.fire({
-      title: '🔌 Verificando Conexión al SIE...',
-      html: `<div style="font-size:0.88rem;color:#334155;">Validando credenciales con el portal <b>sie.unefco.edu.bo</b>...</div>`,
-      allowOutsideClick: false,
-      didOpen: () => { Swal.showLoading(); },
-    });
-
-    try {
-      const res = await fetch('/api/sie/sync-reporte', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, action: 'verify' }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.success) {
-        setIsSieConnected(true);
-        Swal.fire({
-          icon: 'success',
-          title: '🟢 Conexión Exitosa con el SIE',
-          html: `Conectado correctamente como <b>${username}</b>.<br><br>Presiona el botón <b>"Analizar y Sincronizar"</b> a continuación para procesar los eventos y valoraciones.`,
-          confirmButtonColor: '#16a34a',
-          confirmButtonText: 'Entendido',
-        });
-      } else {
-        setIsSieConnected(false);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error de Conexión al SIE',
-          text: data.error || 'No se pudo verificar el inicio de sesión en el SIE UNEFCO. Revisa tus credenciales.',
-          confirmButtonColor: '#0d3b66',
-        });
-      }
-    } catch (e) {
-      setIsSieConnected(false);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error de Servidor',
-        text: 'No se pudo conectar con el servicio de autenticación.',
-        confirmButtonColor: '#0d3b66',
-      });
-    } finally {
-      setSyncingSie(false);
-    }
+    return handleSyncSieData(userToUse, passToUse);
   };
 
   // Paso 2: Analizar y sincronizar todos los datos del SIE en tiempo real

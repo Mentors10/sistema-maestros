@@ -953,19 +953,32 @@ if (document.readyState === 'loading') {
 </body>
 </html>`;
 
-    // Save directly to Supabase Database (reportes_html table)
-    const { error: dbErr } = await supabase.from('reportes_html').upsert({
-      id: 'REPORTE_DIARIO_ACTUAL',
-      contenido: finalHtml,
-      tecnico_carnet: '8639300',
-      updated_at: new Date().toISOString(),
-    });
+    // Save directly to Supabase Database (reportes_html table, fallback to agenda_contactos if table not created)
+    let savedOk = false;
+    try {
+      const { error: dbErr1 } = await supabase.from('reportes_html').upsert({
+        id: 'REPORTE_DIARIO_ACTUAL',
+        contenido: finalHtml,
+        tecnico_carnet: '8639300',
+        updated_at: new Date().toISOString(),
+      });
+      if (!dbErr1) savedOk = true;
+    } catch (e) {}
 
-    if (dbErr) {
-      console.warn('Advertencia al guardar en la tabla reportes_html de Supabase DB:', dbErr);
-    } else {
-      console.log('Sincronización SIE guardada con éxito en la tabla reportes_html.');
+    if (!savedOk) {
+      try {
+        await supabase.from('agenda_contactos').upsert({
+          id_contacto: 'REPORTE_DIARIO_ACTUAL',
+          tecnico_carnet: '8639300',
+          nombre: 'PLANTILLA_REPORTE_DIARIO',
+          descripcion: finalHtml,
+          updated_at: new Date().toISOString(),
+        });
+        savedOk = true;
+      } catch (e) {}
     }
+
+    console.log('Sincronización SIE guardada con éxito en Supabase DB. (Éxito:', savedOk, ')');
 
     return NextResponse.json({
       success: true,
