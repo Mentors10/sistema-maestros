@@ -408,23 +408,19 @@ if (document.readyState === 'loading') {
     html = html + scriptBlock;
   }
 
-  console.log('=== Step 3: Saving Enriched Report to Supabase DB and local template ===');
-  const { data: dbData, error: dbErr } = await supabase.from('agenda_contactos').upsert({
-    id_contacto: 'CONFIG-REPORTE-PLANTILLA-HTML',
+  console.log('=== Step 3: Saving Enriched Report to Supabase DB (reportes_html table) ===');
+  const { data: dbData, error: dbErr } = await supabase.from('reportes_html').upsert({
+    id: 'REPORTE_DIARIO_ACTUAL',
+    contenido: html,
     tecnico_carnet: '8639300',
-    nombre: 'PLANTILLA_REPORTE_DIARIO',
-    descripcion: html,
     updated_at: new Date().toISOString()
-  }).select('id_contacto, updated_at');
+  }).select('id, updated_at');
 
   if (dbErr) {
     console.error('Supabase DB error:', dbErr);
   } else {
     console.log('Supabase DB Save Success:', dbData);
   }
-
-  const templatePath = path.join(__dirname, '..', 'public', 'reporte_diario_template.html');
-  fs.writeFileSync(templatePath, html, 'utf8');
 
   console.log('=== Step 4: Pushing updated report to GitHub main branch ===');
   try {

@@ -240,16 +240,16 @@ function marcarPrioritarios() {
       return finalHtml;
     };
 
-    // 1. Intentar obtener plantilla guardada en Supabase (agenda_contactos CONFIG-REPORTE-PLANTILLA-HTML)
+    // 1. Obtener plantilla guardada exclusivamente en la tabla reportes_html de Supabase
     try {
       const { data, error } = await supabase
-        .from('agenda_contactos')
-        .select('descripcion')
-        .eq('id_contacto', 'CONFIG-REPORTE-PLANTILLA-HTML')
+        .from('reportes_html')
+        .select('contenido')
+        .eq('id', 'REPORTE_DIARIO_ACTUAL')
         .maybeSingle();
 
-      if (!error && data?.descripcion && data.descripcion.trim().length > 0) {
-        let outputHtml = await processHtmlForResponse(data.descripcion);
+      if (!error && data?.contenido && data.contenido.trim().length > 0) {
+        let outputHtml = await processHtmlForResponse(data.contenido);
         if (outputHtml.includes('</head>')) {
           outputHtml = outputHtml.replace('</head>', hideHeaderCss);
         }
@@ -262,25 +262,17 @@ function marcarPrioritarios() {
         });
       }
     } catch (dbErr) {
-      console.warn('Error leyendo plantilla desde Supabase:', dbErr);
+      console.warn('Error leyendo desde la tabla reportes_html en Supabase:', dbErr);
     }
 
-    // 2. Fallback a archivo de plantilla estático
-    const filePath = path.join(process.cwd(), 'public', 'reporte_diario_template.html');
-    if (fs.existsSync(filePath)) {
-      let html = await processHtmlForResponse(fs.readFileSync(filePath, 'utf8'));
-      if (html.includes('</head>')) {
-        html = html.replace('</head>', hideHeaderCss);
-      }
-      return new NextResponse(html, {
+    // Sin backups locales ni plantillas estáticas de respaldo por mandato explícito del usuario
+    return new NextResponse(
+      '<div style="font-family:sans-serif;padding:40px;text-align:center;color:#64748b;"><h2>No hay ningún reporte almacenado en la base de datos</h2><p>Conecta al SIE o sube un reporte para almacenar y visualizar la información.</p></div>',
+      {
         status: 200,
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        },
-      });
-    }
-    return new NextResponse('<h1>Reporte Diario no disponible</h1>', { status: 404 });
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -695,31 +687,22 @@ if (document.readyState === 'loading') {
       console.warn('Error durante el enriquecimiento del HTML:', enrichError);
     }
 
-    // 1. Guardar plantilla enriquecida en Supabase DB (agenda_contactos)
+    // 1. Guardar plantilla enriquecida exclusivamente en la tabla reportes_html de Supabase
     try {
-      await supabase.from('agenda_contactos').upsert({
-        id_contacto: 'CONFIG-REPORTE-PLANTILLA-HTML',
+      await supabase.from('reportes_html').upsert({
+        id: 'REPORTE_DIARIO_ACTUAL',
+        contenido: inputHtml,
         tecnico_carnet: '8639300',
-        nombre: 'PLANTILLA_REPORTE_DIARIO',
-        descripcion: inputHtml,
         updated_at: new Date().toISOString(),
       });
     } catch (dbSaveErr) {
-      console.warn('Advertencia al guardar plantilla en Supabase DB:', dbSaveErr);
-    }
-
-    // 2. Guardar en disco local si el entorno lo permite (ej: desarrollo local)
-    try {
-      const filePath = path.join(process.cwd(), 'public', 'reporte_diario_template.html');
-      fs.writeFileSync(filePath, inputHtml, 'utf8');
-    } catch (fileErr) {
-      // Ignorar error de solo lectura en Vercel Serverless
+      console.warn('Advertencia al guardar plantilla en reportes_html en Supabase DB:', dbSaveErr);
     }
 
     return NextResponse.json({
       success: true,
       enrichedHtml: inputHtml,
-      message: 'Plantilla de Reporte Diario guardada exitosamente en la base de datos',
+      message: 'Plantilla de Reporte Diario guardada exclusivamente en la tabla reportes_html',
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -728,19 +711,19 @@ if (document.readyState === 'loading') {
 
 export async function DELETE() {
   try {
-    // Eliminar la plantilla personalizada en la base de datos de Supabase
+    // Eliminar el reporte almacenado en la tabla reportes_html de Supabase
     const { error } = await supabase
-      .from('agenda_contactos')
+      .from('reportes_html')
       .delete()
-      .eq('id_contacto', 'CONFIG-REPORTE-PLANTILLA-HTML');
+      .eq('id', 'REPORTE_DIARIO_ACTUAL');
 
     if (error) {
-      console.warn('Error borrando CONFIG-REPORTE-PLANTILLA-HTML de Supabase:', error);
+      console.warn('Error borrando reporte de la tabla reportes_html:', error);
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Plantilla personalizada eliminada del servidor (Supabase)',
+      message: 'Reporte eliminado de la base de datos (reportes_html)',
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

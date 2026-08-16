@@ -10,25 +10,25 @@ const supabase = createClient(url, key);
 
 async function checkDb() {
   const { data, error } = await supabase
-    .from('agenda_contactos')
-    .select('id_contacto, descripcion, updated_at')
-    .eq('id_contacto', 'CONFIG-REPORTE-PLANTILLA-HTML')
+    .from('reportes_html')
+    .select('id, contenido, updated_at')
+    .eq('id', 'REPORTE_DIARIO_ACTUAL')
     .maybeSingle();
 
   if (error) {
-    console.error('Error fetching DB row:', error);
+    console.error('Error fetching DB row from reportes_html:', error);
     return;
   }
 
   if (!data) {
-    console.log('No DB row found for CONFIG-REPORTE-PLANTILLA-HTML');
+    console.log('No DB row found in reportes_html for REPORTE_DIARIO_ACTUAL');
     return;
   }
 
   console.log('Row updated_at:', data.updated_at);
-  console.log('Description length:', data.descripcion ? data.descripcion.length : 0);
+  console.log('Contenido length:', data.contenido ? data.contenido.length : 0);
 
-  const desc = data.descripcion || '';
+  const desc = data.contenido || '';
   console.log('Includes btnCiclo:', desc.includes('btnCiclo'));
   console.log('Includes btnVerdes:', desc.includes('btnVerdes'));
   console.log('Includes Ocultar Ciclo:', desc.includes('Ocultar Ciclo'));

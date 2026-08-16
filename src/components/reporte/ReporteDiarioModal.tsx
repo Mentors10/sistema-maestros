@@ -258,59 +258,37 @@ function marcarPrioritarios() {
     return finalHtml;
   }, [htmlContent, defaultTecnicoCarnet]);
 
-  // Cargar contenido HTML desde el servidor o localStorage
-  const loadHtmlReport = async (forceFetchServer: boolean = false) => {
+  // Cargar contenido HTML exclusivamente desde la base de datos de Supabase (sin localStorage/cookies)
+  const loadHtmlReport = async () => {
     setLoading(true);
 
-    // Limpiar caché obsoleto si contiene botones antiguos en localStorage
+    // Mandato explícito: Limpiar cualquier rastro de localStorage anterior
     if (typeof window !== 'undefined') {
-      const savedLocal = localStorage.getItem('reporte_diario_custom_html');
-      if (savedLocal && savedLocal.includes('id="btnCiclo"')) {
-        localStorage.removeItem('reporte_diario_custom_html');
-        localStorage.removeItem('reporte_diario_user_uploaded');
-      }
-    }
-
-    const isUserUploaded = typeof window !== 'undefined' && localStorage.getItem('reporte_diario_user_uploaded') === 'true';
-    const savedLocal = typeof window !== 'undefined' ? localStorage.getItem('reporte_diario_custom_html') : null;
-
-    if (!forceFetchServer && isUserUploaded && savedLocal) {
-      setHtmlContent(savedLocal);
-      setLoading(false);
-      return;
+      localStorage.removeItem('reporte_diario_custom_html');
+      localStorage.removeItem('reporte_diario_user_uploaded');
     }
 
     try {
       const res = await fetch(`/api/reporte-diario?t=${Date.now()}`);
       if (res.ok) {
         const text = await res.text();
-        if (text && text.trim().length > 0) {
-          setHtmlContent(text);
-          localStorage.setItem('reporte_diario_custom_html', text);
-          if (forceFetchServer) {
-            localStorage.removeItem('reporte_diario_user_uploaded');
-          }
-          setLoading(false);
-          return;
-        }
+        setHtmlContent(text || '');
+      } else {
+        setHtmlContent('');
       }
     } catch (e) {
-      console.warn('Error al obtener reporte desde API, intentando localStorage:', e);
-    }
-
-    if (savedLocal !== null) {
-      setHtmlContent(savedLocal);
-    } else {
+      console.warn('Error al obtener reporte desde API Supabase:', e);
       setHtmlContent('');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // Limpiar el reporte COMPLETAMENTE (sin versión base ni datos, 100% vacío)
+  // Limpiar el reporte COMPLETAMENTE de la base de datos de Supabase
   const handleClearReport = async () => {
     const result = await Swal.fire({
-      title: '¿Vaciar Reporte por Completo?',
-      text: 'Se eliminará todo el contenido del reporte tanto localmente como en el servidor, dejándolo 100% vacío.',
+      title: '¿Vaciar Reporte de la Base de Datos?',
+      text: 'Se eliminará el contenido del reporte guardado en la tabla reportes_html en Supabase.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
@@ -322,13 +300,11 @@ function marcarPrioritarios() {
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        // 1. Limpiar en Servidor (API DELETE /api/reporte-diario en Supabase)
         await fetch('/api/reporte-diario', { method: 'DELETE' });
 
-        // 2. Establecer estado y memoria local 100% vacíos sin cargar versión base
         if (typeof window !== 'undefined') {
-          localStorage.setItem('reporte_diario_custom_html', '');
-          localStorage.setItem('reporte_diario_user_uploaded', 'true');
+          localStorage.removeItem('reporte_diario_custom_html');
+          localStorage.removeItem('reporte_diario_user_uploaded');
         }
 
         setHtmlContent('');
@@ -338,14 +314,14 @@ function marcarPrioritarios() {
 
         Swal.fire({
           icon: 'success',
-          title: '¡Reporte Vacío!',
-          text: 'Se ha borrado el reporte por completo tanto localmente como en el servidor.',
+          title: '¡Reporte Vaciado!',
+          text: 'Se ha eliminado el reporte de la base de datos en Supabase.',
           timer: 2500,
           showConfirmButton: false,
         });
       } catch (err) {
         console.error('Error al vaciar reporte en servidor:', err);
-        Swal.fire('Error', 'No se pudo vaciar la plantilla del servidor', 'error');
+        Swal.fire('Error', 'No se pudo vaciar la tabla de la base de datos', 'error');
       } finally {
         setLoading(false);
       }
@@ -464,7 +440,7 @@ function marcarPrioritarios() {
 
       if (res.ok && data.success) {
         setIsSieConnected(true);
-        await loadHtmlReport(true);
+        await loadHtmlReport();
         Swal.fire({
           icon: 'success',
           title: '✅ Monitoreo Realizado',

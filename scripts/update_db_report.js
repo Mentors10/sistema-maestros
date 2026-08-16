@@ -16,13 +16,12 @@ async function updateDb() {
   console.log('Template includes btnCiclo:', html.includes('btnCiclo'));
   console.log('Template includes btnFiltroPrioritarios:', html.includes('btnFiltroPrioritarios'));
 
-  const { data, error } = await supabase.from('agenda_contactos').upsert({
-    id_contacto: 'CONFIG-REPORTE-PLANTILLA-HTML',
+  const { data, error } = await supabase.from('reportes_html').upsert({
+    id: 'REPORTE_DIARIO_ACTUAL',
+    contenido: html,
     tecnico_carnet: '8639300',
-    nombre: 'PLANTILLA_REPORTE_DIARIO',
-    descripcion: html,
     updated_at: new Date().toISOString()
-  }).select('id_contacto, updated_at');
+  }).select('id, updated_at');
 
   if (error) {
     console.error('Supabase DB Update Error:', error);

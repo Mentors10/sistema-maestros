@@ -617,6 +617,18 @@ DROP POLICY IF EXISTS "Permitir modificación de usuarios" ON usuarios_sistema;
 CREATE POLICY "Permitir lectura de usuarios" ON usuarios_sistema FOR SELECT USING (true);
 CREATE POLICY "Permitir inserción de accesos" ON registro_accesos FOR INSERT WITH CHECK (true);
 CREATE POLICY "Permitir lectura de accesos" ON registro_accesos FOR SELECT USING (true);
-CREATE POLICY "Permitir modificación de usuarios" ON usuarios_sistema FOR UPDATE USING (true);
+
+-- Tabla para almacenamiento exclusivo del HTML del Reporte Diario
+CREATE TABLE IF NOT EXISTS reportes_html (
+  id VARCHAR(50) PRIMARY KEY,
+  contenido TEXT,
+  tecnico_carnet VARCHAR(50),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE reportes_html ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir todo en reportes_html" ON reportes_html;
+CREATE POLICY "Permitir todo en reportes_html" ON reportes_html FOR ALL USING (true) WITH CHECK (true);
+
 
 
